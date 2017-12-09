@@ -42,14 +42,19 @@ under the License.
   </prerequisites>
 
   <scm>
-    <connection>scm:svn:http://svn.apache.org/repos/asf/maven/plugins/trunk/maven-deploy-plugin/</connection>
-    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/maven/plugins/trunk/maven-deploy-plugin/</developerConnection>
-    <url>http://svn.apache.org/viewvc/maven/plugins/trunk/maven-deploy-plugin/</url>
+    <connection>scm:git:https://gitbox.apache.org/repos/asf/maven-deploy-plugin.git</connection>
+    <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/maven-deploy-plugin.git</developerConnection>
+    <url>https://github.com/apache/maven-deploy-plugin/tree/${project.scm.tag}</url>
+    <tag>HEAD</tag>
   </scm>
   <issueManagement>
     <system>JIRA</system>
     <url>https://issues.apache.org/jira/browse/MDEPLOY</url>
   </issueManagement>
+  <ciManagement>
+    <system>Jenkins</system>
+    <url>https://builds.apache.org/job/maven-box/job/maven-deploy-plugin/</url>
+  </ciManagement>
   <distributionManagement>
     <site>
       <id>apache.website</id>
