@@ -43,7 +43,6 @@ import org.apache.maven.model.building.ModelSource;
 import org.apache.maven.model.building.StringModelSource;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
-import org.apache.maven.model.validation.ModelValidator;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Component;
@@ -187,12 +186,6 @@ public class DeployFileMojo
     @Parameter( property = "uniqueVersion" )
     @Deprecated
     private Boolean uniqueVersion;
-
-    /**
-     * The component used to validate the user-supplied artifact coordinates.
-     */
-    @Component
-    private ModelValidator modelValidator;
 
     /**
      * A comma separated list of types for each of the extra side artifacts to deploy. If there is a mis-match in the
