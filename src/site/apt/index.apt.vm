@@ -135,8 +135,6 @@ ${project.name}
 
   * {{{./examples/deploying-with-classifiers.html}Deploy an artifact with classifier}}
 
-  * {{{./examples/disabling-timestamps-suffix.html}Disable timestamps suffix in an artifact}}
-
   * {{{./examples/deploying-in-legacy-layout.html}Deploy an artifact in legacy layout}}
 
    []
