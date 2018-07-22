@@ -25,7 +25,7 @@ under the License.
   <parent>
     <groupId>org.apache.maven.plugins</groupId>
     <artifactId>maven-plugins</artifactId>
-    <version>31</version>
+    <version>32</version>
     <relativePath>../../pom/maven/maven-plugins/pom.xml</relativePath>
   </parent>
 
@@ -64,7 +64,6 @@ under the License.
 
   <properties>
     <mavenVersion>3.0</mavenVersion>
-    <surefire.version>2.21.0</surefire.version>
   </properties>
 
   <dependencies>
@@ -175,6 +174,7 @@ under the License.
               <artifactId>maven-invoker-plugin</artifactId>
               <configuration>
                 <debug>true</debug>
+                <showErrors>true</showErrors>
                 <cloneProjectsTo>${project.build.directory}/it</cloneProjectsTo>
                 <cloneClean>true</cloneClean>
                 <pomIncludes>
