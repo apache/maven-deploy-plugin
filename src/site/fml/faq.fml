@@ -77,6 +77,37 @@ under the License.
 </plugin>]]></source>
        </answer>
      </faq>
+     <faq id="skipAttachedArtifacts">
+            <question>I don't want to deploy some attached artifact on a specific module.  Can I skip deployment for specific attached artifacts?</question>
+            <answer>
+              <p>
+                Yes, you can skip deployment of several attached artifacts by configuring the Deploy Plugin as follows:
+              </p>
+              <source>
+     <![CDATA[<plugin>
+       <groupId>org.apache.maven.plugins</groupId>
+       <artifactId>maven-deploy-plugin</artifactId>
+       <version>X.Y</version>
+       <configuration>
+         <skipAttachedArtifacts>
+           <artifact>
+             <groupId>group</groupId>
+             <artifactId>id</artifactId>
+             <version>1.0</version>
+             <packaging>jar</packaging>
+             <classifier>classifier</classifier>
+           </artifact>
+           <artifact>
+             <groupId>group</groupId>
+             <artifactId>id</artifactId>
+             <version>1.0</version>
+             <packaging>zip</packaging>
+           </artifact>
+         </skipAttachedArtifacts>
+       </configuration>
+     </plugin>]]></source>
+            </answer>
+     </faq>
      <faq id="deploy_deploy">
        <question>What does the message "The packaging for this project did not assign a file to the build artifact" mean when I run <code>deploy:deploy</code>?</question>
        <answer>

@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -42,7 +43,7 @@ import org.apache.maven.shared.project.deploy.ProjectDeployerRequest;
 
 /**
  * Deploys an artifact to remote repository.
- * 
+ *
  * @author <a href="mailto:evenisse@apache.org">Emmanuel Venisse</a>
  * @author <a href="mailto:jdcasey@apache.org">John Casey (refactoring only)</a>
  * @version $Id$
@@ -75,7 +76,7 @@ public class DeployMojo
      * Whether every project should be deployed during its own deploy-phase or at the end of the multimodule build. If
      * set to {@code true} and the build fails, none of the reactor projects is deployed.
      * <strong>(experimental)</strong>
-     * 
+     *
      * @since 2.8
      */
     @Parameter( defaultValue = "false", property = "deployAtEnd" )
@@ -98,7 +99,7 @@ public class DeployMojo
 
     /**
      * The alternative repository to use when the project has a snapshot version.
-     * 
+     *
      * @since 2.8
      * @see DeployMojo#altDeploymentRepository
      */
@@ -107,7 +108,7 @@ public class DeployMojo
 
     /**
      * The alternative repository to use when the project has a final version.
-     * 
+     *
      * @since 2.8
      * @see DeployMojo#altDeploymentRepository
      */
@@ -116,11 +117,19 @@ public class DeployMojo
 
     /**
      * Set this to 'true' to bypass artifact deploy
-     * 
+     *
      * @since 2.4
      */
     @Parameter( property = "maven.deploy.skip", defaultValue = "false" )
     private boolean skip;
+
+    /**
+     * The attached artifacts to exclude from deploy
+     *
+     * @since 3.0
+     */
+    @Parameter( property = "skipAttachedArtifacts" )
+    private List<AttachedArtifact> skipAttachedArtifacts;
 
     /**
      * Component used to deploy project.
@@ -153,6 +162,19 @@ public class DeployMojo
             // CHECKSTYLE_ON: LineLength
 
             ArtifactRepository repo = getDeploymentRepository( pdr );
+
+            final List<Artifact> attachedArtifacts = pdr.getProject().getAttachedArtifacts();
+            if ( skipAttachedArtifacts != null )
+            {
+                for ( final AttachedArtifact attachedArtifactToSkip : skipAttachedArtifacts )
+                {
+                    final Artifact toSkip = attachedArtifactToSkip.checkIfExists( attachedArtifacts );
+                    attachedArtifacts.remove( toSkip );
+                    getLog().info( "Skipping artifact ["
+                            + toSkip
+                            + "]" );
+                }
+            }
 
             if ( !deployAtEnd )
             {
