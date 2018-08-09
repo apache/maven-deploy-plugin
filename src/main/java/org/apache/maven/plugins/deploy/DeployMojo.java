@@ -36,9 +36,10 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.ProjectBuildingRequest;
-import org.apache.maven.shared.project.NoFileAssignedException;
-import org.apache.maven.shared.project.deploy.ProjectDeployer;
-import org.apache.maven.shared.project.deploy.ProjectDeployerRequest;
+import org.apache.maven.shared.transfer.artifact.deploy.ArtifactDeployerException;
+import org.apache.maven.shared.transfer.project.NoFileAssignedException;
+import org.apache.maven.shared.transfer.project.deploy.ProjectDeployer;
+import org.apache.maven.shared.transfer.project.deploy.ProjectDeployerRequest;
 
 /**
  * Deploys an artifact to remote repository.
@@ -194,6 +195,10 @@ public class DeployMojo
         catch ( NoFileAssignedException e )
         {
             throw new MojoExecutionException( "NoFileAssignedException", e );
+        }
+        catch ( ArtifactDeployerException e )
+        {
+            throw new MojoExecutionException( "ArtifactDeployerException", e );
         }
 
     }

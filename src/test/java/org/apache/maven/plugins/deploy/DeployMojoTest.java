@@ -40,7 +40,7 @@ import org.apache.maven.plugins.deploy.stubs.DeployArtifactStub;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.ProjectBuildingRequest;
 import org.apache.maven.repository.internal.MavenRepositorySystemSession;
-import org.apache.maven.shared.project.deploy.ProjectDeployerRequest;
+import org.apache.maven.shared.transfer.project.deploy.ProjectDeployerRequest;
 import org.codehaus.plexus.util.FileUtils;
 import org.junit.Ignore;
 import org.mockito.InjectMocks;

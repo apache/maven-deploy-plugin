@@ -24,8 +24,8 @@ import java.util.Collection;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.project.ProjectBuildingRequest;
-import org.apache.maven.shared.artifact.deploy.ArtifactDeployer;
-import org.apache.maven.shared.artifact.deploy.ArtifactDeployerException;
+import org.apache.maven.shared.transfer.artifact.deploy.ArtifactDeployer;
+import org.apache.maven.shared.transfer.artifact.deploy.ArtifactDeployerException;
 
 public class ArtifactDeployerStub
     implements ArtifactDeployer

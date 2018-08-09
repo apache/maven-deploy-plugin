@@ -91,7 +91,7 @@ under the License.
     <dependency>
       <groupId>org.apache.maven.shared</groupId>
       <artifactId>maven-artifact-transfer</artifactId>
-      <version>0.9.1</version>
+      <version>0.10.0</version>
     </dependency>
     <!-- Upgrade of transitive dependency. -->
     <dependency>
@@ -185,9 +185,14 @@ under the License.
                 <postBuildHookScript>verify</postBuildHookScript>
                 <localRepositoryPath>${project.build.directory}/local-repo</localRepositoryPath>
                 <settingsFile>src/it/settings.xml</settingsFile>
+                <addTestClassPath>true</addTestClassPath>
                 <goals>
                   <goal>deploy</goal>
                 </goals>
+                <properties>
+                  <!-- e.g. ensure that Java7 picks up TLSv1.2 when connecting with Central -->
+                  <https.protocols>${https.protocols}</https.protocols>
+                </properties>
               </configuration>
             </plugin>
           </plugins>
