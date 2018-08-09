@@ -214,11 +214,7 @@ public class DeployFileMojo
     void initProperties()
         throws MojoExecutionException
     {
-        if ( pomFile != null )
-        {
-            processModel( readModel( pomFile ) );
-        }
-        else
+        if ( pomFile == null )
         {
             boolean foundPom = false;
 
@@ -299,6 +295,10 @@ public class DeployFileMojo
                     }
                 }
             }
+        }
+        else
+        {
+            processModel( readModel( pomFile ) );
         }
 
         if ( packaging == null && file != null )
