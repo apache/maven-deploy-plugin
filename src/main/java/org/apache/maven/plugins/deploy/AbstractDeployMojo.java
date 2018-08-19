@@ -42,12 +42,6 @@ public abstract class AbstractDeployMojo
     private boolean offline;
 
     /**
-     * Parameter used to update the metadata to make the artifact as release.
-     */
-    @Parameter( property = "updateReleaseInfo", defaultValue = "false" )
-    protected boolean updateReleaseInfo;
-
-    /**
      * Parameter used to control how many times a failed deployment will be retried before giving up and failing. If a
      * value outside the range 1-10 is specified it will be pulled to the nearest value within the range 1-10.
      * 
@@ -68,11 +62,6 @@ public abstract class AbstractDeployMojo
         {
             throw new MojoFailureException( "Cannot deploy artifacts when Maven is in offline mode" );
         }
-    }
-
-    boolean isUpdateReleaseInfo()
-    {
-        return updateReleaseInfo;
     }
 
     int getRetryFailedDeploymentCount()

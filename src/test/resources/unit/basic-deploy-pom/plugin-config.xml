@@ -32,7 +32,6 @@ under the License.
               <basedir>${basedir}</basedir>
             </deploymentRepository>
           </project>
-          <updateReleaseInfo>true</updateReleaseInfo>
         </configuration>
       </plugin>
     </plugins>

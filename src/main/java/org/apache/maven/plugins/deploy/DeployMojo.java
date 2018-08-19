@@ -144,7 +144,6 @@ public class DeployMojo
             // @formatter:off
             ProjectDeployerRequest pdr = new ProjectDeployerRequest()
                 .setProject( project )
-                .setUpdateReleaseInfo( isUpdateReleaseInfo() )
                 .setRetryFailedDeploymentCount( getRetryFailedDeploymentCount() )
                 .setAltReleaseDeploymentRepository( altReleaseDeploymentRepository )
                 .setAltSnapshotDeploymentRepository( altSnapshotDeploymentRepository )

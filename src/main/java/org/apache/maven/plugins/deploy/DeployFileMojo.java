@@ -378,10 +378,6 @@ public class DeployFileMojo
             }
         }
 
-        if ( updateReleaseInfo )
-        {
-            artifact.setRelease( true );
-        }
         artifact.setRepository( deploymentRepository );
 
         if ( sources != null )

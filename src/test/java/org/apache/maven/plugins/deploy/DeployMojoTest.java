@@ -360,44 +360,6 @@ public class DeployMojoTest
         assertEquals( 0, getSizeOfExpectedFiles( fileList, expectedFiles ) );    
     }
 
-    public void testUpdateReleaseParamSetToTrue()
-        throws Exception
-    {
-        File testPom = new File( getBasedir(),
-                                 "target/test-classes/unit/basic-deploy-pom/plugin-config.xml" );
-        mojo = ( DeployMojo ) lookupMojo( "deploy", testPom );
-        
-        MockitoAnnotations.initMocks( this );
-        
-        assertNotNull( mojo );
-        
-        ProjectBuildingRequest buildingRequest = mock ( ProjectBuildingRequest.class );
-        when( session.getProjectBuildingRequest() ).thenReturn( buildingRequest );
-        MavenRepositorySystemSession repositorySession = new MavenRepositorySystemSession();
-        repositorySession.setLocalRepositoryManager( new SimpleLocalRepositoryManager( LOCAL_REPO ) );
-        when( buildingRequest.getRepositorySession() ).thenReturn( repositorySession );
-        
-        boolean updateReleaseInfo = (Boolean) getVariableValueFromObject(mojo, "updateReleaseInfo");
-        
-        assertTrue( updateReleaseInfo );
-        
-        MavenProject project = (MavenProject) getVariableValueFromObject( mojo, "project" );
-
-        setVariableValueToObject( mojo, "reactorProjects", Collections.singletonList( project ) );
-
-        artifact = (DeployArtifactStub) project.getArtifact();
-        
-        artifact.setFile( testPom );
-        
-        ArtifactRepositoryStub repo = getRepoStub( mojo );
-        
-        repo.setAppendToUrl( "basic-deploy-updateReleaseParam" );        
-        
-        mojo.execute();
-        
-        assertTrue( artifact.isRelease() );
-    }
-
     public void testDeployIfArtifactFileIsNull()
         throws Exception
     {
