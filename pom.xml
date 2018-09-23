@@ -30,7 +30,7 @@ under the License.
   </parent>
 
   <artifactId>maven-deploy-plugin</artifactId>
-  <version>3.0.0-M1</version>
+  <version>3.0.0-M2-SNAPSHOT</version>
   <packaging>maven-plugin</packaging>
 
   <name>Apache Maven Deploy Plugin</name>
@@ -45,7 +45,7 @@ under the License.
     <connection>scm:git:https://gitbox.apache.org/repos/asf/maven-deploy-plugin.git</connection>
     <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/maven-deploy-plugin.git</developerConnection>
     <url>https://github.com/apache/maven-deploy-plugin/tree/${project.scm.tag}</url>
-    <tag>maven-deploy-plugin-3.0.0-M1</tag>
+    <tag>HEAD</tag>
   </scm>
   <issueManagement>
     <system>JIRA</system>
