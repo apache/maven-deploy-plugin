@@ -33,7 +33,6 @@ under the License.
 
   <properties>
     <maven.test.skip>true</maven.test.skip>
-    <updateReleaseInfo>true</updateReleaseInfo>
   </properties>
 
   <distributionManagement>
