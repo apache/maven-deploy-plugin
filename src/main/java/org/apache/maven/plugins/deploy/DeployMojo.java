@@ -22,6 +22,11 @@ package org.apache.maven.plugins.deploy;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -81,6 +86,14 @@ public class DeployMojo
      */
     @Parameter( defaultValue = "false", property = "deployAtEnd" )
     private boolean deployAtEnd;
+
+    /**
+     * The number of threads to use during deployment. The value will only be honored if {@code deployAtEnd} is true.
+     *
+     * @since 3.0
+     */
+    @Parameter( defaultValue = "1", property = "maven.deploy.threads" )
+    private int threads = 1;
 
     /**
      * Specifies an alternative repository to which the project artifacts should be deployed ( other than those
@@ -170,12 +183,71 @@ public class DeployMojo
         {
             synchronized ( DEPLOYREQUESTS )
             {
-                while ( !DEPLOYREQUESTS.isEmpty() )
+                int requests = DEPLOYREQUESTS.size();
+                CompletionService<String> service = null;
+                if ( threads > 1 )
                 {
-                    ArtifactRepository repo = getDeploymentRepository( DEPLOYREQUESTS.get( 0 ) );
-
-                    deployProject( getSession().getProjectBuildingRequest(), DEPLOYREQUESTS.remove( 0 ), repo );
+                    service = new ExecutorCompletionService( new ScheduledThreadPoolExecutor( threads ) );
+                    getLog().info( "Deploying with " + threads + " threads" );
                 }
+
+                for ( final ProjectDeployerRequest projectDeployerRequest : DEPLOYREQUESTS )
+                {
+                    Callable<String> callable = new Callable<String>()
+                    {
+                        @Override
+                        public String call() throws Exception
+                        {
+                            ArtifactRepository repo = getDeploymentRepository( projectDeployerRequest );
+                            deployProject( getSession().getProjectBuildingRequest(), projectDeployerRequest, repo );
+                            return projectDeployerRequest.getProject().getName();
+                        }
+                    };
+
+                    if ( threads > 1 )
+                    {
+                        getLog().info( "Submitting " + projectDeployerRequest.getProject().getName() );
+                        service.submit( callable );
+                    }
+                    else
+                    {
+                        try
+                        {
+                            String finished = callable.call();
+                            getLog().info( "Finished " + finished );
+                        }
+                        catch ( RuntimeException e )
+                        {
+                            throw e;
+                        }
+                        catch ( Exception e )
+                        {
+                            throw new RuntimeException( e );
+                        }
+                    }
+                }
+
+                if ( threads > 1 )
+                {
+                    for ( int i = 0; i < requests; ++i )
+                    {
+                        try
+                        {
+                            String finished = service.take().get();
+                            getLog().info( "Finished " + finished );
+                        }
+                        catch ( InterruptedException e )
+                        {
+                            throw new RuntimeException( e );
+                        }
+                        catch ( ExecutionException e )
+                        {
+                            throw new RuntimeException( e );
+                        }
+                    }
+                }
+
+                DEPLOYREQUESTS.clear();
             }
         }
         else if ( addedDeployRequest )
