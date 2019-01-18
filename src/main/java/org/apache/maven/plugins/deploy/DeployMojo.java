@@ -85,14 +85,15 @@ public class DeployMojo
     /**
      * Specifies an alternative repository to which the project artifacts should be deployed ( other than those
      * specified in &lt;distributionManagement&gt; ). <br/>
-     * Format: id::layout::url
+     * Format: <code>id::url</code>
      * <dl>
      * <dt>id</dt>
      * <dd>The id can be used to pick up the correct credentials from the settings.xml</dd>
      * <dt>url</dt>
      * <dd>The location of the repository</dd>
      * </dl>
-     * <b>Note: Since 3.0.0 the layout part has been removed.</b>
+     * <b>Note:</b> In version 2, the format was <code>id::layout::url</code>, but since 3.0.0 the layout part has been removed because Maven 3
+     * only supports <code>default</code> (ie. Maven 2) layout and not <code>legacy</code> (Maven 1) layout.</b>
      */
     @Parameter( property = "altDeploymentRepository" )
     private String altDeploymentRepository;
