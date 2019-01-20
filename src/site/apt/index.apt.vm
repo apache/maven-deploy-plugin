@@ -114,6 +114,8 @@ ${project.name}
 
   * {{{./examples/deploy-ssh-external.html}Deployment with external SSH}}
 
+  * {{{./examples/deploy-network-issues.html}Workarounds when there are network issues}}
+
   []
 
   <File Deployment:>
