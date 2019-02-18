@@ -484,7 +484,133 @@ public class DeployMojoTest
 
         assertEquals( 0, getSizeOfExpectedFiles( fileList, expectedFiles ) );               
     }
-    
+
+    public void testDeployWithNotExistingAttachedArtifactsExcluded()
+            throws Exception {
+        File testPom = new File(getBasedir(),
+                "target/test-classes/unit/basic-deploy-with-attached-artifacts/" +
+                        "plugin-config.xml");
+
+        mojo = (DeployMojo) lookupMojo("deploy", testPom);
+
+        MockitoAnnotations.initMocks(this);
+
+        assertNotNull(mojo);
+
+        ProjectBuildingRequest buildingRequest = mock(ProjectBuildingRequest.class);
+        when(session.getProjectBuildingRequest()).thenReturn(buildingRequest);
+        MavenRepositorySystemSession repositorySession = new MavenRepositorySystemSession();
+        repositorySession.setLocalRepositoryManager(new SimpleLocalRepositoryManager(LOCAL_REPO));
+        when(buildingRequest.getRepositorySession()).thenReturn(repositorySession);
+
+        MavenProject project = (MavenProject) getVariableValueFromObject(mojo, "project");
+
+        setVariableValueToObject(mojo, "reactorProjects", Collections.singletonList(project));
+
+        artifact = (DeployArtifactStub) project.getArtifact();
+
+        File file = new File(getBasedir(),
+                "target/test-classes/unit/basic-deploy-with-attached-artifacts/target/" +
+                        "deploy-test-file-1.0-SNAPSHOT.jar");
+
+        artifact.setFile(file);
+
+        ArtifactRepositoryStub repo = getRepoStub(mojo);
+
+        repo.setAppendToUrl("basic-deploy-with-attached-artifacts");
+
+        setVariableValueToObject(mojo, "skipAttachedArtifacts", Collections.singletonList(new AttachedArtifact("org.apache.maven.test", "attached-artifact-not-existing-0", "1.0-SNAPSHOT", "jar")));
+
+        try
+        {
+            mojo.execute();
+
+            fail( "Did not throw mojo execution exception" );
+        }
+        catch( MojoExecutionException e )
+        {
+            //expected
+        }
+
+
+    }
+
+    public void testDeployWithAttachedArtifactsExcluded()
+            throws Exception
+    {
+        File testPom = new File( getBasedir(),
+                "target/test-classes/unit/basic-deploy-with-attached-artifacts/" +
+                        "plugin-config.xml" );
+
+        mojo = ( DeployMojo ) lookupMojo( "deploy", testPom );
+
+        MockitoAnnotations.initMocks( this );
+
+        assertNotNull( mojo );
+
+        ProjectBuildingRequest buildingRequest = mock ( ProjectBuildingRequest.class );
+        when( session.getProjectBuildingRequest() ).thenReturn( buildingRequest );
+        MavenRepositorySystemSession repositorySession = new MavenRepositorySystemSession();
+        repositorySession.setLocalRepositoryManager( new SimpleLocalRepositoryManager( LOCAL_REPO ) );
+        when( buildingRequest.getRepositorySession() ).thenReturn( repositorySession );
+
+        MavenProject project = (MavenProject) getVariableValueFromObject( mojo, "project" );
+
+        setVariableValueToObject( mojo, "reactorProjects", Collections.singletonList( project ) );
+
+        artifact = (DeployArtifactStub) project.getArtifact();
+
+        File file = new File( getBasedir(),
+                "target/test-classes/unit/basic-deploy-with-attached-artifacts/target/" +
+                        "deploy-test-file-1.0-SNAPSHOT.jar" );
+
+        artifact.setFile( file );
+
+        ArtifactRepositoryStub repo = getRepoStub( mojo );
+
+        repo.setAppendToUrl( "basic-deploy-with-attached-artifacts" );
+
+        setVariableValueToObject( mojo, "skipAttachedArtifacts", Collections.singletonList(new AttachedArtifact( "org.apache.maven.test", "attached-artifact-test-0", "1.0-SNAPSHOT","jar" ) ) );
+
+        mojo.execute();
+
+        //check the artifacts in remote repository
+        List<String> expectedFiles = new ArrayList<String>();
+        List<String> fileList = new ArrayList<String>();
+
+        expectedFiles.add( "org" );
+        expectedFiles.add( "apache" );
+        expectedFiles.add( "maven" );
+        expectedFiles.add( "test" );
+        expectedFiles.add( "maven-deploy-test" );
+        expectedFiles.add( "1.0-SNAPSHOT" );
+        expectedFiles.add( "maven-metadata.xml" );
+        expectedFiles.add( "maven-metadata.xml.md5" );
+        expectedFiles.add( "maven-metadata.xml.sha1" );
+        expectedFiles.add( "maven-deploy-test-1.0-SNAPSHOT.jar" );
+        expectedFiles.add( "maven-deploy-test-1.0-SNAPSHOT.jar.md5" );
+        expectedFiles.add( "maven-deploy-test-1.0-SNAPSHOT.jar.sha1" );
+        expectedFiles.add( "maven-deploy-test-1.0-SNAPSHOT.pom" );
+        expectedFiles.add( "maven-deploy-test-1.0-SNAPSHOT.pom.md5" );
+        expectedFiles.add( "maven-deploy-test-1.0-SNAPSHOT.pom.sha1" );
+        // as we are in SNAPSHOT the file is here twice
+        expectedFiles.add( "maven-metadata.xml" );
+        expectedFiles.add( "maven-metadata.xml.md5" );
+        expectedFiles.add( "maven-metadata.xml.sha1" );
+
+        remoteRepo = new File( remoteRepo, "basic-deploy-with-attached-artifacts" );
+
+        File[] files = remoteRepo.listFiles();
+
+        for (File file1 : files) {
+            addFileToList(file1, fileList);
+        }
+
+        assertEquals( expectedFiles.size(), fileList.size() );
+
+        assertEquals( 0, getSizeOfExpectedFiles( fileList, expectedFiles ) );
+    }
+
     @Ignore( "SCP is not part of Maven3 distribution. Aether handles transport extensions." )
     public void _testBasicDeployWithScpAsProtocol()
         throws Exception
