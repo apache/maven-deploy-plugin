@@ -101,7 +101,10 @@ public class DeployMojo
 
     /**
      * The alternative repository to use when the project has a snapshot version.
-     * 
+     *
+     * <b>Note:</b> In version 2, the format was <code>id::layout::url</code>, but since 3.0.0 the layout part has been
+     * removed because Maven 3 only supports <code>default</code> (ie. Maven 2) layout and not <code>legacy</code>
+     * (Maven 1) layout.</b>
      * @since 2.8
      * @see DeployMojo#altDeploymentRepository
      */
@@ -110,7 +113,10 @@ public class DeployMojo
 
     /**
      * The alternative repository to use when the project has a final version.
-     * 
+     *
+     * <b>Note:</b> In version 2, the format was <code>id::layout::url</code>, but since 3.0.0 the layout part has been
+     * removed because Maven 3 only supports <code>default</code> (ie. Maven 2) layout and not <code>legacy</code>
+     * (Maven 1) layout.</b>
      * @since 2.8
      * @see DeployMojo#altDeploymentRepository
      */
