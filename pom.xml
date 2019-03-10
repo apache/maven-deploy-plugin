@@ -200,30 +200,5 @@ under the License.
         </pluginManagement>
       </build>
     </profile>
-    <profile>
-      <id>reporting</id>
-      <reporting>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-changes-plugin</artifactId>
-            <configuration>
-              <!-- For JIRA-report -->
-              <columnNames>Type,Key,Summary,Assignee,Status,Resolution,Fix Version</columnNames>
-              <onlyCurrentVersion>true</onlyCurrentVersion>
-              <resolutionIds>Closed</resolutionIds>
-              <sortColumnNames>Type,Key</sortColumnNames>
-            </configuration>
-            <reportSets>
-              <reportSet>
-                <reports>
-                  <report>jira-report</report>
-                </reports>
-              </reportSet>
-            </reportSets>
-          </plugin>
-        </plugins>
-      </reporting>
-    </profile>
   </profiles>
 </project>
