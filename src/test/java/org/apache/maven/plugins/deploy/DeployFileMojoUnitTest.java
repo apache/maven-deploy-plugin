@@ -30,7 +30,6 @@ import java.io.File;
 
 /**
  * @author <a href="jerome@coffeebreaks.org">Jerome Lacoste</a>
- * @version $Id$
  */
 public class DeployFileMojoUnitTest
     extends TestCase

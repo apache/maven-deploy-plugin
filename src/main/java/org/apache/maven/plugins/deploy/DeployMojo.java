@@ -46,7 +46,6 @@ import org.apache.maven.shared.transfer.project.deploy.ProjectDeployerRequest;
  * 
  * @author <a href="mailto:evenisse@apache.org">Emmanuel Venisse</a>
  * @author <a href="mailto:jdcasey@apache.org">John Casey (refactoring only)</a>
- * @version $Id$
  */
 @Mojo( name = "deploy", defaultPhase = LifecyclePhase.DEPLOY, threadSafe = true )
 public class DeployMojo

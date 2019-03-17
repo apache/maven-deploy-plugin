@@ -32,7 +32,6 @@ import org.sonatype.aether.util.ChecksumUtils;
  * A utility class to assist testing.
  *
  * @author Benjamin Bentmann
- * @version $Id$
  */
 public class Utils
 {
