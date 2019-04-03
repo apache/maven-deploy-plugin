@@ -98,6 +98,12 @@ public class DeployMojo
     @Parameter( property = "altDeploymentRepository" )
     private String altDeploymentRepository;
 
+    @Parameter( property = "altDeploymentRepositoryId" )
+    private String altDeploymentRepositoryId;
+
+    @Parameter( property = "altDeploymentRepositoryURL" )
+    private java.net.URL altDeploymentRepositoryURL;
+
     /**
      * The alternative repository to use when the project has a snapshot version.
      *
@@ -147,6 +153,24 @@ public class DeployMojo
         else
         {
             failIfOffline();
+
+            if ( altDeploymentRepository == null
+                    && altDeploymentRepositoryURL != null
+                    //&& altDeploymentRepositoryURL.toString().length() > 0
+                    && altDeploymentRepositoryId != null
+                    //&& altDeploymentRepositoryId.length() > 0
+                    )
+            {
+                getLog().info( "altDeploymentRepositoryId is: " + altDeploymentRepositoryId );
+                getLog().info( "altDeploymentRepositoryURL is: " + altDeploymentRepositoryURL );
+                altDeploymentRepository =
+                        String.format( "%s::%s", altDeploymentRepositoryId, altDeploymentRepositoryURL );
+                getLog().info( "combined altDeploymentRepository is: " + altDeploymentRepository );
+            }
+            else
+            {
+                getLog().info( "altDeploymentRepository is: " + altDeploymentRepository );
+            }
 
             // CHECKSTYLE_OFF: LineLength
             // @formatter:off
