@@ -60,7 +60,7 @@ Deploying With Network Issues
 
  When the network is really not consistent, a deeper strategy is to deploy in 2 steps:
 
- 1. <<<deploy>>> to a local <<<file:./target/staging-deploy>>> directory during the build,
+ 1. <<<deploy>>> to a local directory during the build, for example <<<file:./target/staging-deploy>>>,
 
  2. then copy from the local area to the target remote repository, retrying as much as necessary.
 
@@ -75,9 +75,13 @@ Deploying With Network Issues
 mvn deploy -DaltDeploymentRepository=local::file:./target/staging-deploy
 +----+  
 
- Notice: with maven-deploy-plugin 2.x, the parameter format was <<<local::default::file:./target/staging-deploy>>>
+ or for older 2.x version of maven-deploy-plugin
 
- Of course, if you want can configure the repository in your <<<pom.xml>>> if you want to go from a temporary strategy
++----+
+mvn deploy -DaltDeploymentRepository=local::default::file:./target/staging-deploy
++----+  
+
+ Of course, you can configure the repository in your <<<pom.xml>>> if you want to go from a temporary strategy
  to the general strategy.
  
 ** Copying from Local Directory to Target Remote Repository
@@ -90,13 +94,15 @@ mvn deploy -DaltDeploymentRepository=local::file:./target/staging-deploy
  like a staging repository provided by a repository manager.
  
  It can be invoked fully from command line (renaming <<<-Dwagon.>>> with <<<wagon.targetId>>> when
- {{{https://github.com/mojohaus/wagon-maven-plugin/pull/26}2.0.1 will be released}}):
+ {{{https://github.com/mojohaus/wagon-maven-plugin/pull/26}Wagon Maven Plugin 2.0.1 will be released}}):
 
 +----+
 mvn org.codehaus.mojo:wagon-maven-plugin:2.0.0:merge-maven-repos \
   -Dwagon.source=file:./target/staging-deploy \
   -Dwagon.target=https://... \
   -Dwagon.=id
+# or once wagon-maven-plugin 2.0.1 is released:
+  -Dwagon.targetId=id
 +----+
 
  or more simply with <<<mvn wagon:merge-maven-repos>>> with configuration in <<<pom.xml>>>:
@@ -112,8 +118,8 @@ mvn org.codehaus.mojo:wagon-maven-plugin:2.0.0:merge-maven-repos \
         <version>2.0.0</version>
         <configuration>
           <source>file:./target/staging-deploy</source>
-          <target>https://...</target>
-          <targetId>id</targetId>
+          <target>${project.distributionManagement.repository.url}</target>
+          <targetId>${project.distributionManagement.repository.id}</targetId>
         </configuration>
       </plugin>
     </plugins>

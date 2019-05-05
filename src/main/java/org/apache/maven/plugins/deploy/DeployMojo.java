@@ -82,8 +82,8 @@ public class DeployMojo
     private boolean deployAtEnd;
 
     /**
-     * Specifies an alternative repository to which the project artifacts should be deployed ( other than those
-     * specified in &lt;distributionManagement&gt; ). <br/>
+     * Specifies an alternative repository to which the project artifacts should be deployed (other than those specified
+     * in &lt;distributionManagement&gt;). <br/>
      * Format: <code>id::url</code>
      * <dl>
      * <dt>id</dt>
@@ -91,9 +91,9 @@ public class DeployMojo
      * <dt>url</dt>
      * <dd>The location of the repository</dd>
      * </dl>
-     * <b>Note:</b> In version 2, the format was <code>id::layout::url</code>, but since 3.0.0 the layout part has been
-     * removed because Maven 3 only supports <code>default</code> (ie. Maven 2) layout and not <code>legacy</code>
-     * (Maven 1) layout.</b>
+     * <b>Note:</b> In version 2.x, the format was <code>id::<i>layout</i>::url</code> where <code><i>layout</i></code>
+     * could be <code>default</code> (ie. Maven 2) or <code>legacy</code> (ie. Maven 1), but since 3.0.0 the layout part
+     * has been removed because Maven 3 only supports Maven 2 repository layout.
      */
     @Parameter( property = "altDeploymentRepository" )
     private String altDeploymentRepository;
@@ -101,9 +101,9 @@ public class DeployMojo
     /**
      * The alternative repository to use when the project has a snapshot version.
      *
-     * <b>Note:</b> In version 2, the format was <code>id::layout::url</code>, but since 3.0.0 the layout part has been
-     * removed because Maven 3 only supports <code>default</code> (ie. Maven 2) layout and not <code>legacy</code>
-     * (Maven 1) layout.</b>
+     * <b>Note:</b> In version 2.x, the format was <code>id::<i>layout</i>::url</code> where <code><i>layout</i></code>
+     * could be <code>default</code> (ie. Maven 2) or <code>legacy</code> (ie. Maven 1), but since 3.0.0 the layout part
+     * has been removed because Maven 3 only supports Maven 2 repository layout.
      * @since 2.8
      * @see DeployMojo#altDeploymentRepository
      */
@@ -113,9 +113,9 @@ public class DeployMojo
     /**
      * The alternative repository to use when the project has a final version.
      *
-     * <b>Note:</b> In version 2, the format was <code>id::layout::url</code>, but since 3.0.0 the layout part has been
-     * removed because Maven 3 only supports <code>default</code> (ie. Maven 2) layout and not <code>legacy</code>
-     * (Maven 1) layout.</b>
+     * <b>Note:</b> In version 2.x, the format was <code>id::<i>layout</i>::url</code> where <code><i>layout</i></code>
+     * could be <code>default</code> (ie. Maven 2) or <code>legacy</code> (ie. Maven 1), but since 3.0.0 the layout part
+     * has been removed because Maven 3 only supports Maven 2 repository layout.
      * @since 2.8
      * @see DeployMojo#altDeploymentRepository
      */
