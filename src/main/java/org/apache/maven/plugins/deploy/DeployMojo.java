@@ -263,7 +263,7 @@ public class DeployMojo
         if ( repo == null )
         {
             String msg = "Deployment failed: repository element was not specified in the POM inside"
-                + " distributionManagement element or in -DaltDeploymentRepository=id::layout::url parameter";
+                + " distributionManagement element or in -DaltDeploymentRepository=id::url parameter";
 
             throw new MojoExecutionException( msg );
         }
