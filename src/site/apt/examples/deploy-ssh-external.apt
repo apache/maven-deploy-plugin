@@ -122,4 +122,4 @@ mvn deploy
  <<NOTE:>> If you are using Putty it will expect the private key to be in the <<<PPK>>> format and not the standard
  format so make sure you use <<<puttygen>>> to convert your openssh format key to <<<PPK>>> format or generate another
  one. Windows users can find the Putty tools on the
- {{{http://www.chiark.greenend.org.uk/~sgtatham/putty/download.html}PuTTY Download Page}}.
+ {{{https://www.chiark.greenend.org.uk/~sgtatham/putty/latest.html}PuTTY Download Page}}.

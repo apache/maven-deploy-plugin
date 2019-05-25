@@ -84,7 +84,7 @@ Usage
 +---+
 
   Please see the article about
-  {{{http://maven.apache.org/guides/mini/guide-encryption.html}Password Encryption}}
+  {{{https://maven.apache.org/guides/mini/guide-encryption.html}Password Encryption}}
   for instructions on how to avoid clear text passwords in the <<<settings.xml>>>.
 
   Once you've configured your repository deployment information correctly

@@ -86,10 +86,10 @@ mvn deploy -DaltDeploymentRepository=local::default::file:./target/staging-deplo
  
 ** Copying from Local Directory to Target Remote Repository
 
- <<<wagon-maven-plugin>>>'s {{{http://www.mojohaus.org/wagon-maven-plugin/merge-maven-repos-mojo.html}<<<merge-maven-repos>>> goal}}
+ <<<wagon-maven-plugin>>>'s {{{https://www.mojohaus.org/wagon-maven-plugin/merge-maven-repos-mojo.html}<<<merge-maven-repos>>> goal}}
  provides a mechanism to copy from one remote repository to the other, while merging repository metadata.
  
- <<<wagon-maven-plugin>>>'s {{{http://www.mojohaus.org/wagon-maven-plugin/upload-mojo.html}<<<upload>>> goal}}
+ <<<wagon-maven-plugin>>>'s {{{https://www.mojohaus.org/wagon-maven-plugin/upload-mojo.html}<<<upload>>> goal}}
  will do the same without taking care of repository metadata: use it if you have an empty repository as target,
  like a staging repository provided by a repository manager.
  

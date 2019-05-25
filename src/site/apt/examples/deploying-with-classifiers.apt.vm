@@ -32,9 +32,9 @@ Deploy an artifact with classifier
 
   For example: from the following artifact names, the classifier is located between the version and extension name of the artifact.
 
-  * <<<artifact-name-1.0.jar>>> the main jar which contains classes compiled without {{{http://maven.apache.org/plugins/maven-compiler-plugin/compile-mojo.html#debug}debugging}} information (such as linenumbers)
+  * <<<artifact-name-1.0.jar>>> the main jar which contains classes compiled without {{{https://maven.apache.org/plugins/maven-compiler-plugin/compile-mojo.html#debug}debugging}} information (such as linenumbers)
 
-  * <<<artifact-name-1.0-debug.jar>>> the classified jar which contains classes compiled with {{{http://maven.apache.org/plugins/maven-compiler-plugin/compile-mojo.html#debug}debugging}} information, so will be larger
+  * <<<artifact-name-1.0-debug.jar>>> the classified jar which contains classes compiled with {{{https://maven.apache.org/plugins/maven-compiler-plugin/compile-mojo.html#debug}debugging}} information, so will be larger
 
   * <<<artifact-name-1.0-site.pdf>>> a pdf which contains an export of the site documentation. 
 
