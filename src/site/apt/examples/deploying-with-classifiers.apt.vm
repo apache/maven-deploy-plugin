@@ -28,13 +28,13 @@
 
 Deploy an artifact with classifier
 
-  Beside the main artifact there can be additional files which are attached to the Maven project. Such attached filed can be recognized and accessed by their classifier.
+  Beside the main artifact there can be additional files which are attached to the Maven project. Such attached files can be recognized and accessed by their classifier.
 
-  For example: from the following artifact names, the classifier is be located between the version and extension name of the artifact.
+  For example: from the following artifact names, the classifier is located between the version and extension name of the artifact.
 
   * <<<artifact-name-1.0.jar>>> the main jar which contains classes compiled without {{{http://maven.apache.org/plugins/maven-compiler-plugin/compile-mojo.html#debug}debugging}} information (such as linenumbers)
 
-  * <<<artifact-name-1.0-debug.jar>>> the classified jar which contains classes compiled with {{{http://maven.apache.org/plugins/maven-compiler-plugin/compile-mojo.html#debug}debugging}} information, so will be smaller
+  * <<<artifact-name-1.0-debug.jar>>> the classified jar which contains classes compiled with {{{http://maven.apache.org/plugins/maven-compiler-plugin/compile-mojo.html#debug}debugging}} information, so will be larger
 
   * <<<artifact-name-1.0-site.pdf>>> a pdf which contains an export of the site documentation. 
 
