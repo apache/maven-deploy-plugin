@@ -59,7 +59,8 @@ under the License.
     <menu name="Examples">
       <item name="Project Deployment" collapse="true" href="project-deployment.html">
         <item name="Deployment with FTP" href="examples/deploy-ftp.html" />
-        <item name="Deployment with external SSH " href="examples/deploy-ssh-external.html"/>
+        <item name="Deployment with external SSH" href="examples/deploy-ssh-external.html"/>
+        <item name="Deploying With Network Issues" href="examples/deploy-network-issues.html"/>
       </item>
 
       <item name="File Deployment" collapse="true" href="file-deployment.html">
