@@ -1,0 +1,10 @@
+# see https://s.apache.org/asfyaml
+github:
+  description: "Apache Maven Deploy Plugin"
+  homepage: https://maven.apache.org/plugins/maven-deploy-plugin
+  labels:
+    - java
+    - build-management
+    - apache-maven
+    - maven-plugins
+    - maven-deploy-plugin

@@ -163,7 +163,21 @@ under the License.
       <name>Hermann Josef Hill</name>
     </contributor>
   </contributors>
-  
+
+  <build>
+    <plugins>
+      <!-- https://issues.apache.org/jira/browse/MPOM-226 -->
+      <plugin>
+        <groupId>org.apache.rat</groupId>
+        <artifactId>apache-rat-plugin</artifactId>
+        <configuration>
+          <excludes combine.children="append">
+            <exclude>.asf.yaml</exclude><!-- Can be removed with upgrade to maven-plugins:34 -->
+          </excludes>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
   <profiles>
     <profile>
       <id>run-its</id>
