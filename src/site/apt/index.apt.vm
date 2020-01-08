@@ -88,7 +88,7 @@ ${project.name}
     * altSnapshotDeploymentRepository
 
     The old format was: <<<id::layout::url>>>
-    The new format is:  <<<id::url>>>
+    The new format is:  <<<id::url>>> (although, <<<id::default::url>>> is still supported for backwards compatibility.)
 
   []
 

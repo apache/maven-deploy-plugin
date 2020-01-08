@@ -52,7 +52,7 @@ public class DeployMojo
     extends AbstractDeployMojo
 {
 
-    private static final Pattern ALT_REPO_SYNTAX_PATTERN = Pattern.compile( "(.+)::(.+)" );
+    private static final Pattern ALT_REPO_SYNTAX_PATTERN = Pattern.compile( "(.+?)::(default::)?(.+)" );
 
     /**
      * When building with multiple threads, reaching the last project doesn't have to mean that all projects are ready
@@ -249,7 +249,7 @@ public class DeployMojo
             else
             {
                 String id = matcher.group( 1 ).trim();
-                String url = matcher.group( 2 ).trim();
+                String url = matcher.group( 3 ).trim();
 
                 repo = createDeploymentArtifactRepository( id, url );
             }

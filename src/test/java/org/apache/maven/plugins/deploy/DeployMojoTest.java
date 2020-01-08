@@ -571,6 +571,25 @@ public class DeployMojoTest
                       mojo.getDeploymentRepository( pdr ));
     }
 
+    public void testAltSnapshotDeploymentRepositoryDefaultLayout()
+        throws Exception
+    {
+        DeployMojo mojo = spy( new DeployMojo() );
+
+        ArtifactRepository repository = mock( ArtifactRepository.class );
+        when( mojo.createDeploymentArtifactRepository( "altSnapshotDeploymentRepository", "http://localhost"
+        ) ).thenReturn( repository );
+
+        project.setVersion( "1.0-SNAPSHOT" );
+
+        ProjectDeployerRequest pdr =
+                new ProjectDeployerRequest()
+                        .setProject( project )
+                        .setAltDeploymentRepository( "altSnapshotDeploymentRepository::default::http://localhost" );
+        assertEquals( repository,
+                mojo.getDeploymentRepository( pdr ));
+    }
+
     public void testAltReleaseDeploymentRepository()
         throws Exception
     {
@@ -587,9 +606,28 @@ public class DeployMojoTest
                             .setAltReleaseDeploymentRepository( "altReleaseDeploymentRepository::http://localhost" );
 
         assertEquals( repository,
+                mojo.getDeploymentRepository( pdr ));
+    }
+
+    public void testAltReleaseDeploymentRepositoryDefaultLayout()
+            throws Exception
+    {
+        DeployMojo mojo = spy( new DeployMojo() );
+
+        ArtifactRepository repository = mock( ArtifactRepository.class );
+        when( mojo.createDeploymentArtifactRepository( "altReleaseDeploymentRepository", "http://localhost" ) ).thenReturn( repository );
+
+        project.setVersion( "1.0" );
+
+        ProjectDeployerRequest pdr =
+                new ProjectDeployerRequest()
+                        .setProject( project )
+                        .setAltReleaseDeploymentRepository( "altReleaseDeploymentRepository::default::http://localhost" );
+
+        assertEquals( repository,
                       mojo.getDeploymentRepository( pdr ));
     }
-    
+
     private void addFileToList( File file, List<String> fileList )
     {
         if( !file.isDirectory() )
