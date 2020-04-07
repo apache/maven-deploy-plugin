@@ -25,7 +25,7 @@ under the License.
   <parent>
     <groupId>org.apache.maven.plugins</groupId>
     <artifactId>maven-plugins</artifactId>
-    <version>33</version>
+    <version>34</version>
     <relativePath>../../pom/maven/maven-plugins/pom.xml</relativePath>
   </parent>
 
@@ -65,6 +65,7 @@ under the License.
   <properties>
     <mavenVersion>3.0</mavenVersion>
     <javaVersion>7</javaVersion>
+    <project.build.outputTimestamp>2020-04-07T21:04:00Z</project.build.outputTimestamp>
   </properties>
 
   <dependencies>
