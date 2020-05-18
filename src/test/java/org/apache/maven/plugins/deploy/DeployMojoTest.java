@@ -271,7 +271,7 @@ public class DeployMojoTest
         assertEquals( "file", repo.getProtocol() );
         assertEquals( "file://" + getBasedir() + "/target/remote-repo/basic-deploy-test", repo.getUrl() );
 
-        setVariableValueToObject( mojo, "skip", Boolean.TRUE );
+        setVariableValueToObject( mojo, "skip", Boolean.TRUE.toString() );
         
         mojo.execute();
 

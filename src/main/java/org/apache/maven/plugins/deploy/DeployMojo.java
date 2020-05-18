@@ -124,11 +124,17 @@ public class DeployMojo
 
     /**
      * Set this to 'true' to bypass artifact deploy
-     * 
+     * Since since 3.0.0-M2 it's not anymore a real boolean as it can have more than 2 values:
+     * <ul>
+     *     <li><code>true</code>: will skip as usual</li>
+     *     <li><code>releases</code>: will skip if current version of the project is a release</li>
+     *     <li><code>snapshots</code>: will skip if current version of the project is a snapshot</li>
+     *     <li>any other values will be considered as <code>false</code></li>
+     * </ul>
      * @since 2.4
      */
     @Parameter( property = "maven.deploy.skip", defaultValue = "false" )
-    private boolean skip;
+    private String skip = Boolean.FALSE.toString();
 
     /**
      * Component used to deploy project.
@@ -140,7 +146,10 @@ public class DeployMojo
         throws MojoExecutionException, MojoFailureException
     {
         boolean addedDeployRequest = false;
-        if ( skip )
+        if ( Boolean.parseBoolean( skip )
+            || ( "releases".equals( skip ) && !ArtifactUtils.isSnapshot( project.getVersion() ) )
+            || ( "snapshots".equals( skip ) && ArtifactUtils.isSnapshot( project.getVersion() ) )
+        )
         {
             getLog().info( "Skipping artifact deployment" );
         }
