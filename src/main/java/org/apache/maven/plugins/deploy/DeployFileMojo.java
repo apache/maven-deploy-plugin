@@ -68,7 +68,7 @@ import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
 /**
  * Installs the artifact in the remote repository.
- * 
+ *
  * @author <a href="mailto:aramirez@apache.org">Allan Ramirez</a>
  */
 @Mojo( name = "deploy-file", requiresProject = false, threadSafe = true )
@@ -131,7 +131,7 @@ public class DeployFileMojo
 
     /**
      * The bundled API docs for the artifact.
-     * 
+     *
      * @since 2.6
      */
     @Parameter( property = "javadoc" )
@@ -139,7 +139,7 @@ public class DeployFileMojo
 
     /**
      * The bundled sources for the artifact.
-     * 
+     *
      * @since 2.6
      */
     @Parameter( property = "sources" )
@@ -179,7 +179,7 @@ public class DeployFileMojo
 
     /**
      * Whether to deploy snapshots with a unique version or not.
-     * 
+     *
      * @deprecated As of Maven 3, this isn't supported anymore and this parameter is only present to break the build if
      *             you use it!
      */
@@ -207,6 +207,13 @@ public class DeployFileMojo
      */
     @Parameter( property = "files" )
     private String files;
+
+    /**
+     * Whether to skip bypass artifact deploy.  "true" means skip deployment.
+     * Defaults to "false"
+     */
+    @Parameter( property = "maven.deploy.file.skip", defaultValue = "false" )
+    private boolean skip;
 
     @Component
     private RepositoryManager repoManager;
@@ -315,6 +322,11 @@ public class DeployFileMojo
             throw new MojoExecutionException( "You are using 'uniqueVersion' which has been removed"
                 + " from the maven-deploy-plugin. "
                 + "Please see the >>Major Version Upgrade to version 3.0.0<< on the plugin site." );
+        }
+        if ( skip )
+        {
+            getLog().info( "Skipping artifact deployment" );
+            return;
         }
 
         failIfOffline();
@@ -494,7 +506,7 @@ public class DeployFileMojo
      * Creates a Maven project in-memory from the user-supplied groupId, artifactId and version. When a classifier is
      * supplied, the packaging must be POM because the project with only have attachments. This project serves as basis
      * to attach the artifacts to deploy to.
-     * 
+     *
      * @return The created Maven project, never <code>null</code>.
      * @throws MojoExecutionException When the model of the project could not be built.
      * @throws MojoFailureException When building the project failed.
@@ -532,7 +544,7 @@ public class DeployFileMojo
     /**
      * Gets the path of the artifact constructed from the supplied groupId, artifactId, version, classifier and
      * packaging within the local repository. Note that the returned path need not exist (yet).
-     * 
+     *
      * @return The absolute path to the artifact when installed, never <code>null</code>.
      */
     private File getLocalRepoFile()
@@ -549,7 +561,7 @@ public class DeployFileMojo
 
     /**
      * Process the supplied pomFile to get groupId, artifactId, version, and packaging
-     * 
+     *
      * @param model The POM to extract missing artifact coordinates from, must not be <code>null</code>.
      */
     private void processModel( Model model )
@@ -584,7 +596,7 @@ public class DeployFileMojo
 
     /**
      * Extract the model from the specified POM file.
-     * 
+     *
      * @param pomFile The path of the POM file to parse, must not be <code>null</code>.
      * @return The model from the POM file, never <code>null</code>.
      * @throws MojoExecutionException If the file doesn't exist of cannot be read.
@@ -621,7 +633,7 @@ public class DeployFileMojo
 
     /**
      * Generates a minimal POM from the user-supplied artifact information.
-     * 
+     *
      * @return The path to the generated POM file, never <code>null</code>.
      * @throws MojoExecutionException If the generation failed.
      */
@@ -657,7 +669,7 @@ public class DeployFileMojo
 
     /**
      * Generates a minimal model from the user-supplied artifact information.
-     * 
+     *
      * @return The generated model, never <code>null</code>.
      */
     private Model generateModel()
