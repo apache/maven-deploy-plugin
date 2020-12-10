@@ -51,8 +51,9 @@ import org.apache.maven.shared.transfer.project.deploy.ProjectDeployerRequest;
 public class DeployMojo
     extends AbstractDeployMojo
 {
+    private static final Pattern ALT_LEGACY_REPO_SYNTAX_PATTERN = Pattern.compile( "(.+?)::(.+?)::(.+)" );
 
-    private static final Pattern ALT_REPO_SYNTAX_PATTERN = Pattern.compile( "(.+)::(.+)" );
+    private static final Pattern ALT_REPO_SYNTAX_PATTERN = Pattern.compile( "(.+?)::(.+)" );
 
     /**
      * When building with multiple threads, reaching the last project doesn't have to mean that all projects are ready
@@ -248,19 +249,48 @@ public class DeployMojo
         {
             getLog().info( "Using alternate deployment repository " + altDeploymentRepo );
 
-            Matcher matcher = ALT_REPO_SYNTAX_PATTERN.matcher( altDeploymentRepo );
+            Matcher matcher = ALT_LEGACY_REPO_SYNTAX_PATTERN.matcher( altDeploymentRepo );
 
-            if ( !matcher.matches() )
+            if ( matcher.matches() )
             {
-                throw new MojoFailureException( altDeploymentRepo, "Invalid syntax for repository.",
-                                                "Invalid syntax for alternative repository. Use \"id::url\"." );
+                String id = matcher.group( 1 ).trim();
+                String layout = matcher.group( 2 ).trim();
+                String url = matcher.group( 3 ).trim();
+
+                if ( "default".equals( layout ) )
+                {
+                    throw new MojoFailureException( altDeploymentRepo,
+                            "Invalid legacy syntax for repository.",
+                            "Invalid legacy syntax for alternative repository. Use \"" + id + "::" + url + "\" instead."
+                    );
+                }
+                else
+                {
+                    throw new MojoFailureException( altDeploymentRepo,
+                            "Invalid legacy syntax and layout for repository.",
+                            "Invalid legacy syntax and layout for alternative repository. Use \""
+                                    + id + "::" + url + "\" instead, and only default layout is supported."
+                    );
+                }
             }
             else
             {
-                String id = matcher.group( 1 ).trim();
-                String url = matcher.group( 2 ).trim();
+                matcher = ALT_REPO_SYNTAX_PATTERN.matcher( altDeploymentRepo );
 
-                repo = createDeploymentArtifactRepository( id, url );
+                if ( !matcher.matches() )
+                {
+                    throw new MojoFailureException( altDeploymentRepo,
+                            "Invalid syntax for repository.",
+                            "Invalid syntax for alternative repository. Use \"id::url\"."
+                    );
+                }
+                else
+                {
+                    String id = matcher.group( 1 ).trim();
+                    String url = matcher.group( 2 ).trim();
+
+                    repo = createDeploymentArtifactRepository( id, url );
+                }
             }
         }
 
