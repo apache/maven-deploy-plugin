@@ -19,13 +19,6 @@ package org.apache.maven.plugins.deploy;
  * under the License.
  */
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -41,6 +34,13 @@ import org.apache.maven.shared.transfer.project.NoFileAssignedException;
 import org.apache.maven.shared.transfer.project.deploy.ProjectDeployer;
 import org.apache.maven.shared.transfer.project.deploy.ProjectDeployerRequest;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 /**
  * Deploys an artifact to remote repository.
  * 
@@ -51,6 +51,9 @@ import org.apache.maven.shared.transfer.project.deploy.ProjectDeployerRequest;
 public class DeployMojo
     extends AbstractDeployMojo
 {
+    private static final Pattern ALT_INVALID_REPO_SYNTAX_PATTERN = Pattern.compile( "(.+)::(.+)::(.+)::(.+)" );
+
+    private static final Pattern ALT_LEGACY_REPO_SYNTAX_PATTERN = Pattern.compile( "(.+)::(.+)::(.+)" );
 
     private static final Pattern ALT_REPO_SYNTAX_PATTERN = Pattern.compile( "(.+)::(.+)" );
 
@@ -248,19 +251,48 @@ public class DeployMojo
         {
             getLog().info( "Using alternate deployment repository " + altDeploymentRepo );
 
-            Matcher matcher = ALT_REPO_SYNTAX_PATTERN.matcher( altDeploymentRepo );
+            Matcher matcher = ALT_INVALID_REPO_SYNTAX_PATTERN.matcher( altDeploymentRepo );
 
-            if ( !matcher.matches() )
+            if ( matcher.matches() )
             {
-                throw new MojoFailureException( altDeploymentRepo, "Invalid syntax for repository.",
-                                                "Invalid syntax for alternative repository. Use \"id::url\"." );
+                throw new MojoFailureException( altDeploymentRepo,
+                        "Invalid syntax for repository.",
+                        "Invalid syntax for alternative repository. Use \"id::url\"."
+                );
             }
             else
             {
-                String id = matcher.group( 1 ).trim();
-                String url = matcher.group( 2 ).trim();
+                matcher = ALT_LEGACY_REPO_SYNTAX_PATTERN.matcher( altDeploymentRepo );
 
-                repo = createDeploymentArtifactRepository( id, url );
+                if ( matcher.matches() )
+                {
+                    String id = matcher.group( 1 ).trim();
+                    String url = matcher.group( 3 ).trim();
+
+                    throw new MojoFailureException( altDeploymentRepo,
+                            "Invalid legacy syntax for repository.",
+                            "Invalid legacy syntax for alternative repository. Use \"" + id + "::" + url + "\" instead."
+                    );
+                }
+                else
+                {
+                    matcher = ALT_REPO_SYNTAX_PATTERN.matcher( altDeploymentRepo );
+
+                    if ( !matcher.matches() )
+                    {
+                        throw new MojoFailureException( altDeploymentRepo,
+                                "Invalid syntax for repository.",
+                                "Invalid syntax for alternative repository. Use \"id::url\"."
+                        );
+                    }
+                    else
+                    {
+                        String id = matcher.group( 1 ).trim();
+                        String url = matcher.group( 2 ).trim();
+
+                        repo = createDeploymentArtifactRepository( id, url );
+                    }
+                }
             }
         }
 

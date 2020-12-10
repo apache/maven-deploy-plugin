@@ -32,6 +32,7 @@ import java.util.Properties;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 import org.apache.maven.plugin.testing.stubs.MavenProjectStub;
 import org.apache.maven.plugins.deploy.stubs.ArtifactDeployerStub;
@@ -551,7 +552,85 @@ public class DeployMojoTest
         
         FileUtils.deleteDirectory( sshFile );
     }
-    
+
+    public void testLegacyAltDeploymentRepositoryWithDefaultLayout()
+        throws Exception
+    {
+        DeployMojo mojo = spy( new DeployMojo() );
+
+        ArtifactRepository repository = mock( ArtifactRepository.class );
+        when( mojo.createDeploymentArtifactRepository( "altDeploymentRepository", "http://localhost"
+        ) ).thenReturn( repository );
+
+        project.setVersion( "1.0-SNAPSHOT" );
+
+        ProjectDeployerRequest pdr =
+            new ProjectDeployerRequest()
+                .setProject( project )
+                .setAltDeploymentRepository( "altDeploymentRepository::default::http://localhost" );
+        try
+        {
+            mojo.getDeploymentRepository( pdr );
+            fail( "Should throw: Invalid legacy syntax for repository." );
+        }
+        catch( MojoFailureException e )
+        {
+            assertEquals( e.getMessage(), "Invalid legacy syntax for repository.");
+        }
+    }
+
+    public void testLegacyAltDeploymentRepositoryWithLegacyLayout()
+        throws Exception
+    {
+        DeployMojo mojo = spy( new DeployMojo() );
+
+        ArtifactRepository repository = mock( ArtifactRepository.class );
+        when( mojo.createDeploymentArtifactRepository( "altDeploymentRepository", "http://localhost"
+        ) ).thenReturn( repository );
+
+        project.setVersion( "1.0-SNAPSHOT" );
+
+        ProjectDeployerRequest pdr =
+            new ProjectDeployerRequest()
+                .setProject( project )
+                .setAltDeploymentRepository( "altDeploymentRepository::legacy::http://localhost" );
+        try
+        {
+            mojo.getDeploymentRepository( pdr );
+            fail( "Should throw: Invalid legacy syntax for repository." );
+        }
+        catch( MojoFailureException e )
+        {
+            assertEquals( e.getMessage(), "Invalid legacy syntax for repository.");
+        }
+    }
+
+    public void testInsaneAltDeploymentRepositoryWithLegacyLayout()
+            throws Exception
+    {
+        DeployMojo mojo = spy( new DeployMojo() );
+
+        ArtifactRepository repository = mock( ArtifactRepository.class );
+        when( mojo.createDeploymentArtifactRepository( "altDeploymentRepository", "http://localhost"
+        ) ).thenReturn( repository );
+
+        project.setVersion( "1.0-SNAPSHOT" );
+
+        ProjectDeployerRequest pdr =
+                new ProjectDeployerRequest()
+                        .setProject( project )
+                        .setAltDeploymentRepository( "altDeploymentRepository::hey::wow::foo::http://localhost" );
+        try
+        {
+            mojo.getDeploymentRepository( pdr );
+            fail( "Should throw: Invalid syntax for repository." );
+        }
+        catch( MojoFailureException e )
+        {
+            assertEquals( e.getMessage(), "Invalid syntax for repository.");
+        }
+    }
+
     public void testAltSnapshotDeploymentRepository()
         throws Exception
     {
