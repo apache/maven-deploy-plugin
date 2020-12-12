@@ -21,11 +21,13 @@ package org.apache.maven.plugins.deploy;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -137,6 +139,16 @@ public class DeployMojo
     private String skip = Boolean.FALSE.toString();
 
     /**
+     * Optional list of artifact classifiers to skip from deploy.
+     *
+     * Note: if this parameter is set, it will prevent any attached artifact having classifier present in this list
+     * to be deployed.
+     * @since 3.0.0
+     */
+    @Parameter
+    private List<String> skipClassifiers = Collections.emptyList();
+
+    /**
      * Component used to deploy project.
      */
     @Component
@@ -157,10 +169,28 @@ public class DeployMojo
         {
             failIfOffline();
 
+            MavenProject deployProject = project;
+
+            if ( !skipClassifiers.isEmpty() && !project.getAttachedArtifacts().isEmpty() )
+            {
+                deployProject = project.clone();
+
+                Iterator<Artifact> iterator = deployProject.getAttachedArtifacts().listIterator();
+                while ( iterator.hasNext() )
+                {
+                    Artifact artifact = iterator.next();
+                    if ( artifact.hasClassifier() && skipClassifiers.contains( artifact.getClassifier() ) )
+                    {
+                        getLog().info( "Skipping deploy of artifact: " + artifact );
+                        iterator.remove();
+                    }
+                }
+            }
+
             // CHECKSTYLE_OFF: LineLength
             // @formatter:off
             ProjectDeployerRequest pdr = new ProjectDeployerRequest()
-                .setProject( project )
+                .setProject( deployProject )
                 .setRetryFailedDeploymentCount( getRetryFailedDeploymentCount() )
                 .setAltReleaseDeploymentRepository( altReleaseDeploymentRepository )
                 .setAltSnapshotDeploymentRepository( altSnapshotDeploymentRepository )
