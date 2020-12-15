@@ -607,7 +607,7 @@ public class DeployMojoTest
         }
     }
 
-    public void testInsaneAltDeploymentRepositoryWithLegacyLayout()
+    public void testInsaneAltDeploymentRepository()
             throws Exception
     {
         DeployMojo mojo = spy( new DeployMojo() );
