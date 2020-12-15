@@ -576,6 +576,7 @@ public class DeployMojoTest
         catch( MojoFailureException e )
         {
             assertEquals( e.getMessage(), "Invalid legacy syntax for repository.");
+            assertEquals( e.getLongMessage(), "Invalid legacy syntax for alternative repository. Use \"altDeploymentRepository::http://localhost\" instead.");
         }
     }
 
@@ -602,6 +603,7 @@ public class DeployMojoTest
         catch( MojoFailureException e )
         {
             assertEquals( e.getMessage(), "Invalid legacy syntax for repository.");
+            assertEquals( e.getLongMessage(), "Invalid legacy syntax for alternative repository. Use \"altDeploymentRepository::http://localhost\" instead.");
         }
     }
 
@@ -623,11 +625,12 @@ public class DeployMojoTest
         try
         {
             mojo.getDeploymentRepository( pdr );
-            fail( "Should throw: Invalid syntax for repository." );
+            fail( "Should throw: Invalid legacy syntax for repository." );
         }
         catch( MojoFailureException e )
         {
-            assertEquals( e.getMessage(), "Invalid syntax for repository.");
+            assertEquals( e.getMessage(), "Invalid legacy syntax for repository.");
+            assertEquals( e.getLongMessage(), "Invalid legacy syntax for alternative repository. Use \"altDeploymentRepository::http://localhost\" instead.");
         }
     }
 
