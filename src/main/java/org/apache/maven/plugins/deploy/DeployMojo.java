@@ -254,12 +254,24 @@ public class DeployMojo
             if ( matcher.matches() )
             {
                 String id = matcher.group( 1 ).trim();
+                String layout = matcher.group( 2 ).trim();
                 String url = matcher.group( 3 ).trim();
 
-                throw new MojoFailureException( altDeploymentRepo,
-                        "Invalid legacy syntax for repository.",
-                        "Invalid legacy syntax for alternative repository. Use \"" + id + "::" + url + "\" instead."
-                );
+                if ( "default".equals( layout ) )
+                {
+                    throw new MojoFailureException( altDeploymentRepo,
+                            "Invalid legacy syntax for repository.",
+                            "Invalid legacy syntax for alternative repository. Use \"" + id + "::" + url + "\" instead."
+                    );
+                }
+                else
+                {
+                    throw new MojoFailureException( altDeploymentRepo,
+                            "Invalid legacy syntax and layout for repository.",
+                            "Invalid legacy syntax and layout for alternative repository. Use \""
+                                    + id + "::" + url + "\" instead, and only default layout is supported."
+                    );
+                }
             }
             else
             {

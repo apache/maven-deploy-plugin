@@ -598,12 +598,12 @@ public class DeployMojoTest
         try
         {
             mojo.getDeploymentRepository( pdr );
-            fail( "Should throw: Invalid legacy syntax for repository." );
+            fail( "Should throw: Invalid legacy syntax and layout for repository." );
         }
         catch( MojoFailureException e )
         {
-            assertEquals( e.getMessage(), "Invalid legacy syntax for repository.");
-            assertEquals( e.getLongMessage(), "Invalid legacy syntax for alternative repository. Use \"altDeploymentRepository::http://localhost\" instead.");
+            assertEquals( e.getMessage(), "Invalid legacy syntax and layout for repository.");
+            assertEquals( e.getLongMessage(), "Invalid legacy syntax and layout for alternative repository. Use \"altDeploymentRepository::http://localhost\" instead, and only default layout is supported.");
         }
     }
 
@@ -625,12 +625,65 @@ public class DeployMojoTest
         try
         {
             mojo.getDeploymentRepository( pdr );
+            fail( "Should throw: Invalid legacy syntax and layout for repository." );
+        }
+        catch( MojoFailureException e )
+        {
+            assertEquals( e.getMessage(), "Invalid legacy syntax and layout for repository.");
+            assertEquals( e.getLongMessage(), "Invalid legacy syntax and layout for alternative repository. Use \"altDeploymentRepository::wow::foo::http://localhost\" instead, and only default layout is supported.");
+        }
+    }
+
+    public void testDefaultScmSvnAltDeploymentRepository()
+            throws Exception
+    {
+        DeployMojo mojo = spy( new DeployMojo() );
+
+        ArtifactRepository repository = mock( ArtifactRepository.class );
+        when( mojo.createDeploymentArtifactRepository( "altDeploymentRepository", "http://localhost"
+        ) ).thenReturn( repository );
+
+        project.setVersion( "1.0-SNAPSHOT" );
+
+        ProjectDeployerRequest pdr =
+                new ProjectDeployerRequest()
+                        .setProject( project )
+                        .setAltDeploymentRepository( "altDeploymentRepository::default::scm:svn:http://localhost" );
+        try
+        {
+            mojo.getDeploymentRepository( pdr );
             fail( "Should throw: Invalid legacy syntax for repository." );
         }
         catch( MojoFailureException e )
         {
             assertEquals( e.getMessage(), "Invalid legacy syntax for repository.");
-            assertEquals( e.getLongMessage(), "Invalid legacy syntax for alternative repository. Use \"altDeploymentRepository::http://localhost\" instead.");
+            assertEquals( e.getLongMessage(), "Invalid legacy syntax for alternative repository. Use \"altDeploymentRepository::scm:svn:http://localhost\" instead.");
+        }
+    }
+    public void testLegacyScmSvnAltDeploymentRepository()
+            throws Exception
+    {
+        DeployMojo mojo = spy( new DeployMojo() );
+
+        ArtifactRepository repository = mock( ArtifactRepository.class );
+        when( mojo.createDeploymentArtifactRepository( "altDeploymentRepository", "http://localhost"
+        ) ).thenReturn( repository );
+
+        project.setVersion( "1.0-SNAPSHOT" );
+
+        ProjectDeployerRequest pdr =
+                new ProjectDeployerRequest()
+                        .setProject( project )
+                        .setAltDeploymentRepository( "altDeploymentRepository::legacy::scm:svn:http://localhost" );
+        try
+        {
+            mojo.getDeploymentRepository( pdr );
+            fail( "Should throw: Invalid legacy syntax and layout for repository." );
+        }
+        catch( MojoFailureException e )
+        {
+            assertEquals( e.getMessage(), "Invalid legacy syntax and layout for repository.");
+            assertEquals( e.getLongMessage(), "Invalid legacy syntax and layout for alternative repository. Use \"altDeploymentRepository::scm:svn:http://localhost\" instead, and only default layout is supported.");
         }
     }
 
