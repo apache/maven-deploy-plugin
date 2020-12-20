@@ -19,6 +19,13 @@ package org.apache.maven.plugins.deploy;
  * under the License.
  */
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -33,13 +40,6 @@ import org.apache.maven.shared.transfer.artifact.deploy.ArtifactDeployerExceptio
 import org.apache.maven.shared.transfer.project.NoFileAssignedException;
 import org.apache.maven.shared.transfer.project.deploy.ProjectDeployer;
 import org.apache.maven.shared.transfer.project.deploy.ProjectDeployerRequest;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Deploys an artifact to remote repository.
