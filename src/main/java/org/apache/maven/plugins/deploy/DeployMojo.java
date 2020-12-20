@@ -51,7 +51,7 @@ import org.apache.maven.shared.transfer.project.deploy.ProjectDeployerRequest;
 public class DeployMojo
     extends AbstractDeployMojo
 {
-    private static final Pattern ALT_LEGACY_REPO_SYNTAX_PATTERN = Pattern.compile( "(.+?)::(.+)::(.+)" );
+    private static final Pattern ALT_LEGACY_REPO_SYNTAX_PATTERN = Pattern.compile( "(.+?)::(.+?)::(.+)" );
 
     private static final Pattern ALT_REPO_SYNTAX_PATTERN = Pattern.compile( "(.+?)::(.+)" );
 
