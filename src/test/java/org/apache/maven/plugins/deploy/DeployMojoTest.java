@@ -568,16 +568,10 @@ public class DeployMojoTest
             new ProjectDeployerRequest()
                 .setProject( project )
                 .setAltDeploymentRepository( "altDeploymentRepository::default::http://localhost" );
-        try
-        {
-            mojo.getDeploymentRepository( pdr );
-            fail( "Should throw: Invalid legacy syntax for repository." );
-        }
-        catch( MojoFailureException e )
-        {
-            assertEquals( e.getMessage(), "Invalid legacy syntax for repository.");
-            assertEquals( e.getLongMessage(), "Invalid legacy syntax for alternative repository. Use \"altDeploymentRepository::http://localhost\" instead.");
-        }
+
+        assertEquals( repository,
+                mojo.getDeploymentRepository( pdr ) );
+
     }
 
     public void testLegacyAltDeploymentRepositoryWithLegacyLayout()
@@ -640,7 +634,7 @@ public class DeployMojoTest
         DeployMojo mojo = spy( new DeployMojo() );
 
         ArtifactRepository repository = mock( ArtifactRepository.class );
-        when( mojo.createDeploymentArtifactRepository( "altDeploymentRepository", "http://localhost"
+        when( mojo.createDeploymentArtifactRepository( "altDeploymentRepository", "scm:svn:http://localhost"
         ) ).thenReturn( repository );
 
         project.setVersion( "1.0-SNAPSHOT" );
@@ -649,16 +643,9 @@ public class DeployMojoTest
                 new ProjectDeployerRequest()
                         .setProject( project )
                         .setAltDeploymentRepository( "altDeploymentRepository::default::scm:svn:http://localhost" );
-        try
-        {
-            mojo.getDeploymentRepository( pdr );
-            fail( "Should throw: Invalid legacy syntax for repository." );
-        }
-        catch( MojoFailureException e )
-        {
-            assertEquals( e.getMessage(), "Invalid legacy syntax for repository.");
-            assertEquals( e.getLongMessage(), "Invalid legacy syntax for alternative repository. Use \"altDeploymentRepository::scm:svn:http://localhost\" instead.");
-        }
+
+        assertEquals( repository,
+                mojo.getDeploymentRepository( pdr ) );
     }
     public void testLegacyScmSvnAltDeploymentRepository()
             throws Exception
