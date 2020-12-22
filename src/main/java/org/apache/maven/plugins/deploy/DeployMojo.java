@@ -259,10 +259,9 @@ public class DeployMojo
 
                 if ( "default".equals( layout ) )
                 {
-                    throw new MojoFailureException( altDeploymentRepo,
-                            "Invalid legacy syntax for repository.",
-                            "Invalid legacy syntax for alternative repository. Use \"" + id + "::" + url + "\" instead."
-                    );
+                    getLog().warn( "Using legacy syntax for alternative repository. "
+                            + "Use \"" + id + "::" + url + "\" instead." );
+                    repo = createDeploymentArtifactRepository( id, url );
                 }
                 else
                 {
