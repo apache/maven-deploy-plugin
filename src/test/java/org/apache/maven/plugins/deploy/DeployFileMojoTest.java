@@ -43,7 +43,7 @@ public class DeployFileMojoTest
     extends AbstractMojoTestCase
 {
     private String LOCAL_REPO = getBasedir() + "/target/local-repo";
-    
+
     private List<String> expectedFiles;
 
     private List<String> fileList;
@@ -52,10 +52,10 @@ public class DeployFileMojoTest
 
     @Mock
     private MavenSession session;
-    
+
     @InjectMocks
     private DeployFileMojo mojo;
-    
+
     public void setUp()
         throws Exception
     {
@@ -87,15 +87,15 @@ public class DeployFileMojoTest
         mojo = (DeployFileMojo) lookupMojo( "deploy-file", testPom );
 
         MockitoAnnotations.initMocks( this );
-        
+
         assertNotNull( mojo );
-        
+
         ProjectBuildingRequest buildingRequest = mock ( ProjectBuildingRequest.class );
         when( session.getProjectBuildingRequest() ).thenReturn( buildingRequest );
         MavenRepositorySystemSession repositorySession = new MavenRepositorySystemSession();
         repositorySession.setLocalRepositoryManager( new SimpleLocalRepositoryManager( LOCAL_REPO ) );
         when( buildingRequest.getRepositorySession() ).thenReturn( repositorySession );
-        
+
         String groupId = (String) getVariableValueFromObject( mojo, "groupId" );
 
         String artifactId = (String) getVariableValueFromObject( mojo, "artifactId" );
@@ -110,6 +110,8 @@ public class DeployFileMojoTest
 
         String url = (String) getVariableValueFromObject( mojo, "url" );
 
+        boolean skip = (boolean) getVariableValueFromObject( mojo, "skip" );
+
         assertEquals( "org.apache.maven.test", groupId );
 
         assertEquals( "maven-deploy-file-test", artifactId );
@@ -118,12 +120,14 @@ public class DeployFileMojoTest
 
         assertEquals( "jar", packaging );
 
+        assertTrue( !skip );
+
         assertTrue( file.exists() );
 
         assertEquals( "deploy-test", repositoryId );
 
         assertEquals( "file://" + getBasedir() + "/target/remote-repo/deploy-file-test", url );
-        
+
         mojo.execute();
 
         //check the generated pom
@@ -188,9 +192,9 @@ public class DeployFileMojoTest
         mojo = (DeployFileMojo) lookupMojo( "deploy-file", testPom );
 
         MockitoAnnotations.initMocks( this );
-        
+
         assertNotNull( mojo );
-        
+
         ProjectBuildingRequest buildingRequest = mock ( ProjectBuildingRequest.class );
         when( session.getProjectBuildingRequest() ).thenReturn( buildingRequest );
         MavenRepositorySystemSession repositorySession = new MavenRepositorySystemSession();
@@ -236,9 +240,9 @@ public class DeployFileMojoTest
         mojo = (DeployFileMojo) lookupMojo( "deploy-file", testPom );
 
         MockitoAnnotations.initMocks( this );
-        
+
         assertNotNull( mojo );
-        
+
         ProjectBuildingRequest buildingRequest = mock ( ProjectBuildingRequest.class );
         when( session.getProjectBuildingRequest() ).thenReturn( buildingRequest );
         MavenRepositorySystemSession repositorySession = new MavenRepositorySystemSession();
@@ -264,6 +268,48 @@ public class DeployFileMojoTest
                                           "-" + version + ".zip");
 
         assertTrue( file.exists() );
+    }
+
+    public void testDeployIsSkip()
+        throws Exception
+    {
+        File testPom = new File( getBasedir(), "target/test-classes/unit/deploy-file-skip/plugin-config.xml" );
+
+        mojo = (DeployFileMojo) lookupMojo( "deploy-file", testPom );
+
+        MockitoAnnotations.initMocks( this );
+
+        assertNotNull( mojo );
+
+        ProjectBuildingRequest buildingRequest = mock ( ProjectBuildingRequest.class );
+        when( session.getProjectBuildingRequest() ).thenReturn( buildingRequest );
+        MavenRepositorySystemSession repositorySession = new MavenRepositorySystemSession();
+        repositorySession.setLocalRepositoryManager( new SimpleLocalRepositoryManager( LOCAL_REPO ) );
+        when( buildingRequest.getRepositorySession() ).thenReturn( repositorySession );
+
+        String groupId = (String) getVariableValueFromObject( mojo, "groupId" );
+
+        String artifactId = (String) getVariableValueFromObject( mojo, "artifactId" );
+
+        String version = (String) getVariableValueFromObject( mojo, "version" );
+
+        boolean skip = (boolean) getVariableValueFromObject( mojo, "skip" );
+
+        assertEquals( "org.apache.maven.test", groupId );
+
+        assertTrue( skip );
+
+        assertEquals( "maven-deploy-file-test", artifactId );
+
+        assertEquals( "1.0", version );
+
+        mojo.execute();
+
+        File file = new File( remoteRepo, "deploy-file-skip/" + groupId.replace( '.', '/' ) +
+                                          "/" + artifactId + "/" + version + "/" + artifactId +
+                                          "-" + version + ".zip");
+
+        assertTrue( !file.exists() );
     }
 
     private void addFileToList( File file, List<String> fileList )
@@ -301,4 +347,3 @@ public class DeployFileMojoTest
     }
 
 }
-
