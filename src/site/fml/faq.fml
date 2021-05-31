@@ -77,6 +77,28 @@ under the License.
 </plugin>]]></source>
        </answer>
      </faq>
+   <faq id="deployAtEnd">
+     <question>Why isn't <i>deployAtEnd</i> property working?</question>
+     <answer>
+       <p>
+       The <i>deployAtEnd</i> property must be set consistently in all modules and the <i>skip</i>
+       property must be set consistently in all modules.  If either property is not consistent, any
+       module with <i>deployAtEnd</i> set to true will not be deployed.
+       </p>
+       <p>
+       An alternative to using <i>deployAtEnd</i> is to have the build script invoke Maven twice:
+<pre>
+ mvn install
+ mvn deploy:deploy
+</pre>
+       If you need to both installAtEnd and deployAtEnd, use the something like the following:
+<pre>
+ mvn verify
+ mvn install:install deploy:deploy
+</pre>
+       </p>
+     </answer>
+   </faq>
      <faq id="deploy_deploy">
        <question>What does the message "The packaging for this project did not assign a file to the build artifact" mean when I run <code>deploy:deploy</code>?</question>
        <answer>
