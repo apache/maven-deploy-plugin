@@ -98,7 +98,7 @@ mvn deploy
 
 * The <<<deploy:deploy-file>>> Mojo
 
-  The <<<deploy:deploy-file>>> mojo is used primarily for deploying artifacts to
+  The <<<deploy:deploy-file>>> mojo is used primarily for deploying artifacts,
   which were not built by Maven. The project's development team may or may not
   provide a POM for the artifact, and in some cases you may want to deploy the
   artifact to an internal remote repository. The deploy-file mojo provides
