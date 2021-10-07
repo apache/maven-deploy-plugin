@@ -66,7 +66,8 @@ under the License.
     <mavenVersion>3.2.5</mavenVersion>
     <slf4jVersion>1.7.32</slf4jVersion>
     <aetherVersion>1.1.0</aetherVersion>
-    <javaVersion>8</javaVersion>
+    <surefire.version>2.22.2</surefire.version>
+    <javaVersion>7</javaVersion>
     <project.build.outputTimestamp>2020-04-07T21:04:00Z</project.build.outputTimestamp>
   </properties>
 
@@ -112,7 +113,7 @@ under the License.
     <dependency>
       <groupId>org.codehaus.plexus</groupId>
       <artifactId>plexus-utils</artifactId>
-      <version>3.4.1</version>
+      <version>3.3.0</version> <!-- 3.4.x is Java8 -->
     </dependency>
     <dependency>
       <groupId>org.apache.maven.plugin-testing</groupId>

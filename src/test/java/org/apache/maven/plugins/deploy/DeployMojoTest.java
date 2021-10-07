@@ -84,7 +84,7 @@ public class DeployMojoTest
 
         MockitoAnnotations.initMocks( this );
         when( session.getPluginContext( any(PluginDescriptor.class ), any( MavenProject.class ) ) )
-            .thenReturn( new ConcurrentHashMap<>( ));
+            .thenReturn( new ConcurrentHashMap<String, Object>() );
 
         remoteRepo = new File( REMOTE_REPO );
         
