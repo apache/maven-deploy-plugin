@@ -19,10 +19,8 @@ package org.apache.maven.plugins.deploy;
  * under the License.
  */
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -30,6 +28,7 @@ import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugin.descriptor.PluginDescriptor;
 import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
@@ -51,26 +50,30 @@ import org.apache.maven.shared.transfer.project.deploy.ProjectDeployerRequest;
 public class DeployMojo
     extends AbstractDeployMojo
 {
+    private static final String DEPLOY_PROCESSED_MARKER =
+        DeployMojo.class.getName() + ".processed";
+
+    private static final String DEPLOY_ALT_RELEASE_DEPLOYMENT_REPOSITORY =
+        DeployMojo.class.getName() + ".altReleaseDeploymentRepository";
+
+    private static final String DEPLOY_ALT_SNAPSHOT_DEPLOYMENT_REPOSITORY =
+        DeployMojo.class.getName() + ".altSnapshotDeploymentRepository";
+
+    private static final String DEPLOY_ALT_DEPLOYMENT_REPOSITORY =
+        DeployMojo.class.getName() + ".altDeploymentRepository";
+
     private static final Pattern ALT_LEGACY_REPO_SYNTAX_PATTERN = Pattern.compile( "(.+?)::(.+?)::(.+)" );
 
     private static final Pattern ALT_REPO_SYNTAX_PATTERN = Pattern.compile( "(.+?)::(.+)" );
 
-    /**
-     * When building with multiple threads, reaching the last project doesn't have to mean that all projects are ready
-     * to be deployed
-     */
-    private static final AtomicInteger READYPROJECTSCOUNTER = new AtomicInteger();
-
-    private static final List<ProjectDeployerRequest> DEPLOYREQUESTS =
-        Collections.synchronizedList( new ArrayList<ProjectDeployerRequest>() );
-
-    /**
-     */
     @Parameter( defaultValue = "${project}", readonly = true, required = true )
     private MavenProject project;
 
     @Parameter( defaultValue = "${reactorProjects}", required = true, readonly = true )
     private List<MavenProject> reactorProjects;
+
+    @Parameter( defaultValue = "${plugin}", required = true, readonly = true )
+    private PluginDescriptor pluginDescriptor;
 
     /**
      * Whether every project should be deployed during its own deploy-phase or at the end of the multimodule build. If
@@ -146,12 +149,14 @@ public class DeployMojo
     public void execute()
         throws MojoExecutionException, MojoFailureException
     {
+        final String projectKey = project.getGroupId() + ":" + project.getArtifactId() + ":" + project.getVersion();
         boolean addedDeployRequest = false;
         if ( Boolean.parseBoolean( skip )
             || ( "releases".equals( skip ) && !ArtifactUtils.isSnapshot( project.getVersion() ) )
             || ( "snapshots".equals( skip ) && ArtifactUtils.isSnapshot( project.getVersion() ) )
         )
         {
+            getPluginContext().put( DEPLOY_PROCESSED_MARKER, Boolean.FALSE );
             getLog().info( "Skipping artifact deployment" );
         }
         else
@@ -177,29 +182,81 @@ public class DeployMojo
             }
             else
             {
-                DEPLOYREQUESTS.add( pdr );
+                if ( altReleaseDeploymentRepository != null )
+                {
+                    getPluginContext().put(
+                        DEPLOY_ALT_RELEASE_DEPLOYMENT_REPOSITORY,
+                        altReleaseDeploymentRepository
+                    );
+                }
+                if ( altSnapshotDeploymentRepository != null )
+                {
+                    getPluginContext().put(
+                        DEPLOY_ALT_SNAPSHOT_DEPLOYMENT_REPOSITORY,
+                        altSnapshotDeploymentRepository
+                    );
+                }
+                if ( altDeploymentRepository != null )
+                {
+                    getPluginContext().put(
+                        DEPLOY_ALT_DEPLOYMENT_REPOSITORY,
+                        altDeploymentRepository
+                    );
+                }
+                getPluginContext().put( DEPLOY_PROCESSED_MARKER, Boolean.TRUE );
                 addedDeployRequest = true;
             }
         }
 
-        boolean projectsReady = READYPROJECTSCOUNTER.incrementAndGet() == reactorProjects.size();
-        if ( projectsReady )
+        if ( allProjectsMarked() )
         {
-            synchronized ( DEPLOYREQUESTS )
+            for ( MavenProject reactorProject : reactorProjects )
             {
-                while ( !DEPLOYREQUESTS.isEmpty() )
+                Map<String, Object> pluginContext = getSession().getPluginContext( pluginDescriptor, reactorProject );
+                Boolean install = (Boolean) pluginContext.get( DEPLOY_PROCESSED_MARKER );
+                if ( !install )
                 {
-                    ArtifactRepository repo = getDeploymentRepository( DEPLOYREQUESTS.get( 0 ) );
+                    getLog().info( "Project " + projectKey + " skipped install" );
+                }
+                else
+                {
+                    String altReleaseDeploymentRepository =
+                        (String) pluginContext.get( DEPLOY_ALT_RELEASE_DEPLOYMENT_REPOSITORY );
+                    String altSnapshotDeploymentRepository =
+                        (String) pluginContext.get( DEPLOY_ALT_SNAPSHOT_DEPLOYMENT_REPOSITORY );
+                    String altDeploymentRepository =
+                        (String) pluginContext.get( DEPLOY_ALT_DEPLOYMENT_REPOSITORY );
 
-                    deployProject( getSession().getProjectBuildingRequest(), DEPLOYREQUESTS.remove( 0 ), repo );
+                    ProjectDeployerRequest pdr = new ProjectDeployerRequest()
+                        .setProject( reactorProject )
+                        .setRetryFailedDeploymentCount( getRetryFailedDeploymentCount() )
+                        .setAltReleaseDeploymentRepository( altReleaseDeploymentRepository )
+                        .setAltSnapshotDeploymentRepository( altSnapshotDeploymentRepository )
+                        .setAltDeploymentRepository( altDeploymentRepository );
+
+                    ArtifactRepository repo = getDeploymentRepository( pdr );
+
+                    deployProject( getSession().getProjectBuildingRequest(), pdr, repo );
                 }
             }
         }
         else if ( addedDeployRequest )
         {
-            getLog().info( "Deploying " + project.getGroupId() + ":" + project.getArtifactId() + ":"
-                + project.getVersion() + " at end" );
+            getLog().info( "Deploying " + projectKey + " at end" );
         }
+    }
+
+    private boolean allProjectsMarked()
+    {
+        for ( MavenProject reactorProject : reactorProjects )
+        {
+            Map<String, Object> pluginContext = getSession().getPluginContext( pluginDescriptor, reactorProject );
+            if ( !pluginContext.containsKey( DEPLOY_PROCESSED_MARKER ) )
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void deployProject( ProjectBuildingRequest pbr, ProjectDeployerRequest pir, ArtifactRepository repo )
