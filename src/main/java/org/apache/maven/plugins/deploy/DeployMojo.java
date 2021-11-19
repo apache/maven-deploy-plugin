@@ -149,7 +149,6 @@ public class DeployMojo
     public void execute()
         throws MojoExecutionException, MojoFailureException
     {
-        final String projectKey = project.getGroupId() + ":" + project.getArtifactId() + ":" + project.getVersion();
         boolean addedDeployRequest = false;
         if ( Boolean.parseBoolean( skip )
             || ( "releases".equals( skip ) && !ArtifactUtils.isSnapshot( project.getVersion() ) )
@@ -213,10 +212,12 @@ public class DeployMojo
             for ( MavenProject reactorProject : reactorProjects )
             {
                 Map<String, Object> pluginContext = getSession().getPluginContext( pluginDescriptor, reactorProject );
-                Boolean install = (Boolean) pluginContext.get( DEPLOY_PROCESSED_MARKER );
-                if ( !install )
+                Boolean deploy = (Boolean) pluginContext.get( DEPLOY_PROCESSED_MARKER );
+                if ( !deploy )
                 {
-                    getLog().info( "Project " + projectKey + " skipped install" );
+                    getLog().info(
+                        "Project " + getProjectReferenceId( reactorProject ) + " skipped deploy"
+                    );
                 }
                 else
                 {
@@ -242,8 +243,13 @@ public class DeployMojo
         }
         else if ( addedDeployRequest )
         {
-            getLog().info( "Deploying " + projectKey + " at end" );
+            getLog().info( "Deploying " + getProjectReferenceId( project ) + " at end" );
         }
+    }
+
+    private String getProjectReferenceId( MavenProject mavenProject )
+    {
+        return mavenProject.getGroupId() + ":" + mavenProject.getArtifactId() + ":" + mavenProject.getVersion();
     }
 
     private boolean allProjectsMarked()
