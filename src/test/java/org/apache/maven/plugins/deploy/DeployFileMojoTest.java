@@ -110,6 +110,8 @@ public class DeployFileMojoTest
 
         String url = (String) getVariableValueFromObject( mojo, "url" );
 
+        String skip = (String) getVariableValueFromObject( mojo, "skip" );
+
         assertEquals( "org.apache.maven.test", groupId );
 
         assertEquals( "maven-deploy-file-test", artifactId );
@@ -123,6 +125,8 @@ public class DeployFileMojoTest
         assertEquals( "deploy-test", repositoryId );
 
         assertEquals( "file://" + getBasedir() + "/target/remote-repo/deploy-file-test", url );
+
+        assertEquals( "snapshots", skip );
         
         mojo.execute();
 

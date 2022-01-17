@@ -35,6 +35,7 @@ import java.util.jar.JarFile;
 import java.util.regex.Pattern;
 
 import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Parent;
@@ -208,6 +209,20 @@ public class DeployFileMojo
     @Parameter( property = "files" )
     private String files;
 
+    /**
+     * Set this to 'true' to bypass artifact deploy
+     * It's not a real boolean as it can have more than 2 values:
+     * <ul>
+     *     <li><code>true</code>: will skip as usual</li>
+     *     <li><code>releases</code>: will skip if current version of the project is a release</li>
+     *     <li><code>snapshots</code>: will skip if current version of the project is a snapshot</li>
+     *     <li>any other values will be considered as <code>false</code></li>
+     * </ul>
+     * @since 2.4
+     */
+    @Parameter( property = "maven.deploy.file.skip", defaultValue = "false" )
+    private String skip = Boolean.FALSE.toString();
+
     @Component
     private RepositoryManager repoManager;
 
@@ -310,6 +325,15 @@ public class DeployFileMojo
     public void execute()
         throws MojoExecutionException, MojoFailureException
     {
+        if ( Boolean.parseBoolean( skip )
+            || ( "releases".equals( skip ) && !ArtifactUtils.isSnapshot( version ) )
+            || ( "snapshots".equals( skip ) && ArtifactUtils.isSnapshot( version ) )
+        )
+        {
+            getLog().info( "Skipping artifact deployment" );
+            return;
+        }
+
         if ( uniqueVersion != null )
         {
             throw new MojoExecutionException( "You are using 'uniqueVersion' which has been removed"
