@@ -40,14 +40,16 @@ import org.apache.maven.plugins.deploy.stubs.ArtifactRepositoryStub;
 import org.apache.maven.plugins.deploy.stubs.DeployArtifactStub;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.ProjectBuildingRequest;
-import org.apache.maven.repository.internal.MavenRepositorySystemSession;
+import org.apache.maven.repository.internal.MavenRepositorySystemUtils;
 import org.apache.maven.shared.transfer.project.deploy.ProjectDeployerRequest;
 import org.codehaus.plexus.util.FileUtils;
+import org.eclipse.aether.DefaultRepositorySystemSession;
+import org.eclipse.aether.internal.impl.SimpleLocalRepositoryManagerFactory;
+import org.eclipse.aether.repository.LocalRepository;
 import org.junit.Ignore;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.sonatype.aether.impl.internal.SimpleLocalRepositoryManager;
 
 /**
  * @author <a href="mailto:aramirez@apache.org">Allan Ramirez</a>
@@ -132,8 +134,9 @@ public class DeployMojoTest
         
         ProjectBuildingRequest buildingRequest = mock ( ProjectBuildingRequest.class );
         when( session.getProjectBuildingRequest() ).thenReturn( buildingRequest );
-        MavenRepositorySystemSession repositorySession = new MavenRepositorySystemSession();
-        repositorySession.setLocalRepositoryManager( new SimpleLocalRepositoryManager( LOCAL_REPO ) );
+        DefaultRepositorySystemSession repositorySession = MavenRepositorySystemUtils.newSession();
+        repositorySession.setLocalRepositoryManager(  new SimpleLocalRepositoryManagerFactory()
+                .newInstance( repositorySession, new LocalRepository( LOCAL_REPO ) ) );
         when( buildingRequest.getRepositorySession() ).thenReturn( repositorySession );
         
         File file = new File( getBasedir(),
@@ -303,8 +306,9 @@ public class DeployMojoTest
         
         ProjectBuildingRequest buildingRequest = mock ( ProjectBuildingRequest.class );
         when( session.getProjectBuildingRequest() ).thenReturn( buildingRequest );
-        MavenRepositorySystemSession repositorySession = new MavenRepositorySystemSession();
-        repositorySession.setLocalRepositoryManager( new SimpleLocalRepositoryManager( LOCAL_REPO ) );
+        DefaultRepositorySystemSession repositorySession = MavenRepositorySystemUtils.newSession();
+        repositorySession.setLocalRepositoryManager(  new SimpleLocalRepositoryManagerFactory()
+                .newInstance( repositorySession, new LocalRepository( LOCAL_REPO ) ) );
         when( buildingRequest.getRepositorySession() ).thenReturn( repositorySession );
         
         File pomFile = new File( getBasedir(),
@@ -415,8 +419,9 @@ public class DeployMojoTest
         
         ProjectBuildingRequest buildingRequest = mock ( ProjectBuildingRequest.class );
         when( session.getProjectBuildingRequest() ).thenReturn( buildingRequest );
-        MavenRepositorySystemSession repositorySession = new MavenRepositorySystemSession();
-        repositorySession.setLocalRepositoryManager( new SimpleLocalRepositoryManager( LOCAL_REPO ) );
+        DefaultRepositorySystemSession repositorySession = MavenRepositorySystemUtils.newSession();
+        repositorySession.setLocalRepositoryManager(  new SimpleLocalRepositoryManagerFactory()
+                .newInstance( repositorySession, new LocalRepository( LOCAL_REPO ) ) );
         when( buildingRequest.getRepositorySession() ).thenReturn( repositorySession );
 
         MavenProject project = (MavenProject) getVariableValueFromObject( mojo, "project" );
