@@ -19,6 +19,7 @@ package org.apache.maven.plugins.deploy;
  * under the License.
  */
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -27,38 +28,36 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Reader;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.regex.Pattern;
 
-import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.repository.ArtifactRepository;
+import org.apache.maven.api.Artifact;
+import org.apache.maven.api.Project;
+import org.apache.maven.api.RemoteRepository;
+import org.apache.maven.api.plugin.MojoException;
+import org.apache.maven.api.plugin.annotations.Component;
+import org.apache.maven.api.plugin.annotations.Mojo;
+import org.apache.maven.api.plugin.annotations.Parameter;
+import org.apache.maven.api.services.ArtifactDeployer;
+import org.apache.maven.api.services.ArtifactDeployerException;
+import org.apache.maven.api.services.ArtifactManager;
+import org.apache.maven.api.services.ProjectBuilder;
+import org.apache.maven.api.services.ProjectBuilderException;
+import org.apache.maven.api.services.ProjectBuilderRequest;
+import org.apache.maven.api.services.ProjectBuilderResult;
+import org.apache.maven.api.services.ProjectBuilderSource;
+import org.apache.maven.api.services.ProjectManager;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Parent;
-import org.apache.maven.model.building.ModelBuildingException;
-import org.apache.maven.model.building.ModelSource;
-import org.apache.maven.model.building.StringModelSource;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
-import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.plugins.annotations.Component;
-import org.apache.maven.plugins.annotations.Mojo;
-import org.apache.maven.plugins.annotations.Parameter;
-import org.apache.maven.project.DefaultProjectBuildingRequest;
-import org.apache.maven.project.MavenProject;
-import org.apache.maven.project.MavenProjectHelper;
-import org.apache.maven.project.ProjectBuilder;
-import org.apache.maven.project.ProjectBuildingException;
-import org.apache.maven.project.artifact.ProjectArtifactMetadata;
-import org.apache.maven.shared.transfer.artifact.DefaultArtifactCoordinate;
-import org.apache.maven.shared.transfer.artifact.deploy.ArtifactDeployer;
-import org.apache.maven.shared.transfer.artifact.deploy.ArtifactDeployerException;
-import org.apache.maven.shared.transfer.repository.RepositoryManager;
-import org.apache.maven.shared.utils.Os;
 import org.codehaus.plexus.util.FileUtils;
 import org.codehaus.plexus.util.IOUtil;
 import org.codehaus.plexus.util.ReaderFactory;
@@ -71,24 +70,28 @@ import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
  * 
  * @author <a href="mailto:aramirez@apache.org">Allan Ramirez</a>
  */
-@Mojo( name = "deploy-file", requiresProject = false, threadSafe = true )
+@Mojo( name = "deploy-file", requiresProject = false )
 public class DeployFileMojo
     extends AbstractDeployMojo
 {
     @Component
     private ArtifactDeployer artifactDeployer;
 
+    @Component
+    private ArtifactManager artifactManager;
+
     /**
      * Used for attaching the artifacts to deploy to the project.
      */
     @Component
-    private MavenProjectHelper projectHelper;
+    private ProjectManager projectManager;
 
     /**
      * Used for creating the project to which the artifacts to deploy will be attached.
      */
     @Component
     private ProjectBuilder projectBuilder;
+
 
     /**
      * GroupId of the artifact to be deployed. Retrieved from POM file if specified.
@@ -208,11 +211,8 @@ public class DeployFileMojo
     @Parameter( property = "files" )
     private String files;
 
-    @Component
-    private RepositoryManager repoManager;
-
     void initProperties()
-        throws MojoExecutionException
+        throws MojoException
     {
         if ( pomFile == null )
         {
@@ -233,7 +233,7 @@ public class DeployFileMojo
 
                     if ( pomEntry.matcher( entry.getName() ).matches() )
                     {
-                        getLog().debug( "Using " + entry.getName() + " as pomFile" );
+                        logger.debug( "Using " + entry.getName() + " as pomFile" );
 
                         foundPom = true;
 
@@ -274,7 +274,7 @@ public class DeployFileMojo
 
                 if ( !foundPom )
                 {
-                    getLog().info( "pom.xml not found in " + file.getName() );
+                    logger.info( "pom.xml not found in " + file.getName() );
                 }
             }
             catch ( IOException e )
@@ -308,11 +308,11 @@ public class DeployFileMojo
     }
 
     public void execute()
-        throws MojoExecutionException, MojoFailureException
+        throws MojoException
     {
         if ( uniqueVersion != null )
         {
-            throw new MojoExecutionException( "You are using 'uniqueVersion' which has been removed"
+            throw new MojoException( "You are using 'uniqueVersion' which has been removed"
                 + " from the maven-deploy-plugin. "
                 + "Please see the >>Major Version Upgrade to version 3.0.0<< on the plugin site." );
         }
@@ -321,38 +321,38 @@ public class DeployFileMojo
 
         if ( !file.exists() )
         {
-            throw new MojoExecutionException( file.getPath() + " not found." );
+            throw new MojoException( file.getPath() + " not found." );
         }
 
         initProperties();
 
-        ArtifactRepository deploymentRepository = createDeploymentArtifactRepository( repositoryId, url );
+        RemoteRepository deploymentRepository = createDeploymentArtifactRepository( repositoryId, url );
 
         String protocol = deploymentRepository.getProtocol();
 
         if ( StringUtils.isEmpty( protocol ) )
         {
-            throw new MojoExecutionException( "No transfer protocol found." );
+            throw new MojoException( "No transfer protocol found." );
         }
 
-        MavenProject project = createMavenProject();
+        Project project = createMavenProject();
         Artifact artifact = project.getArtifact();
 
-        if ( file.equals( getLocalRepoFile() ) )
+        if ( file.equals( getLocalRepoFile().toFile() ) )
         {
-            throw new MojoFailureException( "Cannot deploy artifact from the local repository: " + file );
+            throw new MojoException( "Cannot deploy artifact from the local repository: " + file );
         }
 
         List<Artifact> deployableArtifacts = new ArrayList<Artifact>();
 
         if ( classifier == null )
         {
-            artifact.setFile( file );
+            artifactManager.setPath( artifact, file.toPath() );
             deployableArtifacts.add( artifact );
         }
         else
         {
-            projectHelper.attachArtifact( project, packaging, classifier, file );
+            projectManager.attachArtifact( project, packaging, classifier, file.toPath() );
         }
 
         // Upload the POM if requested, generating one if need be
@@ -367,50 +367,51 @@ public class DeployFileMojo
             {
                 if ( classifier == null )
                 {
-                    ProjectArtifactMetadata metadata = new ProjectArtifactMetadata( artifact, pom );
-                    artifact.addMetadata( metadata );
+                    Artifact pomArtifact = getSession().createArtifact(
+                            groupId, artifactId, "", version, "pom"
+                    );
+                    artifactManager.setPath( pomArtifact, pom.toPath() );
+                    deployableArtifacts.add( pomArtifact );
                 }
                 else
                 {
-                    artifact.setFile( pom );
+                    artifactManager.setPath( artifact, pom.toPath() );
                     deployableArtifacts.add( artifact );
                 }
             }
         }
 
-        artifact.setRepository( deploymentRepository );
-
         if ( sources != null )
         {
-            projectHelper.attachArtifact( project, "jar", "sources", sources );
+            projectManager.attachArtifact( project, "jar", "sources", sources.toPath() );
         }
 
         if ( javadoc != null )
         {
-            projectHelper.attachArtifact( project, "jar", "javadoc", javadoc );
+            projectManager.attachArtifact( project, "jar", "javadoc", javadoc.toPath() );
         }
 
         if ( files != null )
         {
             if ( types == null )
             {
-                throw new MojoExecutionException( "You must specify 'types' if you specify 'files'" );
+                throw new MojoException( "You must specify 'types' if you specify 'files'" );
             }
             if ( classifiers == null )
             {
-                throw new MojoExecutionException( "You must specify 'classifiers' if you specify 'files'" );
+                throw new MojoException( "You must specify 'classifiers' if you specify 'files'" );
             }
             int filesLength = StringUtils.countMatches( files, "," );
             int typesLength = StringUtils.countMatches( types, "," );
             int classifiersLength = StringUtils.countMatches( classifiers, "," );
             if ( typesLength != filesLength )
             {
-                throw new MojoExecutionException( "You must specify the same number of entries in 'files' and "
+                throw new MojoException( "You must specify the same number of entries in 'files' and "
                     + "'types' (respectively " + filesLength + " and " + typesLength + " entries )" );
             }
             if ( classifiersLength != filesLength )
             {
-                throw new MojoExecutionException( "You must specify the same number of entries in 'files' and "
+                throw new MojoException( "You must specify the same number of entries in 'files' and "
                     + "'classifiers' (respectively " + filesLength + " and " + classifiersLength + " entries )" );
             }
             int fi = 0;
@@ -437,23 +438,17 @@ public class DeployFileMojo
                 if ( !file.isFile() )
                 {
                     // try relative to the project basedir just in case
-                    file = new File( project.getBasedir(), files.substring( fi, nfi ) );
+                    file = new File( project.getPomPath().getParent().toFile(), files.substring( fi, nfi ) );
                 }
                 if ( file.isFile() )
                 {
-                    if ( StringUtils.isWhitespace( classifiers.substring( ci, nci ) ) )
-                    {
-                        projectHelper.attachArtifact( project, types.substring( ti, nti ).trim(), file );
-                    }
-                    else
-                    {
-                        projectHelper.attachArtifact( project, types.substring( ti, nti ).trim(),
-                                                      classifiers.substring( ci, nci ).trim(), file );
-                    }
+                    String classifier = classifiers.substring( ci, nci ).trim();
+                    String type = types.substring( ti, nti ).trim();
+                    projectManager.attachArtifact( project, type, classifier, file.toPath() );
                 }
                 else
                 {
-                    throw new MojoExecutionException( "Specified side artifact " + file + " does not exist" );
+                    throw new MojoException( "Specified side artifact " + file + " does not exist" );
                 }
                 fi = nfi + 1;
                 ti = nti + 1;
@@ -464,29 +459,25 @@ public class DeployFileMojo
         {
             if ( types != null )
             {
-                throw new MojoExecutionException( "You must specify 'files' if you specify 'types'" );
+                throw new MojoException( "You must specify 'files' if you specify 'types'" );
             }
             if ( classifiers != null )
             {
-                throw new MojoExecutionException( "You must specify 'files' if you specify 'classifiers'" );
+                throw new MojoException( "You must specify 'files' if you specify 'classifiers'" );
             }
         }
 
-        List<Artifact> attachedArtifacts = project.getAttachedArtifacts();
+        Collection<Artifact> attachedArtifacts = projectManager.getAttachedArtifacts( project );
 
-        for ( Artifact attached : attachedArtifacts )
-        {
-            deployableArtifacts.add( attached );
-        }
+        deployableArtifacts.addAll( attachedArtifacts );
 
         try
         {
-            artifactDeployer.deploy( getSession().getProjectBuildingRequest(), deploymentRepository,
-                                     deployableArtifacts );
+            artifactDeployer.deploy( getSession(), deploymentRepository, deployableArtifacts );
         }
         catch ( ArtifactDeployerException e )
         {
-            throw new MojoExecutionException( e.getMessage(), e );
+            throw new MojoException( e.getMessage(), e );
         }
     }
 
@@ -496,36 +487,38 @@ public class DeployFileMojo
      * to attach the artifacts to deploy to.
      * 
      * @return The created Maven project, never <code>null</code>.
-     * @throws MojoExecutionException When the model of the project could not be built.
-     * @throws MojoFailureException When building the project failed.
+     * @throws MojoException When the model of the project could not be built.
      */
-    private MavenProject createMavenProject()
-        throws MojoExecutionException, MojoFailureException
+    private Project createMavenProject()
+        throws MojoException
     {
         if ( groupId == null || artifactId == null || version == null || packaging == null )
         {
-            throw new MojoExecutionException( "The artifact information is incomplete: 'groupId', 'artifactId', "
+            throw new MojoException( "The artifact information is incomplete: 'groupId', 'artifactId', "
                 + "'version' and 'packaging' are required." );
         }
-        ModelSource modelSource =
-            new StringModelSource( "<project>" + "<modelVersion>4.0.0</modelVersion>" + "<groupId>" + groupId
-                + "</groupId>" + "<artifactId>" + artifactId + "</artifactId>" + "<version>" + version + "</version>"
-                + "<packaging>" + ( classifier == null ? packaging : "pom" ) + "</packaging>" + "</project>" );
-        DefaultProjectBuildingRequest buildingRequest =
-            new DefaultProjectBuildingRequest( getSession().getProjectBuildingRequest() );
-        buildingRequest.setProcessPlugins( false );
         try
         {
-            return projectBuilder.build( modelSource, buildingRequest ).getProject();
+            String prj = "<project>"
+                    + "<modelVersion>4.0.0</modelVersion>"
+                    + "<groupId>" + groupId + "</groupId>"
+                    + "<artifactId>" + artifactId + "</artifactId>"
+                    + "<version>" + version + "</version>"
+                    + "<packaging>" + ( classifier == null ? packaging : "pom" ) + "</packaging>"
+                    + "</project>";
+            ProjectBuilderResult result = getSession().getService( ProjectBuilder.class )
+                    .build( ProjectBuilderRequest.builder()
+                            .session( getSession() )
+                            .source( new StringSource( prj ) )
+                            .processPlugins( false )
+                            .resolveDependencies( false )
+                            .build() );
+
+            return result.getProject().get();
         }
-        catch ( ProjectBuildingException e )
+        catch ( ProjectBuilderException e )
         {
-            if ( e.getCause() instanceof ModelBuildingException )
-            {
-                throw new MojoExecutionException( "The artifact information is not valid:" + Os.LINE_SEP
-                    + e.getCause().getMessage() );
-            }
-            throw new MojoFailureException( "Unable to create the project.", e );
+            throw new MojoException( "Unable to create the project.", e );
         }
     }
 
@@ -535,16 +528,10 @@ public class DeployFileMojo
      * 
      * @return The absolute path to the artifact when installed, never <code>null</code>.
      */
-    private File getLocalRepoFile()
+    private Path getLocalRepoFile()
     {
-        DefaultArtifactCoordinate coordinate = new DefaultArtifactCoordinate();
-        coordinate.setGroupId( groupId );
-        coordinate.setArtifactId( artifactId );
-        coordinate.setVersion( version );
-        coordinate.setClassifier( classifier );
-        coordinate.setExtension( packaging );
-        String path = repoManager.getPathForLocalArtifact( getSession().getProjectBuildingRequest(), coordinate );
-        return new File( repoManager.getLocalRepositoryBasedir( getSession().getProjectBuildingRequest() ), path );
+        Artifact artifact = getSession().createArtifact( groupId, artifactId, classifier, version, packaging );
+        return getSession().getPathForLocalArtifact( artifact );
     }
 
     /**
@@ -587,10 +574,10 @@ public class DeployFileMojo
      * 
      * @param pomFile The path of the POM file to parse, must not be <code>null</code>.
      * @return The model from the POM file, never <code>null</code>.
-     * @throws MojoExecutionException If the file doesn't exist of cannot be read.
+     * @throws MojoException If the file doesn't exist of cannot be read.
      */
     Model readModel( File pomFile )
-        throws MojoExecutionException
+        throws MojoException
     {
         Reader reader = null;
         try
@@ -603,15 +590,15 @@ public class DeployFileMojo
         }
         catch ( FileNotFoundException e )
         {
-            throw new MojoExecutionException( "POM not found " + pomFile, e );
+            throw new MojoException( "POM not found " + pomFile, e );
         }
         catch ( IOException e )
         {
-            throw new MojoExecutionException( "Error reading POM " + pomFile, e );
+            throw new MojoException( "Error reading POM " + pomFile, e );
         }
         catch ( XmlPullParserException e )
         {
-            throw new MojoExecutionException( "Error parsing POM " + pomFile, e );
+            throw new MojoException( "Error parsing POM " + pomFile, e );
         }
         finally
         {
@@ -623,10 +610,10 @@ public class DeployFileMojo
      * Generates a minimal POM from the user-supplied artifact information.
      * 
      * @return The path to the generated POM file, never <code>null</code>.
-     * @throws MojoExecutionException If the generation failed.
+     * @throws MojoException If the generation failed.
      */
     private File generatePomFile()
-        throws MojoExecutionException
+        throws MojoException
     {
         Model model = generateModel();
 
@@ -647,7 +634,7 @@ public class DeployFileMojo
         }
         catch ( IOException e )
         {
-            throw new MojoExecutionException( "Error writing temporary pom file: " + e.getMessage(), e );
+            throw new MojoException( "Error writing temporary pom file: " + e.getMessage(), e );
         }
         finally
         {
@@ -736,4 +723,25 @@ public class DeployFileMojo
         this.classifier = classifier;
     }
 
+    private static class StringSource implements ProjectBuilderSource
+    {
+        private final String prj;
+
+        StringSource( String prj )
+        {
+            this.prj = prj;
+        }
+
+        @Override
+        public InputStream getInputStream() throws IOException
+        {
+            return new ByteArrayInputStream( prj.getBytes( StandardCharsets.UTF_8 ) );
+        }
+
+        @Override
+        public String getLocation()
+        {
+            return null;
+        }
+    }
 }

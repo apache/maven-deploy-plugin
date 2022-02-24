@@ -19,21 +19,22 @@ package org.apache.maven.plugins.deploy;
  * under the License.
  */
 
-import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.artifact.repository.ArtifactRepositoryPolicy;
-import org.apache.maven.artifact.repository.MavenArtifactRepository;
-import org.apache.maven.artifact.repository.layout.DefaultRepositoryLayout;
-import org.apache.maven.execution.MavenSession;
-import org.apache.maven.plugin.AbstractMojo;
-import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.api.RemoteRepository;
+import org.apache.maven.api.Session;
+import org.apache.maven.api.plugin.Mojo;
+import org.apache.maven.api.plugin.MojoException;
+import org.apache.maven.api.plugin.annotations.Parameter;
+import org.apache.maven.api.services.RepositoryFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Abstract class for Deploy mojo's.
  */
-public abstract class AbstractDeployMojo
-    extends AbstractMojo
+public abstract class AbstractDeployMojo implements Mojo
 {
+
+    protected Logger logger = LoggerFactory.getLogger( getClass() );
 
     /**
      * Flag whether Maven is currently in online/offline mode.
@@ -51,16 +52,16 @@ public abstract class AbstractDeployMojo
     private int retryFailedDeploymentCount;
 
     @Parameter( defaultValue = "${session}", readonly = true, required = true )
-    private MavenSession session;
+    private Session session;
     
     /* Setters and Getters */
 
     void failIfOffline()
-        throws MojoFailureException
+        throws MojoException
     {
         if ( offline )
         {
-            throw new MojoFailureException( "Cannot deploy artifacts when Maven is in offline mode" );
+            throw new MojoException( "Cannot deploy artifacts when Maven is in offline mode" );
         }
     }
 
@@ -69,13 +70,13 @@ public abstract class AbstractDeployMojo
         return retryFailedDeploymentCount;
     }
 
-    protected ArtifactRepository createDeploymentArtifactRepository( String id, String url )
+    protected RemoteRepository createDeploymentArtifactRepository( String id, String url )
     {
-        return new MavenArtifactRepository( id, url, new DefaultRepositoryLayout(), new ArtifactRepositoryPolicy(),
-                                            new ArtifactRepositoryPolicy() );
+        return getSession().getService( RepositoryFactory.class )
+                .createRemote( id, url );
     }
     
-    protected final MavenSession getSession()
+    protected final Session getSession()
     {
         return session;
     }

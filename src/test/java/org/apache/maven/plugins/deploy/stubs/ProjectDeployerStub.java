@@ -19,29 +19,16 @@ package org.apache.maven.plugins.deploy.stubs;
  * under the License.
  */
 
-import java.util.Collection;
+import org.apache.maven.api.services.ProjectDeployer;
+import org.apache.maven.api.services.ProjectDeployerException;
+import org.apache.maven.api.services.ProjectDeployerRequest;
 
-import org.apache.maven.artifact.Artifact;
-import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.project.ProjectBuildingRequest;
-import org.apache.maven.shared.transfer.artifact.deploy.ArtifactDeployer;
-import org.apache.maven.shared.transfer.artifact.deploy.ArtifactDeployerException;
-
-public class ArtifactDeployerStub
-    implements ArtifactDeployer
+public class ProjectDeployerStub
+        implements ProjectDeployer
 {
-
     @Override
-    public void deploy( ProjectBuildingRequest request, Collection<Artifact> mavenArtifacts )
-        throws ArtifactDeployerException
+    public void deploy( ProjectDeployerRequest request ) throws ProjectDeployerException, IllegalArgumentException
     {
-        // does nothing
-    }
 
-    @Override
-    public void deploy( ProjectBuildingRequest arg0, ArtifactRepository arg1, Collection<Artifact> arg2)
-        throws ArtifactDeployerException
-    {
-        // does nothing
     }
 }

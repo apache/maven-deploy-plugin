@@ -20,26 +20,33 @@ package org.apache.maven.plugins.deploy;
  */
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-import org.apache.maven.artifact.ArtifactUtils;
-import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.plugins.annotations.Component;
-import org.apache.maven.plugins.annotations.LifecyclePhase;
-import org.apache.maven.plugins.annotations.Mojo;
-import org.apache.maven.plugins.annotations.Parameter;
-import org.apache.maven.project.MavenProject;
-import org.apache.maven.project.ProjectBuildingRequest;
-import org.apache.maven.shared.transfer.artifact.deploy.ArtifactDeployerException;
-import org.apache.maven.shared.transfer.project.NoFileAssignedException;
-import org.apache.maven.shared.transfer.project.deploy.ProjectDeployer;
-import org.apache.maven.shared.transfer.project.deploy.ProjectDeployerRequest;
+import org.apache.maven.api.Artifact;
+import org.apache.maven.api.Project;
+import org.apache.maven.api.RemoteRepository;
+import org.apache.maven.api.plugin.MojoException;
+import org.apache.maven.api.plugin.annotations.Component;
+import org.apache.maven.api.plugin.annotations.LifecyclePhase;
+import org.apache.maven.api.plugin.annotations.Mojo;
+import org.apache.maven.api.plugin.annotations.Parameter;
+import org.apache.maven.api.services.ArtifactDeployer;
+import org.apache.maven.api.services.ArtifactDeployerRequest;
+import org.apache.maven.api.services.ArtifactManager;
+import org.apache.maven.api.services.ProjectDeployer;
+import org.apache.maven.api.services.ProjectDeployerException;
+import org.apache.maven.api.services.ProjectDeployerRequest;
+import org.apache.maven.api.services.ProjectManager;
+import org.apache.maven.api.services.RepositoryFactory;
+import org.apache.maven.model.DistributionManagement;
+import org.apache.maven.shared.utils.StringUtils;
 
 /**
  * Deploys an artifact to remote repository.
@@ -47,7 +54,7 @@ import org.apache.maven.shared.transfer.project.deploy.ProjectDeployerRequest;
  * @author <a href="mailto:evenisse@apache.org">Emmanuel Venisse</a>
  * @author <a href="mailto:jdcasey@apache.org">John Casey (refactoring only)</a>
  */
-@Mojo( name = "deploy", defaultPhase = LifecyclePhase.DEPLOY, threadSafe = true )
+@Mojo( name = "deploy", defaultPhase = LifecyclePhase.DEPLOY )
 public class DeployMojo
     extends AbstractDeployMojo
 {
@@ -61,16 +68,16 @@ public class DeployMojo
      */
     private static final AtomicInteger READYPROJECTSCOUNTER = new AtomicInteger();
 
-    private static final List<ProjectDeployerRequest> DEPLOYREQUESTS =
-        Collections.synchronizedList( new ArrayList<ProjectDeployerRequest>() );
+    private static final List<ArtifactDeployerRequest> DEPLOYREQUESTS =
+        Collections.synchronizedList( new ArrayList<>() );
 
     /**
      */
     @Parameter( defaultValue = "${project}", readonly = true, required = true )
-    private MavenProject project;
+    private Project project;
 
     @Parameter( defaultValue = "${reactorProjects}", required = true, readonly = true )
-    private List<MavenProject> reactorProjects;
+    private List<Project> reactorProjects;
 
     /**
      * Whether every project should be deployed during its own deploy-phase or at the end of the multimodule build. If
@@ -97,7 +104,7 @@ public class DeployMojo
      * has been removed because Maven 3 only supports Maven 2 repository layout.
      */
     @Parameter( property = "altDeploymentRepository" )
-    private String altDeploymentRepository;
+    String altDeploymentRepository;
 
     /**
      * The alternative repository to use when the project has a snapshot version.
@@ -143,41 +150,61 @@ public class DeployMojo
     @Component
     private ProjectDeployer projectDeployer;
 
+    @Component
+    private ArtifactManager artifactManager;
+
+    @Component
+    private ArtifactDeployer artifactDeployer;
+
     public void execute()
-        throws MojoExecutionException, MojoFailureException
+        throws MojoException
     {
         boolean addedDeployRequest = false;
+        boolean isSnapshot = artifactManager.isSnapshot( project.getVersion() );
         if ( Boolean.parseBoolean( skip )
-            || ( "releases".equals( skip ) && !ArtifactUtils.isSnapshot( project.getVersion() ) )
-            || ( "snapshots".equals( skip ) && ArtifactUtils.isSnapshot( project.getVersion() ) )
+            || ( "releases".equals( skip ) && !isSnapshot )
+            || ( "snapshots".equals( skip ) && isSnapshot )
         )
         {
-            getLog().info( "Skipping artifact deployment" );
+            logger.info( "Skipping artifact deployment" );
         }
         else
         {
             failIfOffline();
 
+            List<Artifact> deployables = new ArrayList<>();
+
+            deployables.add( project.getArtifact() );
+
+            if ( !"pom".equals( project.getPackaging() ) )
+            {
+                Artifact pomArtifact = getSession().createArtifact(
+                        project.getGroupId(), project.getArtifactId(), "",
+                        project.getVersion(), "pom" );
+                artifactManager.setPath( pomArtifact, project.getPomPath() );
+                deployables.add( pomArtifact );
+            }
+
+            ProjectManager projectManager = getSession().getService( ProjectManager.class );
+            deployables.addAll( projectManager.getAttachedArtifacts( project ) );
+
             // CHECKSTYLE_OFF: LineLength
             // @formatter:off
-            ProjectDeployerRequest pdr = new ProjectDeployerRequest()
-                .setProject( project )
-                .setRetryFailedDeploymentCount( getRetryFailedDeploymentCount() )
-                .setAltReleaseDeploymentRepository( altReleaseDeploymentRepository )
-                .setAltSnapshotDeploymentRepository( altSnapshotDeploymentRepository )
-                .setAltDeploymentRepository( altDeploymentRepository );
+            ArtifactDeployerRequest adr = ArtifactDeployerRequest.builder()
+                .repository( getDeploymentRepository( isSnapshot ) )
+                .artifacts( deployables )
+                .retryFailedDeploymentCount( getRetryFailedDeploymentCount() )
+                .build();
             // @formatter:on
             // CHECKSTYLE_ON: LineLength
 
-            ArtifactRepository repo = getDeploymentRepository( pdr );
-
             if ( !deployAtEnd )
             {
-                deployProject( getSession().getProjectBuildingRequest(), pdr, repo );
+                deployProject( adr );
             }
             else
             {
-                DEPLOYREQUESTS.add( pdr );
+                DEPLOYREQUESTS.add( adr );
                 addedDeployRequest = true;
             }
         }
@@ -189,54 +216,42 @@ public class DeployMojo
             {
                 while ( !DEPLOYREQUESTS.isEmpty() )
                 {
-                    ArtifactRepository repo = getDeploymentRepository( DEPLOYREQUESTS.get( 0 ) );
-
-                    deployProject( getSession().getProjectBuildingRequest(), DEPLOYREQUESTS.remove( 0 ), repo );
+                    deployProject( DEPLOYREQUESTS.remove( 0 ) );
                 }
             }
         }
         else if ( addedDeployRequest )
         {
-            getLog().info( "Deploying " + project.getGroupId() + ":" + project.getArtifactId() + ":"
+            logger.info( "Deploying " + project.getGroupId() + ":" + project.getArtifactId() + ":"
                 + project.getVersion() + " at end" );
         }
     }
 
-    private void deployProject( ProjectBuildingRequest pbr, ProjectDeployerRequest pir, ArtifactRepository repo )
-        throws MojoFailureException, MojoExecutionException
+    private void deployProject( ArtifactDeployerRequest adr )
+        throws MojoException
     {
         try
         {
-            projectDeployer.deploy( pbr, pir, repo );
+            artifactDeployer.deploy( adr );
         }
-        catch ( NoFileAssignedException e )
+        catch ( ProjectDeployerException e )
         {
-            throw new MojoExecutionException( "NoFileAssignedException", e );
-        }
-        catch ( ArtifactDeployerException e )
-        {
-            throw new MojoExecutionException( "ArtifactDeployerException", e );
+            throw new MojoException( "ProjectDeployerException", e );
         }
 
     }
 
-    ArtifactRepository getDeploymentRepository( ProjectDeployerRequest pdr )
-
-        throws MojoExecutionException, MojoFailureException
+    RemoteRepository getDeploymentRepository( boolean isSnapshot )
+        throws MojoException
     {
-        MavenProject project = pdr.getProject();
-        String altDeploymentRepository = pdr.getAltDeploymentRepository();
-        String altReleaseDeploymentRepository = pdr.getAltReleaseDeploymentRepository();
-        String altSnapshotDeploymentRepository = pdr.getAltSnapshotDeploymentRepository();
-
-        ArtifactRepository repo = null;
+        RemoteRepository repo = null;
 
         String altDeploymentRepo;
-        if ( ArtifactUtils.isSnapshot( project.getVersion() ) && altSnapshotDeploymentRepository != null )
+        if ( isSnapshot && altSnapshotDeploymentRepository != null )
         {
             altDeploymentRepo = altSnapshotDeploymentRepository;
         }
-        else if ( !ArtifactUtils.isSnapshot( project.getVersion() ) && altReleaseDeploymentRepository != null )
+        else if ( !isSnapshot && altReleaseDeploymentRepository != null )
         {
             altDeploymentRepo = altReleaseDeploymentRepository;
         }
@@ -247,7 +262,7 @@ public class DeployMojo
 
         if ( altDeploymentRepo != null )
         {
-            getLog().info( "Using alternate deployment repository " + altDeploymentRepo );
+            logger.info( "Using alternate deployment repository " + altDeploymentRepo );
 
             Matcher matcher = ALT_LEGACY_REPO_SYNTAX_PATTERN.matcher( altDeploymentRepo );
 
@@ -259,13 +274,13 @@ public class DeployMojo
 
                 if ( "default".equals( layout ) )
                 {
-                    getLog().warn( "Using legacy syntax for alternative repository. "
+                    logger.warn( "Using legacy syntax for alternative repository. "
                             + "Use \"" + id + "::" + url + "\" instead." );
                     repo = createDeploymentArtifactRepository( id, url );
                 }
                 else
                 {
-                    throw new MojoFailureException( altDeploymentRepo,
+                    throw new MojoException( altDeploymentRepo,
                             "Invalid legacy syntax and layout for repository.",
                             "Invalid legacy syntax and layout for alternative repository. Use \""
                                     + id + "::" + url + "\" instead, and only default layout is supported."
@@ -278,7 +293,7 @@ public class DeployMojo
 
                 if ( !matcher.matches() )
                 {
-                    throw new MojoFailureException( altDeploymentRepo,
+                    throw new MojoException( altDeploymentRepo,
                             "Invalid syntax for repository.",
                             "Invalid syntax for alternative repository. Use \"id::url\"."
                     );
@@ -295,7 +310,25 @@ public class DeployMojo
 
         if ( repo == null )
         {
-            repo = project.getDistributionManagementArtifactRepository();
+            DistributionManagement dm = project.getModel().getDistributionManagement();
+            if ( dm != null )
+            {
+                boolean snapshot = isSnapshot;
+                if ( snapshot && dm.getSnapshotRepository() != null
+                        && StringUtils.isNotEmpty(  dm.getSnapshotRepository().getId() )
+                        && StringUtils.isNotEmpty( dm.getSnapshotRepository().getUrl() ) )
+                {
+                    repo = getSession().getService( RepositoryFactory.class )
+                            .createRemote( dm.getSnapshotRepository() );
+                }
+                else if ( dm.getRepository() != null
+                        && StringUtils.isNotEmpty(  dm.getRepository().getId() )
+                        && StringUtils.isNotEmpty( dm.getRepository().getUrl() )  )
+                {
+                    repo = getSession().getService( RepositoryFactory.class )
+                            .createRemote( dm.getRepository() );
+                }
+            }
         }
 
         if ( repo == null )
@@ -303,7 +336,7 @@ public class DeployMojo
             String msg = "Deployment failed: repository element was not specified in the POM inside"
                 + " distributionManagement element or in -DaltDeploymentRepository=id::url parameter";
 
-            throw new MojoExecutionException( msg );
+            throw new MojoException( msg );
         }
 
         return repo;

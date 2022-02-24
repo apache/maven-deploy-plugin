@@ -22,6 +22,7 @@ package org.apache.maven.plugins.deploy;
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
+import org.apache.maven.api.plugin.MojoException;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Parent;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -78,7 +79,7 @@ public class DeployFileMojoUnitTest
             this.model = model;
         }
 
-        protected Model readModel(File pomFile) throws MojoExecutionException {
+        protected Model readModel(File pomFile) throws MojoException {
             return model;
         }
     }
@@ -91,7 +92,7 @@ public class DeployFileMojoUnitTest
 
         try {
             mojo.initProperties();
-        } catch (MojoExecutionException expected) {
+        } catch (MojoException expected) {
             assertTrue( true ); // missing artifactId and packaging
         }
 
@@ -105,7 +106,7 @@ public class DeployFileMojoUnitTest
 
         try {
             mojo.initProperties();
-        } catch (MojoExecutionException expected) {
+        } catch (MojoException expected) {
             assertTrue( true ); // missing packaging
         }
 
@@ -120,7 +121,7 @@ public class DeployFileMojoUnitTest
 
         try {
             mojo.initProperties();
-        } catch (MojoExecutionException expected) {
+        } catch (MojoException expected) {
             assertTrue( true ); // missing version and packaging
         }
 
