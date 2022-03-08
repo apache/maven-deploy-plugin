@@ -24,6 +24,7 @@ import org.apache.maven.api.Session;
 import org.apache.maven.api.plugin.Mojo;
 import org.apache.maven.api.plugin.MojoException;
 import org.apache.maven.api.plugin.annotations.Parameter;
+import org.apache.maven.api.plugin.annotations.Component;
 import org.apache.maven.api.services.RepositoryFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,7 +52,7 @@ public abstract class AbstractDeployMojo implements Mojo
     @Parameter( property = "retryFailedDeploymentCount", defaultValue = "1" )
     private int retryFailedDeploymentCount;
 
-    @Parameter( defaultValue = "${session}", readonly = true, required = true )
+    @Component
     private Session session;
     
     /* Setters and Getters */
@@ -76,8 +77,9 @@ public abstract class AbstractDeployMojo implements Mojo
                 .createRemote( id, url );
     }
     
-    protected final Session getSession()
+    protected Session getSession()
     {
         return session;
     }
+
 }

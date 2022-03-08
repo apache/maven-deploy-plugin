@@ -19,37 +19,25 @@ package org.apache.maven.plugins.deploy;
  * under the License.
  */
 
-import junit.framework.Test;
-import junit.framework.TestCase;
-import junit.framework.TestSuite;
 import org.apache.maven.api.plugin.MojoException;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Parent;
-import org.apache.maven.plugin.MojoExecutionException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * @author <a href="jerome@coffeebreaks.org">Jerome Lacoste</a>
  */
 public class DeployFileMojoUnitTest
-    extends TestCase
 {
-    public static void main( String[] args )
-    {
-        junit.textui.TestRunner.run( suite() );
-    }
-
-    public static Test suite()
-    {
-        TestSuite suite = new TestSuite( DeployFileMojoUnitTest.class );
-
-        return suite;
-    }
-
     MockDeployFileMojo mojo;
     Parent parent;
 
+    @BeforeEach
     public void setUp()
     {
         Model pomModel = new Model();
@@ -63,19 +51,10 @@ public class DeployFileMojoUnitTest
         mojo = new MockDeployFileMojo( pomModel );
     }
 
-    public void tearDown()
-    {
-        mojo = null;
-    }
-
-    class MockDeployFileMojo extends DeployFileMojo {
-        private Model model;
+    static class MockDeployFileMojo extends DeployFileMojo {
+        private final Model model;
 
         public MockDeployFileMojo(Model model) {
-            this.model = model;
-        }
-
-        public void setModel(Model model) {
             this.model = model;
         }
 
@@ -84,93 +63,43 @@ public class DeployFileMojoUnitTest
         }
     }
 
-    public void testProcessPomFromPomFileWithParent1() throws MojoExecutionException
-    {
-        mojo.setPomFile( new File( "foo.bar" ) );
-
-        setMojoModel( mojo.model, null, null, null, null, parent );
-
-        try {
-            mojo.initProperties();
-        } catch (MojoException expected) {
-            assertTrue( true ); // missing artifactId and packaging
-        }
-
-        checkMojoProperties("parentGroup", null, "parentVersion", null);
-    }
-
-    public void testProcessPomFromPomFileWithParent2() throws MojoExecutionException
-    {
-        mojo.setPomFile( new File( "foo.bar" ) );
-        setMojoModel( mojo.model, null, "artifact", null, null, parent );
-
-        try {
-            mojo.initProperties();
-        } catch (MojoException expected) {
-            assertTrue( true ); // missing packaging
-        }
-
-        checkMojoProperties("parentGroup", "artifact", "parentVersion", null );
-
-    }
-
-    public void testProcessPomFromPomFileWithParent3() throws MojoExecutionException
-    {
-        mojo.setPomFile( new File( "foo.bar" ) );
-        setMojoModel( mojo.model, null, "artifact", "version", null, parent );
-
-        try {
-            mojo.initProperties();
-        } catch (MojoException expected) {
-            assertTrue( true ); // missing version and packaging
-        }
-
-        checkMojoProperties( "parentGroup", "artifact", "version", null );
-    }
-
-    public void testProcessPomFromPomFileWithParent4() throws MojoExecutionException
+    @Test
+    public void testProcessPomFromPomFileWithParent4()
     {
         mojo.setPomFile( new File( "foo.bar" ) );
         setMojoModel( mojo.model, null, "artifact", "version", "packaging", parent );
-
         mojo.initProperties();
-
         checkMojoProperties("parentGroup", "artifact", "version", "packaging");
     }
 
-    public void testProcessPomFromPomFileWithParent5() throws MojoExecutionException
+    @Test
+    public void testProcessPomFromPomFileWithParent5()
     {
         mojo.setPomFile( new File( "foo.bar" ) );
         setMojoModel( mojo.model, "group", "artifact", "version", "packaging", parent );
-
         mojo.initProperties();
-
         checkMojoProperties("group", "artifact", "version", "packaging");
     }
 
-    public void testProcessPomFromPomFileWithParent6() throws MojoExecutionException
+    @Test
+    public void testProcessPomFromPomFileWithParent6()
     {
         mojo.setPomFile( new File( "foo.bar" ) );
         setMojoModel( mojo.model, "group", "artifact", "version", "packaging", null );
-
         mojo.initProperties();
-
         checkMojoProperties("group", "artifact", "version", "packaging");
-
     }
 
-    public void testProcessPomFromPomFileWithOverrides() throws MojoExecutionException
+    @Test
+    public void testProcessPomFromPomFileWithOverrides()
     {
         mojo.setPomFile( new File( "foo.bar" ) );
         setMojoModel( mojo.model, "group", "artifact", "version", "packaging", null );
-
         mojo.setGroupId( "groupO" );
         mojo.setArtifactId( "artifactO" );
         mojo.setVersion( "versionO" );
         mojo.setPackaging( "packagingO" );
-
         mojo.initProperties();
-
         checkMojoProperties("groupO", "artifactO", "versionO", "packagingO");
     }
 

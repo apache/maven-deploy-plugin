@@ -19,290 +19,218 @@ package org.apache.maven.plugins.deploy;
  * under the License.
  */
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.apache.maven.api.plugin.testing.MojoExtension.getVariableValueFromObject;
+import static org.codehaus.plexus.testing.PlexusExtension.getBasedir;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doNothing;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.maven.execution.MavenSession;
+import com.google.inject.Inject;
+import com.google.inject.Provides;
+import com.google.inject.Singleton;
+import org.apache.maven.api.Artifact;
+import org.apache.maven.api.Session;
+import org.apache.maven.api.services.ArtifactDeployer;
+import org.apache.maven.api.services.ArtifactDeployerRequest;
+import org.apache.maven.api.services.ArtifactManager;
+import org.apache.maven.api.services.ProjectBuilder;
+import org.apache.maven.api.services.ProjectManager;
 import org.apache.maven.model.Model;
-import org.apache.maven.plugin.testing.AbstractMojoTestCase;
-import org.apache.maven.project.ProjectBuildingRequest;
-import org.apache.maven.repository.internal.MavenRepositorySystemUtils;
-import org.eclipse.aether.DefaultRepositorySystemSession;
-import org.eclipse.aether.internal.impl.SimpleLocalRepositoryManagerFactory;
-import org.eclipse.aether.repository.LocalRepository;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.apache.maven.api.plugin.testing.InjectMojo;
+import org.apache.maven.api.plugin.testing.MojoTest;
+import org.apache.maven.plugins.deploy.stubs.ArtifactStub;
+import org.apache.maven.plugins.deploy.stubs.SessionStub;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 /**
  * @author <a href="mailto:aramirez@apache.org">Allan Ramirez</a>
  */
+@MojoTest
 public class DeployFileMojoTest
-    extends AbstractMojoTestCase
 {
-    private String LOCAL_REPO = getBasedir() + "/target/local-repo";
+    private static final String LOCAL_REPO = getBasedir() + "/target/local-repo";
     
-    private List<String> expectedFiles;
+    @Inject @SuppressWarnings( "unused" )
+    private Session session;
 
-    private List<String> fileList;
+    @Inject @SuppressWarnings( "unused" )
+    private ArtifactDeployer artifactDeployer;
 
-    private File remoteRepo;
-
-    @Mock
-    private MavenSession session;
+    @Inject @SuppressWarnings( "unused" )
+    private ArtifactManager artifactManager;
     
-    @InjectMocks
-    private DeployFileMojo mojo;
-    
-    public void setUp()
-        throws Exception
+    @Test
+    @InjectMojo( goal = "deploy-file", pom = "classpath:/unit/deploy-file/plugin-config-test.xml" )
+    public void testDeployTestEnvironment( DeployFileMojo mojo )
     {
-        super.setUp();
-
-        remoteRepo = new File( getBasedir(), "target/remote-repo" );
-
-        if ( !remoteRepo.exists() )
-        {
-            remoteRepo.mkdirs();
-        }
-    }
-
-    public void testDeployTestEnvironment()
-        throws Exception
-    {
-        File testPom = new File( getBasedir(), "target/test-classes/unit/deploy-file-test/plugin-config.xml" );
-
-        AbstractDeployMojo mojo = (AbstractDeployMojo) lookupMojo( "deploy-file", testPom );
-
         assertNotNull( mojo );
     }
 
-    public void testBasicDeployFile()
+    @Test
+    @InjectMojo( goal = "deploy-file", pom = "classpath:/unit/deploy-file/plugin-config-test.xml" )
+    public void testBasicDeployFile( DeployFileMojo mojo )
         throws Exception
     {
-        File testPom = new File( getBasedir(), "target/test-classes/unit/deploy-file-test/plugin-config.xml" );
-
-        mojo = (DeployFileMojo) lookupMojo( "deploy-file", testPom );
-
-        MockitoAnnotations.initMocks( this );
-        
         assertNotNull( mojo );
-        
-        ProjectBuildingRequest buildingRequest = mock ( ProjectBuildingRequest.class );
-        when( session.getProjectBuildingRequest() ).thenReturn( buildingRequest );
-        DefaultRepositorySystemSession repositorySession = MavenRepositorySystemUtils.newSession();
-        repositorySession.setLocalRepositoryManager(  new SimpleLocalRepositoryManagerFactory()
-                .newInstance( repositorySession, new LocalRepository( LOCAL_REPO ) ) );
-        when( buildingRequest.getRepositorySession() ).thenReturn( repositorySession );
         
         String groupId = (String) getVariableValueFromObject( mojo, "groupId" );
-
         String artifactId = (String) getVariableValueFromObject( mojo, "artifactId" );
-
         String version = (String) getVariableValueFromObject( mojo, "version" );
-
         String packaging = (String) getVariableValueFromObject( mojo, "packaging" );
-
         File file = (File) getVariableValueFromObject( mojo, "file" );
-
         String repositoryId = (String) getVariableValueFromObject( mojo, "repositoryId" );
-
         String url = (String) getVariableValueFromObject( mojo, "url" );
 
         assertEquals( "org.apache.maven.test", groupId );
-
         assertEquals( "maven-deploy-file-test", artifactId );
-
         assertEquals( "1.0", version );
-
         assertEquals( "jar", packaging );
-
         assertTrue( file.exists() );
-
         assertEquals( "deploy-test", repositoryId );
-
         assertEquals( "file://" + getBasedir() + "/target/remote-repo/deploy-file-test", url );
-        
-        mojo.execute();
+
+        ArtifactDeployerRequest request = execute( mojo );
+
+        assertNotNull( request );
+        List<Artifact> artifacts = new ArrayList<>( request.getArtifacts() );
+        assertEquals( 2, artifacts.size() );
+        Artifact a1 = artifacts.get( 0 );
+        Path p1 = artifactManager.getPath( a1 ).orElse( null );
+        assertEquals( file.toPath(), p1 );
+        Artifact a2 = artifacts.get( 1 );
+        Path p2 = artifactManager.getPath( a2 ).orElse( null );
+        assertNotNull( p2 );
+        assertTrue( p2.toString().endsWith( ".pom" ) );
+
+        assertNotNull( request.getRepository() );
+        assertEquals( url, request.getRepository().getUrl() );
 
         //check the generated pom
-        File pom = new File( remoteRepo, "deploy-file-test/" + groupId.replace( '.', '/' ) +
-                                          "/" + artifactId + "/" + version + "/" + artifactId +
-                                          "-" + version + ".pom" );
-
+        File pom = p2.toFile();
         assertTrue( pom.exists() );
 
         Model model = mojo.readModel( pom );
-
         assertEquals( "4.0.0", model.getModelVersion() );
-
         assertEquals( groupId, model.getGroupId() );
-
         assertEquals( artifactId, model.getArtifactId() );
-
         assertEquals( version, model.getVersion() );
-
         assertEquals( packaging, model.getPackaging() );
-
         assertEquals( "POM was created from deploy:deploy-file", model.getDescription() );
-
-        //check the remote-repo
-        expectedFiles = new ArrayList<String>();
-        fileList = new ArrayList<String>();
-
-        File repo = new File( remoteRepo, "deploy-file-test" );
-
-        File[] files = repo.listFiles();
-
-        for (File file1 : files) {
-            addFileToList(file1, fileList);
-        }
-
-        expectedFiles.add( "org" );
-        expectedFiles.add( "apache" );
-        expectedFiles.add( "maven" );
-        expectedFiles.add( "test" );
-        expectedFiles.add( "maven-deploy-file-test" );
-        expectedFiles.add( "1.0" );
-        expectedFiles.add( "maven-metadata.xml" );
-        expectedFiles.add( "maven-metadata.xml.md5" );
-        expectedFiles.add( "maven-metadata.xml.sha1" );
-        expectedFiles.add( "maven-deploy-file-test-1.0.jar" );
-        expectedFiles.add( "maven-deploy-file-test-1.0.jar.md5" );
-        expectedFiles.add( "maven-deploy-file-test-1.0.jar.sha1" );
-        expectedFiles.add( "maven-deploy-file-test-1.0.pom" );
-        expectedFiles.add( "maven-deploy-file-test-1.0.pom.md5" );
-        expectedFiles.add( "maven-deploy-file-test-1.0.pom.sha1" );
-
-        assertEquals( expectedFiles.size(), fileList.size() );
-
-        assertEquals( 0, getSizeOfExpectedFiles( fileList, expectedFiles ) );
     }
 
-    public void testDeployIfClassifierIsSet()
+    @Test
+    @InjectMojo( goal = "deploy-file", pom = "classpath:/unit/deploy-file/plugin-config-classifier.xml" )
+    public void testDeployIfClassifierIsSet( DeployFileMojo mojo )
         throws Exception
     {
-        File testPom = new File( getBasedir(), "target/test-classes/unit/deploy-file-classifier/plugin-config.xml" );
-
-        mojo = (DeployFileMojo) lookupMojo( "deploy-file", testPom );
-
-        MockitoAnnotations.initMocks( this );
-        
         assertNotNull( mojo );
         
-        ProjectBuildingRequest buildingRequest = mock ( ProjectBuildingRequest.class );
-        when( session.getProjectBuildingRequest() ).thenReturn( buildingRequest );
-        DefaultRepositorySystemSession repositorySession = MavenRepositorySystemUtils.newSession();
-        repositorySession.setLocalRepositoryManager(  new SimpleLocalRepositoryManagerFactory()
-                .newInstance( repositorySession, new LocalRepository( LOCAL_REPO ) ) );
-        when( buildingRequest.getRepositorySession() ).thenReturn( repositorySession );
-
-        String classifier = ( String ) getVariableValueFromObject( mojo, "classifier" );
-
         String groupId = ( String ) getVariableValueFromObject( mojo, "groupId" );
-
         String artifactId = ( String ) getVariableValueFromObject( mojo, "artifactId" );
-
-        String version = ( String ) getVariableValueFromObject( mojo, "version" );
-
+        String classifier = ( String ) getVariableValueFromObject( mojo, "classifier" );
         assertEquals( "bin", classifier );
+        String version = ( String ) getVariableValueFromObject( mojo, "version" );
+        String url = (String) getVariableValueFromObject( mojo, "url" );
 
-        mojo.execute();
+        ArtifactDeployerRequest request = execute( mojo );
 
-        File deployedArtifact = new File( remoteRepo, "deploy-file-classifier/" + groupId.replace( '.', '/' ) +
-                                          "/" + artifactId + "/" + version + "/" + artifactId +
-                                          "-" + version + "-" + classifier + ".jar");
-
-        assertTrue( deployedArtifact.exists() );
-
-        mojo.setClassifier( "prod" );
-
-        assertEquals( "prod", mojo.getClassifier() );
-
-        mojo.execute();
-
-        File prodDeployedArtifact = new File( remoteRepo, "deploy-file-classifier/" + groupId.replace( '.', '/' ) +
-                                          "/" + artifactId + "/" + version + "/" + artifactId +
-                                          "-" + version + "-" + mojo.getClassifier() + ".jar");
-
-        assertTrue( prodDeployedArtifact.exists() );
+        assertNotNull( request );
+        List<Artifact> artifacts = new ArrayList<>( request.getArtifacts() );
+        assertEquals( 2, artifacts.size() );
+        // first artifact
+        Artifact a1 = artifacts.get( 0 );
+        assertEquals( new ArtifactStub( groupId, artifactId, "", version, "pom" ), a1 );
+        Path p1 = artifactManager.getPath( a1 ).orElse( null );
+        assertNotNull( p1 );
+        assertTrue( p1.toString().endsWith( ".pom" ) );
+        // second artifact
+        Artifact a2 = artifacts.get( 1 );
+        assertEquals( new ArtifactStub( groupId, artifactId, "bin", version, "jar" ), a2 );
+        Path p2 = artifactManager.getPath( a2 ).orElse( null );
+        assertNotNull( p2 );
+        assertTrue( p2.toString().endsWith( "deploy-test-file-1.0-SNAPSHOT.jar" ) );
+        // remote repository
+        assertNotNull( request.getRepository() );
+        assertEquals( url, request.getRepository().getUrl() );
     }
 
-    public void testDeployIfArtifactIsNotJar()
+    @Test
+    @InjectMojo( goal = "deploy-file", pom = "classpath:/unit/deploy-file/plugin-config-artifact-not-jar.xml" )
+    public void testDeployIfArtifactIsNotJar( DeployFileMojo mojo )
         throws Exception
     {
-        File testPom = new File( getBasedir(), "target/test-classes/unit/deploy-file-artifact-not-jar/plugin-config.xml" );
-
-        mojo = (DeployFileMojo) lookupMojo( "deploy-file", testPom );
-
-        MockitoAnnotations.initMocks( this );
-        
         assertNotNull( mojo );
-        
-        ProjectBuildingRequest buildingRequest = mock ( ProjectBuildingRequest.class );
-        when( session.getProjectBuildingRequest() ).thenReturn( buildingRequest );
-        DefaultRepositorySystemSession repositorySession = MavenRepositorySystemUtils.newSession();
-        repositorySession.setLocalRepositoryManager(  new SimpleLocalRepositoryManagerFactory()
-                .newInstance( repositorySession, new LocalRepository( LOCAL_REPO ) ) );
-        when( buildingRequest.getRepositorySession() ).thenReturn( repositorySession );
 
         String groupId = (String) getVariableValueFromObject( mojo, "groupId" );
-
         String artifactId = (String) getVariableValueFromObject( mojo, "artifactId" );
-
         String version = (String) getVariableValueFromObject( mojo, "version" );
-
         assertEquals( "org.apache.maven.test", groupId );
-
         assertEquals( "maven-deploy-file-test", artifactId );
-
         assertEquals( "1.0", version );
+
+        ArtifactDeployerRequest request = execute( mojo );
+
+        assertNotNull( request );
+        List<Artifact> artifacts = new ArrayList<>( request.getArtifacts() );
+        assertEquals( 2, artifacts.size() );
+        Artifact a1 = artifacts.get( 0 );
+        Artifact a2 = artifacts.get( 1 );
+        Path p1 = artifactManager.getPath( a1 ).orElse( null );
+        Path p2 = artifactManager.getPath( a2 ).orElse( null );
+        assertNotNull( p1 );
+        assertTrue( p1.toString().endsWith( "deploy-test-file.zip" ) );
+        assertNotNull( p2 );
+        assertTrue( p2.toString().endsWith( ".pom" ) );
+
+        assertNotNull( request.getRepository() );
+        assertEquals( "file://" + getBasedir() + "/target/remote-repo/deploy-file", request.getRepository().getUrl() );
+    }
+
+    private ArtifactDeployerRequest execute( DeployFileMojo mojo )
+    {
+        ArgumentCaptor<ArtifactDeployerRequest> requestCaptor = ArgumentCaptor.forClass( ArtifactDeployerRequest.class );
+        doNothing().when( artifactDeployer ).deploy( requestCaptor.capture() );
 
         mojo.execute();
 
-        File file = new File( remoteRepo, "deploy-file-artifact-not-jar/" + groupId.replace( '.', '/' ) +
-                                          "/" + artifactId + "/" + version + "/" + artifactId +
-                                          "-" + version + ".zip");
-
-        assertTrue( file.exists() );
+        return requestCaptor.getValue();
     }
 
-    private void addFileToList( File file, List<String> fileList )
+    @Provides @Singleton @SuppressWarnings( "unused" )
+    private Session getMockSession()
     {
-        if ( !file.isDirectory() )
-        {
-            fileList.add( file.getName() );
-        }
-        else
-        {
-            fileList.add( file.getName() );
-
-            File[] files = file.listFiles();
-
-            for (File file1 : files) {
-                addFileToList(file1, fileList);
-            }
-        }
+        return SessionStub.getMockSession( LOCAL_REPO );
     }
 
-    private int getSizeOfExpectedFiles( List<String> fileList, List<String> expectedFiles )
+    @Provides @SuppressWarnings( "unused" )
+    private ArtifactDeployer getMockArtifactDeployer( Session session )
     {
-        for ( String fileName : fileList )
-        {
-            if ( expectedFiles.contains( fileName ) )
-            {
-                expectedFiles.remove( fileName );
-            }
-            else
-            {
-                fail( fileName + " is not included in the expected files" );
-            }
-        }
-        return expectedFiles.size();
+        return session.getService( ArtifactDeployer.class );
+    }
+
+    @Provides @SuppressWarnings( "unused" )
+    private ArtifactManager getMockArtifactManager( Session session )
+    {
+        return session.getService( ArtifactManager.class );
+    }
+
+    @Provides @SuppressWarnings( "unused" )
+    private ProjectManager getMockProjectManager( Session session )
+    {
+        return session.getService( ProjectManager.class );
+    }
+
+    @Provides @SuppressWarnings( "unused" )
+    private ProjectBuilder getMockProjectBuilder( Session session )
+    {
+        return session.getService( ProjectBuilder.class );
     }
 
 }

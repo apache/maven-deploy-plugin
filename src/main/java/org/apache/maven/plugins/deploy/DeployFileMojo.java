@@ -42,7 +42,6 @@ import org.apache.maven.api.Artifact;
 import org.apache.maven.api.Project;
 import org.apache.maven.api.RemoteRepository;
 import org.apache.maven.api.plugin.MojoException;
-import org.apache.maven.api.plugin.annotations.Component;
 import org.apache.maven.api.plugin.annotations.Mojo;
 import org.apache.maven.api.plugin.annotations.Parameter;
 import org.apache.maven.api.services.ArtifactDeployer;
@@ -74,25 +73,6 @@ import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 public class DeployFileMojo
     extends AbstractDeployMojo
 {
-    @Component
-    private ArtifactDeployer artifactDeployer;
-
-    @Component
-    private ArtifactManager artifactManager;
-
-    /**
-     * Used for attaching the artifacts to deploy to the project.
-     */
-    @Component
-    private ProjectManager projectManager;
-
-    /**
-     * Used for creating the project to which the artifacts to deploy will be attached.
-     */
-    @Component
-    private ProjectBuilder projectBuilder;
-
-
     /**
      * GroupId of the artifact to be deployed. Retrieved from POM file if specified.
      */
@@ -335,6 +315,10 @@ public class DeployFileMojo
             throw new MojoException( "No transfer protocol found." );
         }
 
+        ArtifactManager artifactManager = getSession().getService( ArtifactManager.class );
+        ProjectManager projectManager = getSession().getService( ProjectManager.class );
+        ArtifactDeployer artifactDeployer = getSession().getService( ArtifactDeployer.class );
+
         Project project = createMavenProject();
         Artifact artifact = project.getArtifact();
 
@@ -343,7 +327,7 @@ public class DeployFileMojo
             throw new MojoException( "Cannot deploy artifact from the local repository: " + file );
         }
 
-        List<Artifact> deployableArtifacts = new ArrayList<Artifact>();
+        List<Artifact> deployableArtifacts = new ArrayList<>();
 
         if ( classifier == null )
         {
@@ -352,7 +336,7 @@ public class DeployFileMojo
         }
         else
         {
-            projectManager.attachArtifact( project, packaging, classifier, file.toPath() );
+            projectManager.attachArtifact( getSession(), project, packaging, classifier, file.toPath() );
         }
 
         // Upload the POM if requested, generating one if need be
@@ -383,12 +367,12 @@ public class DeployFileMojo
 
         if ( sources != null )
         {
-            projectManager.attachArtifact( project, "jar", "sources", sources.toPath() );
+            projectManager.attachArtifact( getSession(), project, "jar", "sources", sources.toPath() );
         }
 
         if ( javadoc != null )
         {
-            projectManager.attachArtifact( project, "jar", "javadoc", javadoc.toPath() );
+            projectManager.attachArtifact( getSession(), project, "jar", "javadoc", javadoc.toPath() );
         }
 
         if ( files != null )
@@ -444,7 +428,7 @@ public class DeployFileMojo
                 {
                     String classifier = classifiers.substring( ci, nci ).trim();
                     String type = types.substring( ti, nti ).trim();
-                    projectManager.attachArtifact( project, type, classifier, file.toPath() );
+                    projectManager.attachArtifact( getSession(), project, type, classifier, file.toPath() );
                 }
                 else
                 {
@@ -744,4 +728,5 @@ public class DeployFileMojo
             return null;
         }
     }
+
 }

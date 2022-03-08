@@ -21,6 +21,7 @@ package org.apache.maven.plugins.deploy.stubs;
 
 import javax.annotation.Nonnull;
 
+import java.io.File;
 import java.nio.file.Path;
 import java.util.List;
 
@@ -34,6 +35,11 @@ public class ProjectStub implements Project
     private String groupId;
     private String artifactId;
     private String version;
+    private String packaging;
+    private Artifact artifact;
+    private Model model;
+    private File pomPath;
+    private boolean executionRoot;
 
     @Nonnull
     @Override
@@ -60,28 +66,28 @@ public class ProjectStub implements Project
     @Override
     public String getPackaging()
     {
-        return null;
+        return packaging;
     }
 
     @Nonnull
     @Override
     public Artifact getArtifact()
     {
-        return null;
+        return artifact;
     }
 
     @Nonnull
     @Override
     public Model getModel()
     {
-        return null;
+        return model;
     }
 
     @Nonnull
     @Override
     public Path getPomPath()
     {
-        return null;
+        return pomPath.toPath();
     }
 
     @Nonnull
@@ -98,6 +104,12 @@ public class ProjectStub implements Project
         return null;
     }
 
+    @Override
+    public boolean isExecutionRoot()
+    {
+        return executionRoot;
+    }
+
     public void setGroupId( String groupId )
     {
         this.groupId = groupId;
@@ -111,5 +123,30 @@ public class ProjectStub implements Project
     public void setVersion( String version )
     {
         this.version = version;
+    }
+
+    public void setPackaging( String packaging )
+    {
+        this.packaging = packaging;
+    }
+
+    public void setArtifact( Artifact artifact )
+    {
+        this.artifact = artifact;
+    }
+
+    public void setModel( Model model )
+    {
+        this.model = model;
+    }
+
+    public void setPomPath( File pomPath )
+    {
+        this.pomPath = pomPath;
+    }
+
+    public void setExecutionRoot( boolean executionRoot )
+    {
+        this.executionRoot = executionRoot;
     }
 }

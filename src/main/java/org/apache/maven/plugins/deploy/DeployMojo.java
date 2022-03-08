@@ -19,30 +19,25 @@ package org.apache.maven.plugins.deploy;
  * under the License.
  */
 
+import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.apache.maven.api.Artifact;
 import org.apache.maven.api.Project;
 import org.apache.maven.api.RemoteRepository;
 import org.apache.maven.api.plugin.MojoException;
-import org.apache.maven.api.plugin.annotations.Component;
 import org.apache.maven.api.plugin.annotations.LifecyclePhase;
 import org.apache.maven.api.plugin.annotations.Mojo;
 import org.apache.maven.api.plugin.annotations.Parameter;
 import org.apache.maven.api.services.ArtifactDeployer;
+import org.apache.maven.api.services.ArtifactDeployerException;
 import org.apache.maven.api.services.ArtifactDeployerRequest;
 import org.apache.maven.api.services.ArtifactManager;
-import org.apache.maven.api.services.ProjectDeployer;
-import org.apache.maven.api.services.ProjectDeployerException;
-import org.apache.maven.api.services.ProjectDeployerRequest;
 import org.apache.maven.api.services.ProjectManager;
 import org.apache.maven.api.services.RepositoryFactory;
 import org.apache.maven.model.DistributionManagement;
@@ -144,21 +139,11 @@ public class DeployMojo
     @Parameter( property = "maven.deploy.skip", defaultValue = "false" )
     private String skip = Boolean.FALSE.toString();
 
-    /**
-     * Component used to deploy project.
-     */
-    @Component
-    private ProjectDeployer projectDeployer;
-
-    @Component
-    private ArtifactManager artifactManager;
-
-    @Component
-    private ArtifactDeployer artifactDeployer;
-
     public void execute()
         throws MojoException
     {
+        ArtifactManager artifactManager = getSession().getService( ArtifactManager.class );
+
         boolean addedDeployRequest = false;
         boolean isSnapshot = artifactManager.isSnapshot( project.getVersion() );
         if ( Boolean.parseBoolean( skip )
@@ -184,13 +169,28 @@ public class DeployMojo
                 artifactManager.setPath( pomArtifact, project.getPomPath() );
                 deployables.add( pomArtifact );
             }
+            else
+            {
+                artifactManager.setPath( project.getArtifact(), project.getPomPath() );
+            }
 
             ProjectManager projectManager = getSession().getService( ProjectManager.class );
             deployables.addAll( projectManager.getAttachedArtifacts( project ) );
 
+            for ( Artifact artifact : deployables )
+            {
+                Path path = artifactManager.getPath( artifact ).orElse( null );
+                if ( path == null )
+                {
+                    throw new MojoException( "The packaging for this project did not assign "
+                            + "a file to the build artifact" );
+                }
+            }
+
             // CHECKSTYLE_OFF: LineLength
             // @formatter:off
             ArtifactDeployerRequest adr = ArtifactDeployerRequest.builder()
+                .session( getSession() )
                 .repository( getDeploymentRepository( isSnapshot ) )
                 .artifacts( deployables )
                 .retryFailedDeploymentCount( getRetryFailedDeploymentCount() )
@@ -232,9 +232,10 @@ public class DeployMojo
     {
         try
         {
+            ArtifactDeployer artifactDeployer = getSession().getService( ArtifactDeployer.class );
             artifactDeployer.deploy( adr );
         }
-        catch ( ProjectDeployerException e )
+        catch ( ArtifactDeployerException e )
         {
             throw new MojoException( "ProjectDeployerException", e );
         }
