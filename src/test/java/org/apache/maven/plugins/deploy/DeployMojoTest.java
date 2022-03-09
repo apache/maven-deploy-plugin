@@ -190,7 +190,7 @@ public class DeployMojoTest
         artifactManager.setPath( project.getArtifact(), file.toPath() );
         projectManager.attachArtifact( project,
                 new ArtifactStub( "org.apache.maven.test", "attached-artifact-test", "", "1.0-SNAPSHOT", "jar" ),
-                Paths.get( getBasedir(), "target/test-classes/unit/basic-deploy/attached-artifacts-test-1.0-SNAPSHOT.jar" ) );
+                Paths.get( getBasedir(), "target/test-classes/unit/basic-deploy/attached-artifact-test-1.0-SNAPSHOT.jar" ) );
 
         ArtifactDeployerRequest request = execute( mojo );
 

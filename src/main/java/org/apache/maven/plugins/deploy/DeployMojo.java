@@ -19,6 +19,7 @@ package org.apache.maven.plugins.deploy;
  * under the License.
  */
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -161,17 +162,25 @@ public class DeployMojo
 
             deployables.add( project.getArtifact() );
 
+            Path pomPath = project.getPomPath();
+
             if ( !"pom".equals( project.getPackaging() ) )
             {
                 Artifact pomArtifact = getSession().createArtifact(
                         project.getGroupId(), project.getArtifactId(), "",
                         project.getVersion(), "pom" );
-                artifactManager.setPath( pomArtifact, project.getPomPath() );
+                if ( pomPath != null )
+                {
+                    artifactManager.setPath( pomArtifact, pomPath );
+                }
                 deployables.add( pomArtifact );
             }
             else
             {
-                artifactManager.setPath( project.getArtifact(), project.getPomPath() );
+                if ( pomPath != null )
+                {
+                    artifactManager.setPath( project.getArtifact(), pomPath );
+                }
             }
 
             ProjectManager projectManager = getSession().getService( ProjectManager.class );
@@ -180,10 +189,10 @@ public class DeployMojo
             for ( Artifact artifact : deployables )
             {
                 Path path = artifactManager.getPath( artifact ).orElse( null );
-                if ( path == null )
+                if ( path == null || !Files.isRegularFile( path ) )
                 {
-                    throw new MojoException( "The packaging for this project did not assign "
-                            + "a file to the build artifact" );
+                    throw new MojoException( "The packaging plugin for this project did not assign "
+                            + "a main file to the project but it has attachments. Change packaging to 'pom'." );
                 }
             }
 

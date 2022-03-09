@@ -67,7 +67,7 @@ filesInDirectory.each { existingFile ->
     def result = false
     pathsInTargetDirectory.each { searchItem ->
       def expected = existingFile ==~ searchItem
-      println "existingFile: ${existingFile} ${searchItem} expeced:${expected}"
+      println "existingFile: ${existingFile} ${searchItem} expected:${expected}"
       if (expected) {
 	result = true
       }

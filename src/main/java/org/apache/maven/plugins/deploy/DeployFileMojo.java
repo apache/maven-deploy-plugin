@@ -55,8 +55,10 @@ import org.apache.maven.api.services.ProjectBuilderSource;
 import org.apache.maven.api.services.ProjectManager;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Parent;
+import org.apache.maven.model.building.ModelBuildingException;
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
+import org.apache.maven.shared.utils.Os;
 import org.codehaus.plexus.util.FileUtils;
 import org.codehaus.plexus.util.IOUtil;
 import org.codehaus.plexus.util.ReaderFactory;
@@ -422,7 +424,7 @@ public class DeployFileMojo
                 if ( !file.isFile() )
                 {
                     // try relative to the project basedir just in case
-                    file = new File( project.getPomPath().getParent().toFile(), files.substring( fi, nfi ) );
+                    file = new File( project.getBasedir().toFile(), files.substring( fi, nfi ) );
                 }
                 if ( file.isFile() )
                 {
@@ -502,6 +504,13 @@ public class DeployFileMojo
         }
         catch ( ProjectBuilderException e )
         {
+            for ( Throwable c = e.getCause(); c != null; c = c.getCause() )
+            {
+                if ( c instanceof ModelBuildingException )
+                {
+                    throw new MojoException( "The artifact information is not valid:" + Os.LINE_SEP + c.getMessage() );
+                }
+            }
             throw new MojoException( "Unable to create the project.", e );
         }
     }
