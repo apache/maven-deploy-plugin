@@ -58,9 +58,26 @@ Deployment of artifacts in an external SSH command
 
 +----+
 
- If you are deploying from Unix or have Cygwin installed you won't need to any additional configuration in your <<<settings.xml>>>
- file as everything will be taken from the environment. But if you are on Windows and are using something like <<<plink>>> then
- you will need something like the following:
+ If you are deploying from Linux/Unix or have Cygwin installed you only need to add the location of your PEM based private key in your <<<settings.xml>>>
+ 
++----+
+
+<settings>
+  ...
+  <servers>
+    <server>
+      <id>production-server</id>
+      <username>your username in the remote system if different from local</username>
+      <privateKey>/path/to/your/private/key</privateKey>
+    </server>
+  </servers>
+  ...
+</settings>
+
++----+
+
+ 
+But if you are on Windows and are using something like <<<plink>>> then you will need something like the following:
 
 +----+
 
@@ -81,6 +98,19 @@ Deployment of artifacts in an external SSH command
   ...
 </settings>
 
++----+
+
+ Your private key should be in PEM format. Otherwise you get the error message "Cannot connect. Reason: invalid privatekey". 
+ On most Linux systems it is in the form of openSSH and start with:
+
++----+
+-----BEGIN OPENSSH PRIVATE KEY-----
++----+
+
+To generate a private key in PEM format use:
+
++----+
+ssh-keygen -t rsa -b 4096 -m PEM
 +----+
 
  You should, of course, make sure that you can login into the specified SSH server by hand before attempting the
