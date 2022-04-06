@@ -38,8 +38,9 @@ Deployment of artifacts in an external SSH command
   ...
   <distributionManagement>
     <repository>
-      <id>ssh-repository</id>
-      <url>scpexe://repository.mycompany.com/repository</url>
+      <id>production-server</id>
+      <url>scp://server.mycompany.com/local_directory</url> <!-- Linux -->
+      <!-- <url>scpexe://server.mycompany.com/local_directory</url>  Windows -->
     </repository>
   </distributionManagement>
 
@@ -85,7 +86,7 @@ But if you are on Windows and are using something like <<<plink>>> then you will
   ...
   <servers>
     <server>
-      <id>ssh-repository</id>
+      <id>production-server</id>
       <username>your username in the remote system if different from local</username>
       <privateKey>/path/to/your/private/key</privateKey> <!-- not needed if using pageant -->
       <configuration>
@@ -130,7 +131,7 @@ mvn deploy
    ...
    <servers>
      <server>
-       <id>ssh-repository</id>
+       <id>production-server</id>
        <!--
         |
         | Change default file/dir permissions
