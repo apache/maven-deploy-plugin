@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.maven.plugin.MojoExecutionException;
-import org.sonatype.aether.util.ChecksumUtils;
+import org.eclipse.aether.util.ChecksumUtils;
 
 /**
  * A utility class to assist testing.

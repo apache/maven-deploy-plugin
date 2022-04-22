@@ -131,4 +131,16 @@ public class ArtifactRepositoryStub
     {
         return blacklisted;
     }
+
+    @Override
+    public boolean isBlocked()
+    {
+        return false;
+    }
+
+    @Override
+    public void setBlocked( boolean b )
+    {
+
+    }
 }
