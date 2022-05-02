@@ -63,10 +63,10 @@ under the License.
   </distributionManagement>
 
   <properties>
-    <mavenVersion>3.8.5</mavenVersion>
-    <slf4j.version>1.7.36</slf4j.version>
-    <resolverVersion>1.6.3</resolverVersion> <!-- Keep in sync with resolver used in maven above -->
-    <javaVersion>8</javaVersion>
+    <mavenVersion>3.2.5</mavenVersion>
+    <slf4j.version>1.7.5</slf4j.version> <!-- Keep in sync with resolver used in maven above -->
+    <resolverVersion>1.0.0.v20140518</resolverVersion> <!-- Keep in sync with resolver used in maven above -->
+    <javaVersion>7</javaVersion>
     <project.build.outputTimestamp>2021-12-27T14:11:19Z</project.build.outputTimestamp>
   </properties>
 
@@ -110,12 +110,22 @@ under the License.
     <dependency>
       <groupId>commons-io</groupId>
       <artifactId>commons-io</artifactId>
-      <version>2.11.0</version>
+      <version>2.6</version>
     </dependency>
     <dependency>
       <groupId>org.codehaus.plexus</groupId>
       <artifactId>plexus-utils</artifactId>
-      <version>3.4.1</version>
+      <version>3.3.1</version>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.aether</groupId>
+      <artifactId>aether-api</artifactId>
+      <version>${resolverVersion}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.aether</groupId>
+      <artifactId>aether-util</artifactId>
+      <version>${resolverVersion}</version>
     </dependency>
 
     <!-- dependencies to annotations -->
@@ -140,32 +150,32 @@ under the License.
     </dependency>
     <dependency>
       <groupId>org.apache.maven</groupId>
-      <artifactId>maven-resolver-provider</artifactId>
+      <artifactId>maven-aether-provider</artifactId>
       <version>${mavenVersion}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.maven.resolver</groupId>
-      <artifactId>maven-resolver-connector-basic</artifactId>
+      <groupId>org.eclipse.aether</groupId>
+      <artifactId>aether-connector-basic</artifactId>
       <version>${resolverVersion}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.maven.resolver</groupId>
-      <artifactId>maven-resolver-transport-file</artifactId>
+      <groupId>org.eclipse.aether</groupId>
+      <artifactId>aether-transport-file</artifactId>
       <version>${resolverVersion}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.maven.resolver</groupId>
-      <artifactId>maven-resolver-transport-http</artifactId>
+      <groupId>org.eclipse.aether</groupId>
+      <artifactId>aether-transport-http</artifactId>
       <version>${resolverVersion}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
-      <version>4.4.0</version>
+      <version>2.28.2</version>
       <scope>test</scope>
     </dependency>
     <dependency>
