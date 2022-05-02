@@ -64,7 +64,7 @@ under the License.
 
   <properties>
     <mavenVersion>3.2.5</mavenVersion>
-    <slf4j.version>1.7.5</slf4j.version> <!-- Keep in sync with resolver used in maven above -->
+    <slf4jVersion>1.7.5</slf4jVersion> <!-- Keep in sync with resolver used in maven above -->
     <resolverVersion>1.0.0.v20140518</resolverVersion> <!-- Keep in sync with resolver used in maven above -->
     <javaVersion>7</javaVersion>
     <project.build.outputTimestamp>2021-12-27T14:11:19Z</project.build.outputTimestamp>
@@ -99,7 +99,7 @@ under the License.
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
-      <version>${slf4j.version}</version>
+      <version>${slf4jVersion}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -187,7 +187,7 @@ under the License.
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-nop</artifactId>
-      <version>${slf4j.version}</version>
+      <version>${slf4jVersion}</version>
       <scope>test</scope>
     </dependency>
     
