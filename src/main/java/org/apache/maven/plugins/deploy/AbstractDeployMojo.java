@@ -26,7 +26,12 @@ import org.apache.maven.artifact.repository.layout.DefaultRepositoryLayout;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.rtinfo.RuntimeInformation;
+import org.eclipse.aether.util.version.GenericVersionScheme;
+import org.eclipse.aether.version.InvalidVersionSpecificationException;
+import org.eclipse.aether.version.Version;
 
 /**
  * Abstract class for Deploy mojo's.
@@ -52,7 +57,14 @@ public abstract class AbstractDeployMojo
 
     @Parameter( defaultValue = "${session}", readonly = true, required = true )
     private MavenSession session;
-    
+
+    @Component
+    private RuntimeInformation runtimeInformation;
+
+    private static final String AFFECTED_MAVEN_PACKAGING = "maven-plugin";
+
+    private static final String FIXED_MAVEN_VERSION = "3.9.0";
+
     /* Setters and Getters */
 
     void failIfOffline()
@@ -78,5 +90,30 @@ public abstract class AbstractDeployMojo
     protected final MavenSession getSession()
     {
         return session;
+    }
+
+    protected void warnIfAffectedPackagingAndMaven( final String packaging )
+    {
+        if ( AFFECTED_MAVEN_PACKAGING.equals( packaging ) )
+        {
+            try
+            {
+                GenericVersionScheme versionScheme = new GenericVersionScheme();
+                Version fixedMavenVersion = versionScheme.parseVersion( FIXED_MAVEN_VERSION );
+                Version currentMavenVersion = versionScheme.parseVersion( runtimeInformation.getMavenVersion() );
+                if ( fixedMavenVersion.compareTo( currentMavenVersion ) > 0 )
+                {
+                    getLog().warn( "" );
+                    getLog().warn( "You are about to deploy a maven-plugin using Maven " + currentMavenVersion + "." );
+                    getLog().warn( "This plugin should be used ONLY with Maven 3.9.0 and newer, as MNG-7055" );
+                    getLog().warn( "is fixed in those versions of Maven only!" );
+                    getLog().warn( "" );
+                }
+            }
+            catch ( InvalidVersionSpecificationException e )
+            {
+                // skip it: Generic does not throw, only API contains this exception
+            }
+        }
     }
 }

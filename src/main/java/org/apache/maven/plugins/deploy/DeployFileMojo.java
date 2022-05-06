@@ -481,6 +481,7 @@ public class DeployFileMojo
 
         try
         {
+            warnIfAffectedPackagingAndMaven( packaging );
             artifactDeployer.deploy( getSession().getProjectBuildingRequest(), deploymentRepository,
                                      deployableArtifacts );
         }

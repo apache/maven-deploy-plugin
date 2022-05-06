@@ -207,6 +207,7 @@ public class DeployMojo
     {
         try
         {
+            warnIfAffectedPackagingAndMaven( pir.getProject().getPackaging() );
             projectDeployer.deploy( pbr, pir, repo );
         }
         catch ( NoFileAssignedException e )
