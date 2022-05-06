@@ -40,7 +40,6 @@ under the License.
   <custom>
     <fluidoSkin>
       <sourceLineNumbersEnabled>true</sourceLineNumbersEnabled>
-      <googlePlusOne />
       <googleSearch>
         <sitesearch>maven.apache.org/plugins/maven-deploy-plugin/</sitesearch>
       </googleSearch>
