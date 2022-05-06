@@ -30,6 +30,7 @@ import org.eclipse.aether.util.ChecksumUtils;
 
 /**
  * A utility class to assist testing.
+ * used in IntegrationTests like attach-jar-checksum-snapshot, attach-jar-checksum-snapshot
  *
  * @author Benjamin Bentmann
  */

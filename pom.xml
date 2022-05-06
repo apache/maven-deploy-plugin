@@ -63,7 +63,7 @@ under the License.
   </distributionManagement>
 
   <properties>
-    <javaVersion>7</javaVersion>
+    <javaVersion>8</javaVersion>
     <mavenVersion>3.2.5</mavenVersion>
     <slf4jVersion>1.7.5</slf4jVersion> <!-- Keep in sync with resolver used in maven above -->
     <resolverVersion>1.0.0.v20140518</resolverVersion> <!-- Keep in sync with resolver used in maven above -->
@@ -232,10 +232,6 @@ under the License.
                 <goals>
                   <goal>deploy</goal>
                 </goals>
-                <properties>
-                  <!-- e.g. ensure that Java7 picks up TLSv1.2 when connecting with Central -->
-                  <https.protocols>${https.protocols}</https.protocols>
-                </properties>
               </configuration>
             </plugin>
           </plugins>

@@ -21,12 +21,12 @@ package org.apache.maven.plugins.deploy;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Reader;
 import java.io.Writer;
+import java.nio.file.Files;
 import java.util.Enumeration;
 import java.util.Objects;
 import java.util.jar.JarEntry;
@@ -179,14 +179,9 @@ public class DeployFileMojo
         if ( pomFile == null )
         {
             boolean foundPom = false;
-
-            JarFile jarFile = null;
-            try
+            try ( JarFile jarFile = new JarFile( file ) )
             {
                 Pattern pomEntry = Pattern.compile( "META-INF/maven/.*/pom\\.xml" );
-
-                jarFile = new JarFile( file );
-
                 Enumeration<JarEntry> jarEntries = jarFile.entries();
 
                 while ( jarEntries.hasMoreElements() )
@@ -196,40 +191,22 @@ public class DeployFileMojo
                     if ( pomEntry.matcher( entry.getName() ).matches() )
                     {
                         getLog().debug( "Using " + entry.getName() + " as pomFile" );
-
                         foundPom = true;
-
-                        InputStream pomInputStream = null;
-                        OutputStream pomOutputStream = null;
-
-                        try
+                        String base = file.getName();
+                        if ( base.indexOf( '.' ) > 0 )
                         {
-                            pomInputStream = jarFile.getInputStream( entry );
-
-                            String base = file.getName();
-                            if ( base.indexOf( '.' ) > 0 )
-                            {
-                                base = base.substring( 0, base.lastIndexOf( '.' ) );
-                            }
-                            pomFile = new File( file.getParentFile(), base + ".pom" );
-
-                            pomOutputStream = new FileOutputStream( pomFile );
-
-                            IOUtil.copy( pomInputStream, pomOutputStream );
-
-                            pomOutputStream.close();
-                            pomOutputStream = null;
-                            pomInputStream.close();
-                            pomInputStream = null;
-
-                            processModel( readModel( pomFile ) );
-
-                            break;
+                            base = base.substring( 0, base.lastIndexOf( '.' ) );
                         }
-                        finally
+                        pomFile = new File( file.getParentFile(), base + ".pom" );
+
+                        try ( InputStream pomInputStream = jarFile.getInputStream( entry ) )
                         {
-                            IOUtil.close( pomInputStream );
-                            IOUtil.close( pomOutputStream );
+                            try ( OutputStream pomOutputStream = Files.newOutputStream( pomFile.toPath() ) )
+                            {
+                                IOUtil.copy( pomInputStream, pomOutputStream );
+                            }
+                            processModel( readModel( pomFile ) );
+                            break;
                         }
                     }
                 }
@@ -242,20 +219,6 @@ public class DeployFileMojo
             catch ( IOException e )
             {
                 // ignore, artifact not packaged by Maven
-            }
-            finally
-            {
-                if ( jarFile != null )
-                {
-                    try
-                    {
-                        jarFile.close();
-                    }
-                    catch ( IOException e )
-                    {
-                        // we did our best
-                    }
-                }
             }
         }
         else

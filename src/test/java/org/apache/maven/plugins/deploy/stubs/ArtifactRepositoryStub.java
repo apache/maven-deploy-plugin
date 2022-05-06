@@ -36,7 +36,7 @@ public class ArtifactRepositoryStub
     
     private String url;
     
-    private String basedir = System.getProperty( "basedir" );
+    private final String basedir = System.getProperty( "basedir" );
     
     public ArtifactRepositoryStub()
     {
