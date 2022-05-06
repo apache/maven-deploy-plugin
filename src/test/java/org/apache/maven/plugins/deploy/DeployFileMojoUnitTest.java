@@ -70,13 +70,14 @@ public class DeployFileMojoUnitTest
             this.model = model;
         }
 
-        protected Model readModel(File pomFile) throws MojoExecutionException {
+        protected Model readModel(File pomFile)
+        {
             return model;
         }
     }
 
     @Test
-    public void testProcessPomFromPomFileWithParent1() throws MojoExecutionException
+    public void testProcessPomFromPomFileWithParent1()
     {
         mojo.setPomFile( new File( "foo.bar" ) );
 
@@ -92,7 +93,7 @@ public class DeployFileMojoUnitTest
     }
 
     @Test
-    public void testProcessPomFromPomFileWithParent2() throws MojoExecutionException
+    public void testProcessPomFromPomFileWithParent2()
     {
         mojo.setPomFile( new File( "foo.bar" ) );
         setMojoModel( mojo.model, null, "artifact", null, null, parent );
@@ -108,7 +109,7 @@ public class DeployFileMojoUnitTest
     }
 
     @Test
-    public void testProcessPomFromPomFileWithParent3() throws MojoExecutionException
+    public void testProcessPomFromPomFileWithParent3()
     {
         mojo.setPomFile( new File( "foo.bar" ) );
         setMojoModel( mojo.model, null, "artifact", "version", null, parent );

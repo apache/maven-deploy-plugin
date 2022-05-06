@@ -29,6 +29,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -62,13 +63,13 @@ public class DeployMojoTest
     
     private File localRepo;
     
-    private String LOCAL_REPO = getBasedir() + "/target/local-repo";
+    private final String LOCAL_REPO = getBasedir() + "/target/local-repo";
     
-    private String REMOTE_REPO = getBasedir() + "/target/remote-repo";
+    private final String REMOTE_REPO = getBasedir() + "/target/remote-repo";
     
     DeployArtifactStub artifact;
     
-    MavenProjectStub project = new MavenProjectStub();
+    final MavenProjectStub project = new MavenProjectStub();
 
     private MavenSession session;
     
@@ -180,8 +181,8 @@ public class DeployMojoTest
         mojo.execute();
 
         //check the artifact in local repository
-        List<String> expectedFiles = new ArrayList<String>();
-        List<String> fileList = new ArrayList<String>();
+        List<String> expectedFiles = new ArrayList<>();
+        List<String> fileList = new ArrayList<>();
         
         expectedFiles.add( "org" );
         expectedFiles.add( "apache" );
@@ -202,7 +203,7 @@ public class DeployMojoTest
         
         File[] files = localRepo.listFiles();
 
-        for (File file2 : files) {
+        for (File file2 : Objects.requireNonNull( files ) ) {
             addFileToList(file2, fileList);
         }
         
@@ -211,8 +212,8 @@ public class DeployMojoTest
         assertEquals( 0, getSizeOfExpectedFiles( fileList, expectedFiles ) );        
                   
         //check the artifact in remote repository
-        expectedFiles = new ArrayList<String>();
-        fileList = new ArrayList<String>();
+        expectedFiles = new ArrayList<>();
+        fileList = new ArrayList<>();
         
         expectedFiles.add( "org" );
         expectedFiles.add( "apache" );
@@ -238,7 +239,7 @@ public class DeployMojoTest
         
         files = remoteRepo.listFiles();
 
-        for (File file1 : files) {
+        for (File file1 : Objects.requireNonNull( files ) ) {
             addFileToList(file1, fileList);
         }
         
@@ -349,8 +350,8 @@ public class DeployMojoTest
         
         mojo.execute();
         
-        List<String> expectedFiles = new ArrayList<String>();
-        List<String> fileList = new ArrayList<String>();
+        List<String> expectedFiles = new ArrayList<>();
+        List<String> fileList = new ArrayList<>();
         
         expectedFiles.add( "org" );
         expectedFiles.add( "apache" );
@@ -372,7 +373,7 @@ public class DeployMojoTest
         
         File[] files = remoteRepo.listFiles();
 
-        for (File file : files) {
+        for (File file : Objects.requireNonNull( files ) ) {
             addFileToList(file, fileList);
         }
         
@@ -467,8 +468,8 @@ public class DeployMojoTest
         mojo.execute();
 
         //check the artifacts in remote repository
-        List<String> expectedFiles = new ArrayList<String>();
-        List<String> fileList = new ArrayList<String>();
+        List<String> expectedFiles = new ArrayList<>();
+        List<String> fileList = new ArrayList<>();
         
         expectedFiles.add( "org" );
         expectedFiles.add( "apache" );
@@ -506,7 +507,7 @@ public class DeployMojoTest
         
         File[] files = remoteRepo.listFiles();
 
-        for (File file1 : files) {
+        for (File file1 : Objects.requireNonNull( files ) ) {
             addFileToList(file1, fileList);
         }
         
@@ -720,7 +721,7 @@ public class DeployMojoTest
 
             File[] files = file.listFiles();
 
-            for (File file1 : files) {
+            for (File file1 : Objects.requireNonNull( files ) ) {
                 addFileToList(file1, fileList);
             }
         }

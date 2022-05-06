@@ -101,7 +101,7 @@ public class DeployArtifactStub
     {
         if ( metadataMap == null )
         {
-            metadataMap = new HashMap<Object, ArtifactMetadata>();
+            metadataMap = new HashMap<>();
         }
 
         ArtifactMetadata m = metadataMap.get( metadata.getKey() );
@@ -117,7 +117,7 @@ public class DeployArtifactStub
     
     public Collection<ArtifactMetadata> getMetadataList()
     {
-        return metadataMap == null ? Collections.<ArtifactMetadata>emptyList() : metadataMap.values();
+        return metadataMap == null ? Collections.emptyList() : metadataMap.values();
     }
 
     public boolean isRelease()

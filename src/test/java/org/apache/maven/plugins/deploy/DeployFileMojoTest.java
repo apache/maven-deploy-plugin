@@ -25,6 +25,7 @@ import static org.mockito.Mockito.when;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Model;
@@ -43,7 +44,7 @@ import org.eclipse.aether.internal.impl.SimpleLocalRepositoryManagerFactory;
 public class DeployFileMojoTest
     extends AbstractMojoTestCase
 {
-    private String LOCAL_REPO = getBasedir() + "/target/local-repo";
+    private final String LOCAL_REPO = getBasedir() + "/target/local-repo";
     
     private List<String> expectedFiles;
 
@@ -151,14 +152,14 @@ public class DeployFileMojoTest
         assertEquals( "POM was created from deploy:deploy-file", model.getDescription() );
 
         //check the remote-repo
-        expectedFiles = new ArrayList<String>();
-        fileList = new ArrayList<String>();
+        expectedFiles = new ArrayList<>();
+        fileList = new ArrayList<>();
 
         File repo = new File( remoteRepo, "deploy-file-test" );
 
         File[] files = repo.listFiles();
 
-        for (File file1 : files) {
+        for (File file1 : Objects.requireNonNull( files ) ) {
             addFileToList(file1, fileList);
         }
 
@@ -285,7 +286,7 @@ public class DeployFileMojoTest
 
             File[] files = file.listFiles();
 
-            for (File file1 : files) {
+            for (File file1 : Objects.requireNonNull( files ) ) {
                 addFileToList(file1, fileList);
             }
         }
