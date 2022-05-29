@@ -19,7 +19,6 @@ package org.apache.maven.plugins.deploy;
  * under the License.
  */
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
@@ -29,13 +28,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.plugin.descriptor.PluginDescriptor;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 import org.apache.maven.plugin.testing.stubs.MavenProjectStub;
 import org.apache.maven.plugins.deploy.stubs.ArtifactDeployerStub;
@@ -46,12 +43,12 @@ import org.apache.maven.project.ProjectBuildingRequest;
 import org.apache.maven.shared.transfer.project.deploy.ProjectDeployerRequest;
 import org.codehaus.plexus.util.FileUtils;
 import org.eclipse.aether.DefaultRepositorySystemSession;
-import org.eclipse.aether.internal.impl.EnhancedLocalRepositoryManagerFactory;
 import org.eclipse.aether.repository.LocalRepository;
 import org.junit.Ignore;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.eclipse.aether.internal.impl.SimpleLocalRepositoryManagerFactory;
 
 /**
  * @author <a href="mailto:aramirez@apache.org">Allan Ramirez</a>
@@ -81,11 +78,7 @@ public class DeployMojoTest
         throws Exception
     {
         super.setUp();
-
-        MockitoAnnotations.initMocks( this );
-        when( session.getPluginContext( any(PluginDescriptor.class ), any( MavenProject.class ) ) )
-            .thenReturn( new ConcurrentHashMap<String, Object>() );
-
+        
         remoteRepo = new File( REMOTE_REPO );
         
         remoteRepo.mkdirs();  
@@ -140,8 +133,8 @@ public class DeployMojoTest
         
         ProjectBuildingRequest buildingRequest = mock ( ProjectBuildingRequest.class );
         when( session.getProjectBuildingRequest() ).thenReturn( buildingRequest );
-        DefaultRepositorySystemSession repositorySession  = new DefaultRepositorySystemSession();
-        repositorySession.setLocalRepositoryManager( new EnhancedLocalRepositoryManagerFactory().newInstance( repositorySession, new LocalRepository( LOCAL_REPO )) );
+        DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
+        repositorySession.setLocalRepositoryManager( new SimpleLocalRepositoryManagerFactory().newInstance( repositorySession, new LocalRepository( LOCAL_REPO ) ) );
         when( buildingRequest.getRepositorySession() ).thenReturn( repositorySession );
         
         File file = new File( getBasedir(),
@@ -151,8 +144,7 @@ public class DeployMojoTest
         assertTrue( file.exists() );
 
         MavenProject project = (MavenProject) getVariableValueFromObject( mojo, "project" );
-
-        setVariableValueToObject( mojo, "pluginContext", new ConcurrentHashMap<>() );
+        
         setVariableValueToObject( mojo, "reactorProjects", Collections.singletonList( project ) );
         
         artifact = ( DeployArtifactStub ) project.getArtifact();
@@ -259,9 +251,7 @@ public class DeployMojoTest
         assertTrue( file.exists() );
 
         MavenProject project = (MavenProject) getVariableValueFromObject( mojo, "project" );
-
-        setVariableValueToObject( mojo, "session", session );
-        setVariableValueToObject( mojo, "pluginContext", new ConcurrentHashMap<>() );
+        
         setVariableValueToObject( mojo, "reactorProjects", Collections.singletonList( project ) );
 
         artifact = (DeployArtifactStub) project.getArtifact();
@@ -314,8 +304,8 @@ public class DeployMojoTest
         
         ProjectBuildingRequest buildingRequest = mock ( ProjectBuildingRequest.class );
         when( session.getProjectBuildingRequest() ).thenReturn( buildingRequest );
-        DefaultRepositorySystemSession repositorySession  = new DefaultRepositorySystemSession();
-        repositorySession.setLocalRepositoryManager( new EnhancedLocalRepositoryManagerFactory().newInstance( repositorySession, new LocalRepository( LOCAL_REPO )) );
+        DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
+        repositorySession.setLocalRepositoryManager( new SimpleLocalRepositoryManagerFactory().newInstance( repositorySession, new LocalRepository( LOCAL_REPO ) ) );
         when( buildingRequest.getRepositorySession() ).thenReturn( repositorySession );
         
         File pomFile = new File( getBasedir(),
@@ -326,7 +316,6 @@ public class DeployMojoTest
         
         MavenProject project = (MavenProject) getVariableValueFromObject( mojo, "project" );
 
-        setVariableValueToObject( mojo, "pluginContext", new ConcurrentHashMap<>() );
         setVariableValueToObject( mojo, "reactorProjects", Collections.singletonList( project ) );
 
         artifact = (DeployArtifactStub) project.getArtifact();
@@ -392,7 +381,6 @@ public class DeployMojoTest
         
         MavenProject project = (MavenProject) getVariableValueFromObject( mojo, "project" );
 
-        setVariableValueToObject( mojo, "pluginContext", new ConcurrentHashMap<>() );
         setVariableValueToObject( mojo, "reactorProjects", Collections.singletonList( project ) );
 
         artifact = (DeployArtifactStub) project.getArtifact();
@@ -428,8 +416,8 @@ public class DeployMojoTest
         
         ProjectBuildingRequest buildingRequest = mock ( ProjectBuildingRequest.class );
         when( session.getProjectBuildingRequest() ).thenReturn( buildingRequest );
-        DefaultRepositorySystemSession repositorySession  = new DefaultRepositorySystemSession();
-        repositorySession.setLocalRepositoryManager( new EnhancedLocalRepositoryManagerFactory().newInstance( repositorySession, new LocalRepository( LOCAL_REPO )) );
+        DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
+        repositorySession.setLocalRepositoryManager( new SimpleLocalRepositoryManagerFactory().newInstance( repositorySession, new LocalRepository( LOCAL_REPO ) ) );
         when( buildingRequest.getRepositorySession() ).thenReturn( repositorySession );
 
         MavenProject project = (MavenProject) getVariableValueFromObject( mojo, "project" );

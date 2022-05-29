@@ -31,11 +31,11 @@ import org.apache.maven.model.Model;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 import org.apache.maven.project.ProjectBuildingRequest;
 import org.eclipse.aether.DefaultRepositorySystemSession;
-import org.eclipse.aether.internal.impl.EnhancedLocalRepositoryManagerFactory;
 import org.eclipse.aether.repository.LocalRepository;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.eclipse.aether.internal.impl.SimpleLocalRepositoryManagerFactory;
 
 /**
  * @author <a href="mailto:aramirez@apache.org">Allan Ramirez</a>
@@ -92,9 +92,10 @@ public class DeployFileMojoTest
         assertNotNull( mojo );
         
         ProjectBuildingRequest buildingRequest = mock ( ProjectBuildingRequest.class );
+        when( buildingRequest.getRepositoryMerging() ).thenReturn( ProjectBuildingRequest.RepositoryMerging.POM_DOMINANT );
         when( session.getProjectBuildingRequest() ).thenReturn( buildingRequest );
-        DefaultRepositorySystemSession repositorySession  = new DefaultRepositorySystemSession();
-        repositorySession.setLocalRepositoryManager( new EnhancedLocalRepositoryManagerFactory().newInstance( repositorySession, new LocalRepository( LOCAL_REPO )) );
+        DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
+        repositorySession.setLocalRepositoryManager( new SimpleLocalRepositoryManagerFactory().newInstance( repositorySession, new LocalRepository( LOCAL_REPO ) ) );
         when( buildingRequest.getRepositorySession() ).thenReturn( repositorySession );
         
         String groupId = (String) getVariableValueFromObject( mojo, "groupId" );
@@ -193,9 +194,10 @@ public class DeployFileMojoTest
         assertNotNull( mojo );
         
         ProjectBuildingRequest buildingRequest = mock ( ProjectBuildingRequest.class );
+        when( buildingRequest.getRepositoryMerging() ).thenReturn( ProjectBuildingRequest.RepositoryMerging.POM_DOMINANT );
         when( session.getProjectBuildingRequest() ).thenReturn( buildingRequest );
-        DefaultRepositorySystemSession repositorySession  = new DefaultRepositorySystemSession();
-        repositorySession.setLocalRepositoryManager( new EnhancedLocalRepositoryManagerFactory().newInstance( repositorySession, new LocalRepository( LOCAL_REPO )) );
+        DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
+        repositorySession.setLocalRepositoryManager( new SimpleLocalRepositoryManagerFactory().newInstance( repositorySession, new LocalRepository( LOCAL_REPO ) ) );
         when( buildingRequest.getRepositorySession() ).thenReturn( repositorySession );
 
         String classifier = ( String ) getVariableValueFromObject( mojo, "classifier" );
@@ -241,9 +243,10 @@ public class DeployFileMojoTest
         assertNotNull( mojo );
         
         ProjectBuildingRequest buildingRequest = mock ( ProjectBuildingRequest.class );
+        when( buildingRequest.getRepositoryMerging() ).thenReturn( ProjectBuildingRequest.RepositoryMerging.POM_DOMINANT );
         when( session.getProjectBuildingRequest() ).thenReturn( buildingRequest );
-        DefaultRepositorySystemSession repositorySession  = new DefaultRepositorySystemSession();
-        repositorySession.setLocalRepositoryManager( new EnhancedLocalRepositoryManagerFactory().newInstance( repositorySession, new LocalRepository( LOCAL_REPO )) );
+        DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
+        repositorySession.setLocalRepositoryManager( new SimpleLocalRepositoryManagerFactory().newInstance( repositorySession, new LocalRepository( LOCAL_REPO ) ) );
         when( buildingRequest.getRepositorySession() ).thenReturn( repositorySession );
 
         String groupId = (String) getVariableValueFromObject( mojo, "groupId" );
