@@ -149,7 +149,6 @@ public class DeployMojo
     public void execute()
         throws MojoExecutionException, MojoFailureException
     {
-        boolean addedDeployRequest = false;
         if ( Boolean.parseBoolean( skip )
             || ( "releases".equals( skip ) && !ArtifactUtils.isSnapshot( project.getVersion() ) )
             || ( "snapshots".equals( skip ) && ArtifactUtils.isSnapshot( project.getVersion() ) )
@@ -203,7 +202,7 @@ public class DeployMojo
                     );
                 }
                 getPluginContext().put( DEPLOY_PROCESSED_MARKER, Boolean.TRUE );
-                addedDeployRequest = true;
+                getLog().info( "Deploying " + getProjectReferenceId( project ) + " at end" );
             }
         }
 
@@ -240,10 +239,6 @@ public class DeployMojo
                     deployProject( getSession().getProjectBuildingRequest(), pdr, repo );
                 }
             }
-        }
-        else if ( addedDeployRequest )
-        {
-            getLog().info( "Deploying " + getProjectReferenceId( project ) + " at end" );
         }
     }
 
