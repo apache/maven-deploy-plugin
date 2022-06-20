@@ -90,11 +90,6 @@ public abstract class AbstractDeployMojo
         }
     }
 
-    int getRetryFailedDeploymentCount()
-    {
-        return retryFailedDeploymentCount;
-    }
-
     protected ArtifactRepository createDeploymentArtifactRepository( String id, String url )
     {
         return new MavenArtifactRepository( id, url, new DefaultRepositoryLayout(), new ArtifactRepositoryPolicy(),
@@ -173,16 +168,40 @@ public abstract class AbstractDeployMojo
         return deployRequest;
     }
 
-    protected void deploy( DeployRequest deployRequest )
-            throws MojoExecutionException
+    protected void deploy( DeployRequest deployRequest ) throws MojoExecutionException
     {
-        try
+        int retryFailedDeploymentCounter = Math.max( 1, Math.min( 10, retryFailedDeploymentCount ) );
+        DeploymentException exception = null;
+        for ( int count = 0; count < retryFailedDeploymentCounter; count++ )
         {
-            repositorySystem.deploy( session.getRepositorySession(), deployRequest );
+            try
+            {
+                if ( count > 0 )
+                {
+                    getLog().info( "Retrying deployment attempt " + ( count + 1 ) + " of "
+                            + retryFailedDeploymentCounter );
+                }
+
+                repositorySystem.deploy( session.getRepositorySession(), deployRequest );
+                exception = null;
+                break;
+            }
+            catch ( DeploymentException e )
+            {
+                if ( count + 1 < retryFailedDeploymentCounter )
+                {
+                    getLog().warn( "Encountered issue during deployment: " + e.getLocalizedMessage() );
+                    getLog().debug( e.getMessage() );
+                }
+                if ( exception == null )
+                {
+                    exception = e;
+                }
+            }
         }
-        catch ( DeploymentException e )
+        if ( exception != null )
         {
-            throw new MojoExecutionException( e.getMessage(), e );
+            throw new MojoExecutionException( exception.getMessage(), exception );
         }
     }
 }
