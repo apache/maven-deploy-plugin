@@ -34,6 +34,7 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.regex.Pattern;
 
+import org.apache.maven.RepositoryUtils;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.model.Model;
@@ -54,11 +55,6 @@ import org.apache.maven.project.MavenProjectHelper;
 import org.apache.maven.project.ProjectBuilder;
 import org.apache.maven.project.ProjectBuildingException;
 import org.apache.maven.project.artifact.ProjectArtifactMetadata;
-import org.apache.maven.shared.transfer.artifact.DefaultArtifactCoordinate;
-import org.apache.maven.shared.transfer.artifact.deploy.ArtifactDeployer;
-import org.apache.maven.shared.transfer.artifact.deploy.ArtifactDeployerException;
-import org.apache.maven.shared.transfer.repository.RepositoryManager;
-import org.apache.maven.shared.utils.Os;
 import org.codehaus.plexus.util.FileUtils;
 import org.codehaus.plexus.util.IOUtil;
 import org.codehaus.plexus.util.ReaderFactory;
@@ -75,8 +71,7 @@ import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 public class DeployFileMojo
     extends AbstractDeployMojo
 {
-    @Component
-    private ArtifactDeployer artifactDeployer;
+    private static final String LINE_SEP = System.getProperty( "line.separator" );
 
     /**
      * Used for attaching the artifacts to deploy to the project.
@@ -178,16 +173,6 @@ public class DeployFileMojo
     private String classifier;
 
     /**
-     * Whether to deploy snapshots with a unique version or not.
-     * 
-     * @deprecated As of Maven 3, this isn't supported anymore and this parameter is only present to break the build if
-     *             you use it!
-     */
-    @Parameter( property = "uniqueVersion" )
-    @Deprecated
-    private Boolean uniqueVersion;
-
-    /**
      * A comma separated list of types for each of the extra side artifacts to deploy. If there is a mis-match in the
      * number of entries in {@link #files} or {@link #classifiers}, then an error will be raised.
      */
@@ -207,9 +192,6 @@ public class DeployFileMojo
      */
     @Parameter( property = "files" )
     private String files;
-
-    @Component
-    private RepositoryManager repoManager;
 
     void initProperties()
         throws MojoExecutionException
@@ -310,13 +292,6 @@ public class DeployFileMojo
     public void execute()
         throws MojoExecutionException, MojoFailureException
     {
-        if ( uniqueVersion != null )
-        {
-            throw new MojoExecutionException( "You are using 'uniqueVersion' which has been removed"
-                + " from the maven-deploy-plugin. "
-                + "Please see the >>Major Version Upgrade to version 3.0.0<< on the plugin site." );
-        }
-
         failIfOffline();
 
         if ( !file.exists() )
@@ -338,7 +313,7 @@ public class DeployFileMojo
         MavenProject project = createMavenProject();
         Artifact artifact = project.getArtifact();
 
-        if ( file.equals( getLocalRepoFile() ) )
+        if ( file.equals( getLocalRepoFile( artifact ) ) )
         {
             throw new MojoFailureException( "Cannot deploy artifact from the local repository: " + file );
         }
@@ -472,23 +447,10 @@ public class DeployFileMojo
             }
         }
 
-        List<Artifact> attachedArtifacts = project.getAttachedArtifacts();
+        deployableArtifacts.addAll( project.getAttachedArtifacts() );
 
-        for ( Artifact attached : attachedArtifacts )
-        {
-            deployableArtifacts.add( attached );
-        }
-
-        try
-        {
-            warnIfAffectedPackagingAndMaven( packaging );
-            artifactDeployer.deploy( getSession().getProjectBuildingRequest(), deploymentRepository,
-                                     deployableArtifacts );
-        }
-        catch ( ArtifactDeployerException e )
-        {
-            throw new MojoExecutionException( e.getMessage(), e );
-        }
+        warnIfAffectedPackagingAndMaven( packaging );
+        deploy( deployRequest( deploymentRepository, deployableArtifacts ) );
     }
 
     /**
@@ -513,7 +475,7 @@ public class DeployFileMojo
                 + "</groupId>" + "<artifactId>" + artifactId + "</artifactId>" + "<version>" + version + "</version>"
                 + "<packaging>" + ( classifier == null ? packaging : "pom" ) + "</packaging>" + "</project>" );
         DefaultProjectBuildingRequest buildingRequest =
-            new DefaultProjectBuildingRequest( getSession().getProjectBuildingRequest() );
+            new DefaultProjectBuildingRequest( session.getProjectBuildingRequest() );
         buildingRequest.setProcessPlugins( false );
         try
         {
@@ -523,7 +485,7 @@ public class DeployFileMojo
         {
             if ( e.getCause() instanceof ModelBuildingException )
             {
-                throw new MojoExecutionException( "The artifact information is not valid:" + Os.LINE_SEP
+                throw new MojoExecutionException( "The artifact information is not valid:" + LINE_SEP
                     + e.getCause().getMessage() );
             }
             throw new MojoFailureException( "Unable to create the project.", e );
@@ -536,16 +498,11 @@ public class DeployFileMojo
      * 
      * @return The absolute path to the artifact when installed, never <code>null</code>.
      */
-    private File getLocalRepoFile()
+    private File getLocalRepoFile( Artifact artifact )
     {
-        DefaultArtifactCoordinate coordinate = new DefaultArtifactCoordinate();
-        coordinate.setGroupId( groupId );
-        coordinate.setArtifactId( artifactId );
-        coordinate.setVersion( version );
-        coordinate.setClassifier( classifier );
-        coordinate.setExtension( packaging );
-        String path = repoManager.getPathForLocalArtifact( getSession().getProjectBuildingRequest(), coordinate );
-        return new File( repoManager.getLocalRepositoryBasedir( getSession().getProjectBuildingRequest() ), path );
+        String path = session.getRepositorySession().getLocalRepositoryManager().getPathForLocalArtifact(
+                RepositoryUtils.toArtifact( artifact ) );
+        return new File( session.getRepositorySession().getLocalRepository().getBasedir(), path );
     }
 
     /**

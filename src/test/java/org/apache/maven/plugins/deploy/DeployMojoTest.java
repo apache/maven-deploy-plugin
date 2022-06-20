@@ -35,14 +35,13 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 import org.apache.maven.plugin.testing.stubs.MavenProjectStub;
-import org.apache.maven.plugins.deploy.stubs.ArtifactDeployerStub;
 import org.apache.maven.plugins.deploy.stubs.ArtifactRepositoryStub;
 import org.apache.maven.plugins.deploy.stubs.DeployArtifactStub;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.ProjectBuildingRequest;
-import org.apache.maven.shared.transfer.project.deploy.ProjectDeployerRequest;
 import org.codehaus.plexus.util.FileUtils;
 import org.eclipse.aether.DefaultRepositorySystemSession;
+import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.repository.LocalRepository;
 import org.junit.Ignore;
 import org.mockito.InjectMocks;
@@ -136,7 +135,8 @@ public class DeployMojoTest
         DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
         repositorySession.setLocalRepositoryManager( new SimpleLocalRepositoryManagerFactory().newInstance( repositorySession, new LocalRepository( LOCAL_REPO ) ) );
         when( buildingRequest.getRepositorySession() ).thenReturn( repositorySession );
-        
+        when( session.getRepositorySession() ).thenReturn( repositorySession );
+
         File file = new File( getBasedir(),
                               "target/test-classes/unit/basic-deploy-test/target/" +
                               "deploy-test-file-1.0-SNAPSHOT.jar" );
@@ -307,6 +307,7 @@ public class DeployMojoTest
         DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
         repositorySession.setLocalRepositoryManager( new SimpleLocalRepositoryManagerFactory().newInstance( repositorySession, new LocalRepository( LOCAL_REPO ) ) );
         when( buildingRequest.getRepositorySession() ).thenReturn( repositorySession );
+        when( session.getRepositorySession() ).thenReturn( repositorySession );
         
         File pomFile = new File( getBasedir(),
                               "target/test-classes/unit/basic-deploy-pom/target/" +
@@ -419,6 +420,7 @@ public class DeployMojoTest
         DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
         repositorySession.setLocalRepositoryManager( new SimpleLocalRepositoryManagerFactory().newInstance( repositorySession, new LocalRepository( LOCAL_REPO ) ) );
         when( buildingRequest.getRepositorySession() ).thenReturn( repositorySession );
+        when( session.getRepositorySession() ).thenReturn( repositorySession );
 
         MavenProject project = (MavenProject) getVariableValueFromObject( mojo, "project" );
 
@@ -511,9 +513,9 @@ public class DeployMojoTest
         
         assertNotNull( mojo );
         
-        ArtifactDeployerStub deployer = new ArtifactDeployerStub();
+        RepositorySystem repositorySystem = mock( RepositorySystem.class );
         
-        setVariableValueToObject( mojo, "deployer", deployer );
+        setVariableValueToObject( mojo, "repositorySystem", repositorySystem );
         
         File file = new File( getBasedir(),
                               "target/test-classes/unit/basic-deploy-scp/target/" +
@@ -559,19 +561,17 @@ public class DeployMojoTest
     {
         DeployMojo mojo = spy( new DeployMojo() );
 
+        setVariableValueToObject( mojo, "project", project );
+        setVariableValueToObject( mojo, "altDeploymentRepository",  "altDeploymentRepository::default::http://localhost" );
+
         ArtifactRepository repository = mock( ArtifactRepository.class );
         when( mojo.createDeploymentArtifactRepository( "altDeploymentRepository", "http://localhost"
         ) ).thenReturn( repository );
 
         project.setVersion( "1.0-SNAPSHOT" );
 
-        ProjectDeployerRequest pdr =
-            new ProjectDeployerRequest()
-                .setProject( project )
-                .setAltDeploymentRepository( "altDeploymentRepository::default::http://localhost" );
-
         assertEquals( repository,
-                mojo.getDeploymentRepository( pdr ) );
+                mojo.getDeploymentRepository() );
 
     }
 
@@ -580,19 +580,18 @@ public class DeployMojoTest
     {
         DeployMojo mojo = spy( new DeployMojo() );
 
+        setVariableValueToObject( mojo, "project", project );
+        setVariableValueToObject( mojo, "altDeploymentRepository",  "altDeploymentRepository::legacy::http://localhost" );
+
         ArtifactRepository repository = mock( ArtifactRepository.class );
         when( mojo.createDeploymentArtifactRepository( "altDeploymentRepository", "http://localhost"
         ) ).thenReturn( repository );
 
         project.setVersion( "1.0-SNAPSHOT" );
 
-        ProjectDeployerRequest pdr =
-            new ProjectDeployerRequest()
-                .setProject( project )
-                .setAltDeploymentRepository( "altDeploymentRepository::legacy::http://localhost" );
         try
         {
-            mojo.getDeploymentRepository( pdr );
+            mojo.getDeploymentRepository();
             fail( "Should throw: Invalid legacy syntax and layout for repository." );
         }
         catch( MojoFailureException e )
@@ -607,19 +606,17 @@ public class DeployMojoTest
     {
         DeployMojo mojo = spy( new DeployMojo() );
 
+        setVariableValueToObject( mojo, "project", project );
+        setVariableValueToObject( mojo, "altDeploymentRepository",  "altDeploymentRepository::hey::wow::foo::http://localhost" );
+
         ArtifactRepository repository = mock( ArtifactRepository.class );
         when( mojo.createDeploymentArtifactRepository( "altDeploymentRepository", "http://localhost"
         ) ).thenReturn( repository );
 
         project.setVersion( "1.0-SNAPSHOT" );
-
-        ProjectDeployerRequest pdr =
-                new ProjectDeployerRequest()
-                        .setProject( project )
-                        .setAltDeploymentRepository( "altDeploymentRepository::hey::wow::foo::http://localhost" );
         try
         {
-            mojo.getDeploymentRepository( pdr );
+            mojo.getDeploymentRepository();
             fail( "Should throw: Invalid legacy syntax and layout for repository." );
         }
         catch( MojoFailureException e )
@@ -634,38 +631,34 @@ public class DeployMojoTest
     {
         DeployMojo mojo = spy( new DeployMojo() );
 
+        setVariableValueToObject( mojo, "project", project );
+        setVariableValueToObject( mojo, "altDeploymentRepository",  "altDeploymentRepository::default::scm:svn:http://localhost" );
+
         ArtifactRepository repository = mock( ArtifactRepository.class );
         when( mojo.createDeploymentArtifactRepository( "altDeploymentRepository", "scm:svn:http://localhost"
         ) ).thenReturn( repository );
 
         project.setVersion( "1.0-SNAPSHOT" );
 
-        ProjectDeployerRequest pdr =
-                new ProjectDeployerRequest()
-                        .setProject( project )
-                        .setAltDeploymentRepository( "altDeploymentRepository::default::scm:svn:http://localhost" );
-
         assertEquals( repository,
-                mojo.getDeploymentRepository( pdr ) );
+                mojo.getDeploymentRepository() );
     }
     public void testLegacyScmSvnAltDeploymentRepository()
             throws Exception
     {
         DeployMojo mojo = spy( new DeployMojo() );
 
+        setVariableValueToObject( mojo, "project", project );
+        setVariableValueToObject( mojo, "altDeploymentRepository",  "altDeploymentRepository::legacy::scm:svn:http://localhost" );
+
         ArtifactRepository repository = mock( ArtifactRepository.class );
         when( mojo.createDeploymentArtifactRepository( "altDeploymentRepository", "http://localhost"
         ) ).thenReturn( repository );
 
         project.setVersion( "1.0-SNAPSHOT" );
-
-        ProjectDeployerRequest pdr =
-                new ProjectDeployerRequest()
-                        .setProject( project )
-                        .setAltDeploymentRepository( "altDeploymentRepository::legacy::scm:svn:http://localhost" );
         try
         {
-            mojo.getDeploymentRepository( pdr );
+            mojo.getDeploymentRepository();
             fail( "Should throw: Invalid legacy syntax and layout for repository." );
         }
         catch( MojoFailureException e )
@@ -680,18 +673,17 @@ public class DeployMojoTest
     {
         DeployMojo mojo = spy( new DeployMojo() );
 
+        setVariableValueToObject( mojo, "project", project );
+        setVariableValueToObject( mojo, "altSnapshotDeploymentRepository",  "altSnapshotDeploymentRepository::http://localhost" );
+
         ArtifactRepository repository = mock( ArtifactRepository.class );
         when( mojo.createDeploymentArtifactRepository( "altSnapshotDeploymentRepository", "http://localhost"
                                                        ) ).thenReturn( repository );
 
         project.setVersion( "1.0-SNAPSHOT" );
 
-        ProjectDeployerRequest pdr =
-                        new ProjectDeployerRequest()
-                            .setProject( project )
-                            .setAltDeploymentRepository( "altSnapshotDeploymentRepository::http://localhost" );
         assertEquals( repository,
-                      mojo.getDeploymentRepository( pdr ));
+                      mojo.getDeploymentRepository());
     }
 
     public void testAltReleaseDeploymentRepository()
@@ -699,18 +691,16 @@ public class DeployMojoTest
     {
         DeployMojo mojo = spy( new DeployMojo() );
 
+        setVariableValueToObject( mojo, "project", project );
+        setVariableValueToObject( mojo, "altReleaseDeploymentRepository",  "altReleaseDeploymentRepository::http://localhost" );
+
         ArtifactRepository repository = mock( ArtifactRepository.class );
         when( mojo.createDeploymentArtifactRepository( "altReleaseDeploymentRepository", "http://localhost" ) ).thenReturn( repository );
 
         project.setVersion( "1.0" );
 
-        ProjectDeployerRequest pdr =
-                        new ProjectDeployerRequest()
-                            .setProject( project )
-                            .setAltReleaseDeploymentRepository( "altReleaseDeploymentRepository::http://localhost" );
-
         assertEquals( repository,
-                      mojo.getDeploymentRepository( pdr ));
+                      mojo.getDeploymentRepository());
     }
     
     private void addFileToList( File file, List<String> fileList )

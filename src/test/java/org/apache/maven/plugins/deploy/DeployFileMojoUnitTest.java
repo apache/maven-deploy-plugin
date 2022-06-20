@@ -19,36 +19,27 @@ package org.apache.maven.plugins.deploy;
  * under the License.
  */
 
-import junit.framework.Test;
-import junit.framework.TestCase;
-import junit.framework.TestSuite;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Parent;
 import org.apache.maven.plugin.MojoExecutionException;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.io.File;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * @author <a href="jerome@coffeebreaks.org">Jerome Lacoste</a>
  */
 public class DeployFileMojoUnitTest
-    extends TestCase
 {
-    public static void main( String[] args )
-    {
-        junit.textui.TestRunner.run( suite() );
-    }
-
-    public static Test suite()
-    {
-        TestSuite suite = new TestSuite( DeployFileMojoUnitTest.class );
-
-        return suite;
-    }
-
     MockDeployFileMojo mojo;
     Parent parent;
 
+    @Before
     public void setUp()
     {
         Model pomModel = new Model();
@@ -62,12 +53,13 @@ public class DeployFileMojoUnitTest
         mojo = new MockDeployFileMojo( pomModel );
     }
 
+    @After
     public void tearDown()
     {
         mojo = null;
     }
 
-    class MockDeployFileMojo extends DeployFileMojo {
+    static class MockDeployFileMojo extends DeployFileMojo {
         private Model model;
 
         public MockDeployFileMojo(Model model) {
@@ -83,6 +75,7 @@ public class DeployFileMojoUnitTest
         }
     }
 
+    @Test
     public void testProcessPomFromPomFileWithParent1() throws MojoExecutionException
     {
         mojo.setPomFile( new File( "foo.bar" ) );
@@ -98,6 +91,7 @@ public class DeployFileMojoUnitTest
         checkMojoProperties("parentGroup", null, "parentVersion", null);
     }
 
+    @Test
     public void testProcessPomFromPomFileWithParent2() throws MojoExecutionException
     {
         mojo.setPomFile( new File( "foo.bar" ) );
@@ -113,6 +107,7 @@ public class DeployFileMojoUnitTest
 
     }
 
+    @Test
     public void testProcessPomFromPomFileWithParent3() throws MojoExecutionException
     {
         mojo.setPomFile( new File( "foo.bar" ) );
@@ -127,6 +122,7 @@ public class DeployFileMojoUnitTest
         checkMojoProperties( "parentGroup", "artifact", "version", null );
     }
 
+    @Test
     public void testProcessPomFromPomFileWithParent4() throws MojoExecutionException
     {
         mojo.setPomFile( new File( "foo.bar" ) );
@@ -137,6 +133,7 @@ public class DeployFileMojoUnitTest
         checkMojoProperties("parentGroup", "artifact", "version", "packaging");
     }
 
+    @Test
     public void testProcessPomFromPomFileWithParent5() throws MojoExecutionException
     {
         mojo.setPomFile( new File( "foo.bar" ) );
@@ -147,6 +144,7 @@ public class DeployFileMojoUnitTest
         checkMojoProperties("group", "artifact", "version", "packaging");
     }
 
+    @Test
     public void testProcessPomFromPomFileWithParent6() throws MojoExecutionException
     {
         mojo.setPomFile( new File( "foo.bar" ) );
@@ -158,6 +156,7 @@ public class DeployFileMojoUnitTest
 
     }
 
+    @Test
     public void testProcessPomFromPomFileWithOverrides() throws MojoExecutionException
     {
         mojo.setPomFile( new File( "foo.bar" ) );

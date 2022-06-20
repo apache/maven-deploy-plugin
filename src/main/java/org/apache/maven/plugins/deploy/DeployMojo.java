@@ -19,6 +19,7 @@ package org.apache.maven.plugins.deploy;
  * under the License.
  */
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -26,20 +27,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.ArtifactUtils;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
-import org.apache.maven.project.ProjectBuildingRequest;
-import org.apache.maven.shared.transfer.artifact.deploy.ArtifactDeployerException;
-import org.apache.maven.shared.transfer.project.NoFileAssignedException;
-import org.apache.maven.shared.transfer.project.deploy.ProjectDeployer;
-import org.apache.maven.shared.transfer.project.deploy.ProjectDeployerRequest;
+import org.apache.maven.project.artifact.ProjectArtifactMetadata;
+import org.eclipse.aether.deployment.DeployRequest;
 
 /**
  * Deploys an artifact to remote repository.
@@ -61,8 +59,8 @@ public class DeployMojo
      */
     private static final AtomicInteger READYPROJECTSCOUNTER = new AtomicInteger();
 
-    private static final List<ProjectDeployerRequest> DEPLOYREQUESTS =
-        Collections.synchronizedList( new ArrayList<ProjectDeployerRequest>() );
+    private static final List<DeployRequest> DEPLOYREQUESTS =
+        Collections.synchronizedList( new ArrayList<DeployRequest>() );
 
     /**
      */
@@ -137,12 +135,6 @@ public class DeployMojo
     @Parameter( property = "maven.deploy.skip", defaultValue = "false" )
     private String skip = Boolean.FALSE.toString();
 
-    /**
-     * Component used to deploy project.
-     */
-    @Component
-    private ProjectDeployer projectDeployer;
-
     public void execute()
         throws MojoExecutionException, MojoFailureException
     {
@@ -158,26 +150,59 @@ public class DeployMojo
         {
             failIfOffline();
 
-            // CHECKSTYLE_OFF: LineLength
-            // @formatter:off
-            ProjectDeployerRequest pdr = new ProjectDeployerRequest()
-                .setProject( project )
-                .setRetryFailedDeploymentCount( getRetryFailedDeploymentCount() )
-                .setAltReleaseDeploymentRepository( altReleaseDeploymentRepository )
-                .setAltSnapshotDeploymentRepository( altSnapshotDeploymentRepository )
-                .setAltDeploymentRepository( altDeploymentRepository );
-            // @formatter:on
-            // CHECKSTYLE_ON: LineLength
+            ArrayList<Artifact> deployableArtifacts = new ArrayList<>();
 
-            ArtifactRepository repo = getDeploymentRepository( pdr );
+            Artifact artifact = project.getArtifact();
+            String packaging = project.getPackaging();
+            File pomFile = project.getFile();
+            List<Artifact> attachedArtifacts = project.getAttachedArtifacts();
 
-            if ( !deployAtEnd )
+            // Deploy the POM
+            boolean isPomArtifact = "pom".equals( packaging );
+            if ( isPomArtifact )
             {
-                deployProject( getSession().getProjectBuildingRequest(), pdr, repo );
+                artifact.setFile( pomFile );
             }
             else
             {
-                DEPLOYREQUESTS.add( pdr );
+                ProjectArtifactMetadata metadata = new ProjectArtifactMetadata( artifact, pomFile );
+                artifact.addMetadata( metadata );
+            }
+
+            if ( isPomArtifact )
+            {
+                deployableArtifacts.add( artifact );
+            }
+            else
+            {
+                File file = artifact.getFile();
+
+                if ( file != null && file.isFile() )
+                {
+                    deployableArtifacts.add( artifact );
+                }
+                else if ( !attachedArtifacts.isEmpty() )
+                {
+                    throw new MojoExecutionException( "The packaging plugin for this project did not assign "
+                            + "a main file to the project but it has attachments. Change packaging to 'pom'." );
+                }
+                else
+                {
+                    throw new MojoExecutionException( "The packaging for this project did not assign "
+                            + "a file to the build artifact" );
+                }
+            }
+            deployableArtifacts.addAll( attachedArtifacts );
+
+            DeployRequest deployRequest = deployRequest( getDeploymentRepository(), deployableArtifacts );
+
+            if ( !deployAtEnd )
+            {
+                deploy( deployRequest );
+            }
+            else
+            {
+                DEPLOYREQUESTS.add( deployRequest );
                 addedDeployRequest = true;
             }
         }
@@ -189,9 +214,7 @@ public class DeployMojo
             {
                 while ( !DEPLOYREQUESTS.isEmpty() )
                 {
-                    ArtifactRepository repo = getDeploymentRepository( DEPLOYREQUESTS.get( 0 ) );
-
-                    deployProject( getSession().getProjectBuildingRequest(), DEPLOYREQUESTS.remove( 0 ), repo );
+                    deploy( DEPLOYREQUESTS.remove( 0 ) );
                 }
             }
         }
@@ -202,34 +225,13 @@ public class DeployMojo
         }
     }
 
-    private void deployProject( ProjectBuildingRequest pbr, ProjectDeployerRequest pir, ArtifactRepository repo )
-        throws MojoFailureException, MojoExecutionException
-    {
-        try
-        {
-            warnIfAffectedPackagingAndMaven( pir.getProject().getPackaging() );
-            projectDeployer.deploy( pbr, pir, repo );
-        }
-        catch ( NoFileAssignedException e )
-        {
-            throw new MojoExecutionException( "NoFileAssignedException", e );
-        }
-        catch ( ArtifactDeployerException e )
-        {
-            throw new MojoExecutionException( "ArtifactDeployerException", e );
-        }
-
-    }
-
-    ArtifactRepository getDeploymentRepository( ProjectDeployerRequest pdr )
+    /**
+     * Visible for testing.
+     */
+    ArtifactRepository getDeploymentRepository()
 
         throws MojoExecutionException, MojoFailureException
     {
-        MavenProject project = pdr.getProject();
-        String altDeploymentRepository = pdr.getAltDeploymentRepository();
-        String altReleaseDeploymentRepository = pdr.getAltReleaseDeploymentRepository();
-        String altSnapshotDeploymentRepository = pdr.getAltSnapshotDeploymentRepository();
-
         ArtifactRepository repo = null;
 
         String altDeploymentRepo;

@@ -19,16 +19,28 @@ package org.apache.maven.plugins.deploy;
  * under the License.
  */
 
+import java.util.List;
+
+import org.apache.maven.RepositoryUtils;
+import org.apache.maven.artifact.Artifact;
+import org.apache.maven.artifact.metadata.ArtifactMetadata;
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.artifact.repository.ArtifactRepositoryPolicy;
 import org.apache.maven.artifact.repository.MavenArtifactRepository;
 import org.apache.maven.artifact.repository.layout.DefaultRepositoryLayout;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
+import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.project.artifact.ProjectArtifactMetadata;
 import org.apache.maven.rtinfo.RuntimeInformation;
+import org.eclipse.aether.RepositorySystem;
+import org.eclipse.aether.deployment.DeployRequest;
+import org.eclipse.aether.deployment.DeploymentException;
+import org.eclipse.aether.repository.RemoteRepository;
+import org.eclipse.aether.util.artifact.SubArtifact;
 import org.eclipse.aether.util.version.GenericVersionScheme;
 import org.eclipse.aether.version.InvalidVersionSpecificationException;
 import org.eclipse.aether.version.Version;
@@ -37,9 +49,8 @@ import org.eclipse.aether.version.Version;
  * Abstract class for Deploy mojo's.
  */
 public abstract class AbstractDeployMojo
-    extends AbstractMojo
+        extends AbstractMojo
 {
-
     /**
      * Flag whether Maven is currently in online/offline mode.
      */
@@ -49,17 +60,20 @@ public abstract class AbstractDeployMojo
     /**
      * Parameter used to control how many times a failed deployment will be retried before giving up and failing. If a
      * value outside the range 1-10 is specified it will be pulled to the nearest value within the range 1-10.
-     * 
+     *
      * @since 2.7
      */
     @Parameter( property = "retryFailedDeploymentCount", defaultValue = "1" )
     private int retryFailedDeploymentCount;
 
-    @Parameter( defaultValue = "${session}", readonly = true, required = true )
-    private MavenSession session;
-
     @Component
     private RuntimeInformation runtimeInformation;
+
+    @Parameter( defaultValue = "${session}", readonly = true, required = true )
+    protected MavenSession session;
+
+    @Component
+    protected RepositorySystem repositorySystem;
 
     private static final String AFFECTED_MAVEN_PACKAGING = "maven-plugin";
 
@@ -68,7 +82,7 @@ public abstract class AbstractDeployMojo
     /* Setters and Getters */
 
     void failIfOffline()
-        throws MojoFailureException
+            throws MojoFailureException
     {
         if ( offline )
         {
@@ -84,12 +98,7 @@ public abstract class AbstractDeployMojo
     protected ArtifactRepository createDeploymentArtifactRepository( String id, String url )
     {
         return new MavenArtifactRepository( id, url, new DefaultRepositoryLayout(), new ArtifactRepositoryPolicy(),
-                                            new ArtifactRepositoryPolicy() );
-    }
-    
-    protected final MavenSession getSession()
-    {
-        return session;
+                new ArtifactRepositoryPolicy() );
     }
 
     protected void warnIfAffectedPackagingAndMaven( final String packaging )
@@ -114,6 +123,66 @@ public abstract class AbstractDeployMojo
             {
                 // skip it: Generic does not throw, only API contains this exception
             }
+        }
+    }
+
+    private RemoteRepository getRemoteRepository( ArtifactRepository remoteRepository )
+    {
+        RemoteRepository aetherRepo = RepositoryUtils.toRepo( remoteRepository );
+
+        if ( aetherRepo.getAuthentication() == null || aetherRepo.getProxy() == null )
+        {
+            RemoteRepository.Builder builder = new RemoteRepository.Builder( aetherRepo );
+
+            if ( aetherRepo.getAuthentication() == null )
+            {
+                builder.setAuthentication( session.getRepositorySession().getAuthenticationSelector()
+                        .getAuthentication( aetherRepo ) );
+            }
+
+            if ( aetherRepo.getProxy() == null )
+            {
+                builder.setProxy( session.getRepositorySession().getProxySelector().getProxy( aetherRepo ) );
+            }
+
+            aetherRepo = builder.build();
+        }
+
+        return aetherRepo;
+    }
+
+    protected DeployRequest deployRequest( ArtifactRepository repository, List<Artifact> artifacts )
+    {
+        DeployRequest deployRequest = new DeployRequest();
+        deployRequest.setRepository( getRemoteRepository( repository ) );
+        for ( Artifact artifact : artifacts )
+        {
+            org.eclipse.aether.artifact.Artifact aetherArtifact = RepositoryUtils.toArtifact( artifact );
+            deployRequest.addArtifact( aetherArtifact );
+
+            for ( ArtifactMetadata metadata : artifact.getMetadataList() )
+            {
+                if ( metadata instanceof ProjectArtifactMetadata )
+                {
+                    org.eclipse.aether.artifact.Artifact pomArtifact = new SubArtifact( aetherArtifact, "", "pom" );
+                    pomArtifact = pomArtifact.setFile( ( (ProjectArtifactMetadata) metadata ).getFile() );
+                    deployRequest.addArtifact( pomArtifact );
+                }
+            }
+        }
+        return deployRequest;
+    }
+
+    protected void deploy( DeployRequest deployRequest )
+            throws MojoExecutionException
+    {
+        try
+        {
+            repositorySystem.deploy( session.getRepositorySession(), deployRequest );
+        }
+        catch ( DeploymentException e )
+        {
+            throw new MojoExecutionException( e.getMessage(), e );
         }
     }
 }
