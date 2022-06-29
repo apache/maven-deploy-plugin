@@ -146,6 +146,11 @@ public class DeployMojo
     @Component
     private ProjectDeployer projectDeployer;
 
+    private enum State
+    {
+        SKIPPED, DEPLOYED, TO_BE_DEPLOYED
+    }
+
     public void execute()
         throws MojoExecutionException, MojoFailureException
     {
@@ -154,29 +159,30 @@ public class DeployMojo
             || ( "snapshots".equals( skip ) && ArtifactUtils.isSnapshot( project.getVersion() ) )
         )
         {
-            getPluginContext().put( DEPLOY_PROCESSED_MARKER, Boolean.FALSE );
             getLog().info( "Skipping artifact deployment" );
+            getPluginContext().put( DEPLOY_PROCESSED_MARKER, State.SKIPPED.name() );
         }
         else
         {
             failIfOffline();
 
-            // CHECKSTYLE_OFF: LineLength
-            // @formatter:off
-            ProjectDeployerRequest pdr = new ProjectDeployerRequest()
-                .setProject( project )
-                .setRetryFailedDeploymentCount( getRetryFailedDeploymentCount() )
-                .setAltReleaseDeploymentRepository( altReleaseDeploymentRepository )
-                .setAltSnapshotDeploymentRepository( altSnapshotDeploymentRepository )
-                .setAltDeploymentRepository( altDeploymentRepository );
-            // @formatter:on
-            // CHECKSTYLE_ON: LineLength
-
-            ArtifactRepository repo = getDeploymentRepository( pdr );
-
             if ( !deployAtEnd )
             {
+                // CHECKSTYLE_OFF: LineLength
+                // @formatter:off
+                ProjectDeployerRequest pdr = new ProjectDeployerRequest()
+                        .setProject( project )
+                        .setRetryFailedDeploymentCount( getRetryFailedDeploymentCount() )
+                        .setAltReleaseDeploymentRepository( altReleaseDeploymentRepository )
+                        .setAltSnapshotDeploymentRepository( altSnapshotDeploymentRepository )
+                        .setAltDeploymentRepository( altDeploymentRepository );
+                // @formatter:on
+                // CHECKSTYLE_ON: LineLength
+
+                ArtifactRepository repo = getDeploymentRepository( pdr );
+
                 deployProject( getSession().getProjectBuildingRequest(), pdr, repo );
+                getPluginContext().put( DEPLOY_PROCESSED_MARKER, State.DEPLOYED.name() );
             }
             else
             {
@@ -201,7 +207,7 @@ public class DeployMojo
                         altDeploymentRepository
                     );
                 }
-                getPluginContext().put( DEPLOY_PROCESSED_MARKER, Boolean.TRUE );
+                getPluginContext().put( DEPLOY_PROCESSED_MARKER, State.TO_BE_DEPLOYED.name() );
                 getLog().info( "Deploying " + getProjectReferenceId( project ) + " at end" );
             }
         }
@@ -211,14 +217,8 @@ public class DeployMojo
             for ( MavenProject reactorProject : reactorProjects )
             {
                 Map<String, Object> pluginContext = getSession().getPluginContext( pluginDescriptor, reactorProject );
-                Boolean deploy = (Boolean) pluginContext.get( DEPLOY_PROCESSED_MARKER );
-                if ( !deploy )
-                {
-                    getLog().info(
-                        "Project " + getProjectReferenceId( reactorProject ) + " skipped deploy"
-                    );
-                }
-                else
+                State state = State.valueOf( (String) pluginContext.get( DEPLOY_PROCESSED_MARKER ) );
+                if ( state == State.TO_BE_DEPLOYED )
                 {
                     String altReleaseDeploymentRepository =
                         (String) pluginContext.get( DEPLOY_ALT_RELEASE_DEPLOYMENT_REPOSITORY );

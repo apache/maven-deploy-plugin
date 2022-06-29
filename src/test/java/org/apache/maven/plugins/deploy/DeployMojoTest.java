@@ -326,6 +326,7 @@ public class DeployMojoTest
         
         MavenProject project = (MavenProject) getVariableValueFromObject( mojo, "project" );
 
+        setVariableValueToObject( mojo, "pluginContext", new ConcurrentHashMap<>() );
         setVariableValueToObject( mojo, "reactorProjects", Collections.singletonList( project ) );
 
         artifact = (DeployArtifactStub) project.getArtifact();
@@ -391,6 +392,7 @@ public class DeployMojoTest
         
         MavenProject project = (MavenProject) getVariableValueFromObject( mojo, "project" );
 
+        setVariableValueToObject( mojo, "pluginContext", new ConcurrentHashMap<>() );
         setVariableValueToObject( mojo, "reactorProjects", Collections.singletonList( project ) );
 
         artifact = (DeployArtifactStub) project.getArtifact();
@@ -432,6 +434,7 @@ public class DeployMojoTest
 
         MavenProject project = (MavenProject) getVariableValueFromObject( mojo, "project" );
 
+        setVariableValueToObject( mojo, "pluginContext", new ConcurrentHashMap<>() );
         setVariableValueToObject( mojo, "reactorProjects", Collections.singletonList( project ) );
 
         artifact = (DeployArtifactStub) project.getArtifact();
@@ -533,6 +536,7 @@ public class DeployMojoTest
         
         MavenProject project = (MavenProject) getVariableValueFromObject( mojo, "project" );
 
+        setVariableValueToObject( mojo, "pluginContext", new ConcurrentHashMap<>() );
         setVariableValueToObject( mojo, "reactorProjects", Collections.singletonList( project ) );
 
         artifact = (DeployArtifactStub) project.getArtifact();
