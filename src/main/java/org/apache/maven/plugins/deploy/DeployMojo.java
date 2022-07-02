@@ -218,7 +218,7 @@ public class DeployMojo
                 putPluginContextValue( DEPLOY_ALT_RELEASE_DEPLOYMENT_REPOSITORY, altReleaseDeploymentRepository );
                 putPluginContextValue( DEPLOY_ALT_SNAPSHOT_DEPLOYMENT_REPOSITORY, altSnapshotDeploymentRepository );
                 putPluginContextValue( DEPLOY_ALT_DEPLOYMENT_REPOSITORY, altDeploymentRepository );
-                getLog().info( "Deferring deploy for  " + getProjectReferenceId( project ) + " at end" );
+                getLog().info( "Deferring deploy for " + getProjectReferenceId( project ) + " at end" );
             }
         }
 

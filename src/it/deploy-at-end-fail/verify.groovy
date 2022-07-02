@@ -22,5 +22,5 @@ assert !( new File( basedir, "module1/target/repo/org/apache/maven/its/deploy/da
 
 File buildLog = new File( basedir, 'build.log' )
 assert buildLog.exists()
-assert buildLog.text.contains( "[INFO] Deploying org.apache.maven.its.deploy.dae.fail:dae:1.0 at end" )
+assert buildLog.text.contains( "[INFO] Deferring deploy for org.apache.maven.its.deploy.dae.fail:dae:1.0 at end" )
 
