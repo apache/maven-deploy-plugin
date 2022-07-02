@@ -50,18 +50,6 @@ import org.apache.maven.shared.transfer.project.deploy.ProjectDeployerRequest;
 public class DeployMojo
     extends AbstractDeployMojo
 {
-    private static final String DEPLOY_PROCESSED_MARKER =
-        DeployMojo.class.getName() + ".processed";
-
-    private static final String DEPLOY_ALT_RELEASE_DEPLOYMENT_REPOSITORY =
-        DeployMojo.class.getName() + ".altReleaseDeploymentRepository";
-
-    private static final String DEPLOY_ALT_SNAPSHOT_DEPLOYMENT_REPOSITORY =
-        DeployMojo.class.getName() + ".altSnapshotDeploymentRepository";
-
-    private static final String DEPLOY_ALT_DEPLOYMENT_REPOSITORY =
-        DeployMojo.class.getName() + ".altDeploymentRepository";
-
     private static final Pattern ALT_LEGACY_REPO_SYNTAX_PATTERN = Pattern.compile( "(.+?)::(.+?)::(.+)" );
 
     private static final Pattern ALT_REPO_SYNTAX_PATTERN = Pattern.compile( "(.+?)::(.+)" );
@@ -151,6 +139,46 @@ public class DeployMojo
         SKIPPED, DEPLOYED, TO_BE_DEPLOYED
     }
 
+    private static final String DEPLOY_PROCESSED_MARKER = DeployMojo.class.getName() + ".processed";
+
+    private static final String DEPLOY_ALT_RELEASE_DEPLOYMENT_REPOSITORY =
+        DeployMojo.class.getName() + ".altReleaseDeploymentRepository";
+
+    private static final String DEPLOY_ALT_SNAPSHOT_DEPLOYMENT_REPOSITORY =
+        DeployMojo.class.getName() + ".altSnapshotDeploymentRepository";
+
+    private static final String DEPLOY_ALT_DEPLOYMENT_REPOSITORY =
+        DeployMojo.class.getName() + ".altDeploymentRepository";
+
+    private void putState( State state )
+    {
+        getPluginContext().put( DEPLOY_PROCESSED_MARKER, state.name() );
+    }
+
+    private void putPluginContextValue( String key, String value )
+    {
+        if ( value != null )
+        {
+            getPluginContext().put( key, value );
+        }
+    }
+
+    private String getPluginContextValue( Map<String, Object> pluginContext, String key )
+    {
+        return (String) pluginContext.get( key );
+    }
+
+    private State getState( Map<String, Object> pluginContext )
+    {
+        return State.valueOf( getPluginContextValue( pluginContext, DEPLOY_PROCESSED_MARKER ) );
+    }
+
+    private boolean hasState( MavenProject project )
+    {
+        Map<String, Object> pluginContext = getSession().getPluginContext( pluginDescriptor, project );
+        return pluginContext.containsKey( DEPLOY_PROCESSED_MARKER );
+    }
+
     public void execute()
         throws MojoExecutionException, MojoFailureException
     {
@@ -160,7 +188,7 @@ public class DeployMojo
         )
         {
             getLog().info( "Skipping artifact deployment" );
-            getPluginContext().put( DEPLOY_PROCESSED_MARKER, State.SKIPPED.name() );
+            putState( State.SKIPPED );
         }
         else
         {
@@ -182,33 +210,15 @@ public class DeployMojo
                 ArtifactRepository repo = getDeploymentRepository( pdr );
 
                 deployProject( getSession().getProjectBuildingRequest(), pdr, repo );
-                getPluginContext().put( DEPLOY_PROCESSED_MARKER, State.DEPLOYED.name() );
+                putState( State.DEPLOYED );
             }
             else
             {
-                if ( altReleaseDeploymentRepository != null )
-                {
-                    getPluginContext().put(
-                        DEPLOY_ALT_RELEASE_DEPLOYMENT_REPOSITORY,
-                        altReleaseDeploymentRepository
-                    );
-                }
-                if ( altSnapshotDeploymentRepository != null )
-                {
-                    getPluginContext().put(
-                        DEPLOY_ALT_SNAPSHOT_DEPLOYMENT_REPOSITORY,
-                        altSnapshotDeploymentRepository
-                    );
-                }
-                if ( altDeploymentRepository != null )
-                {
-                    getPluginContext().put(
-                        DEPLOY_ALT_DEPLOYMENT_REPOSITORY,
-                        altDeploymentRepository
-                    );
-                }
-                getPluginContext().put( DEPLOY_PROCESSED_MARKER, State.TO_BE_DEPLOYED.name() );
-                getLog().info( "Deploying " + getProjectReferenceId( project ) + " at end" );
+                putState( State.TO_BE_DEPLOYED );
+                putPluginContextValue( DEPLOY_ALT_RELEASE_DEPLOYMENT_REPOSITORY, altReleaseDeploymentRepository );
+                putPluginContextValue( DEPLOY_ALT_SNAPSHOT_DEPLOYMENT_REPOSITORY, altSnapshotDeploymentRepository );
+                putPluginContextValue( DEPLOY_ALT_DEPLOYMENT_REPOSITORY, altDeploymentRepository );
+                getLog().info( "Deferring deploy for  " + getProjectReferenceId( project ) + " at end" );
             }
         }
 
@@ -217,15 +227,15 @@ public class DeployMojo
             for ( MavenProject reactorProject : reactorProjects )
             {
                 Map<String, Object> pluginContext = getSession().getPluginContext( pluginDescriptor, reactorProject );
-                State state = State.valueOf( (String) pluginContext.get( DEPLOY_PROCESSED_MARKER ) );
+                State state = getState( pluginContext );
                 if ( state == State.TO_BE_DEPLOYED )
                 {
                     String altReleaseDeploymentRepository =
-                        (String) pluginContext.get( DEPLOY_ALT_RELEASE_DEPLOYMENT_REPOSITORY );
+                        getPluginContextValue( pluginContext, DEPLOY_ALT_RELEASE_DEPLOYMENT_REPOSITORY );
                     String altSnapshotDeploymentRepository =
-                        (String) pluginContext.get( DEPLOY_ALT_SNAPSHOT_DEPLOYMENT_REPOSITORY );
+                        getPluginContextValue( pluginContext, DEPLOY_ALT_SNAPSHOT_DEPLOYMENT_REPOSITORY );
                     String altDeploymentRepository =
-                        (String) pluginContext.get( DEPLOY_ALT_DEPLOYMENT_REPOSITORY );
+                        getPluginContextValue( pluginContext, DEPLOY_ALT_DEPLOYMENT_REPOSITORY );
 
                     ProjectDeployerRequest pdr = new ProjectDeployerRequest()
                         .setProject( reactorProject )
@@ -251,8 +261,7 @@ public class DeployMojo
     {
         for ( MavenProject reactorProject : reactorProjects )
         {
-            Map<String, Object> pluginContext = getSession().getPluginContext( pluginDescriptor, reactorProject );
-            if ( !pluginContext.containsKey( DEPLOY_PROCESSED_MARKER ) )
+            if ( !hasState( reactorProject ) )
             {
                 return false;
             }
