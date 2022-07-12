@@ -19,6 +19,7 @@ package org.apache.maven.plugins.deploy;
  * under the License.
  */
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
@@ -28,11 +29,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugin.descriptor.PluginDescriptor;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 import org.apache.maven.plugin.testing.stubs.MavenProjectStub;
 import org.apache.maven.plugins.deploy.stubs.ArtifactRepositoryStub;
@@ -67,7 +70,6 @@ public class DeployMojoTest
     
     MavenProjectStub project = new MavenProjectStub();
 
-    @Mock
     private MavenSession session;
     
     @InjectMocks
@@ -77,7 +79,11 @@ public class DeployMojoTest
         throws Exception
     {
         super.setUp();
-        
+
+        session = mock( MavenSession.class );
+        when( session.getPluginContext(any(PluginDescriptor.class), any(MavenProject.class)))
+                .thenReturn( new ConcurrentHashMap<String, Object>() );
+
         remoteRepo = new File( REMOTE_REPO );
         
         remoteRepo.mkdirs();  
@@ -144,7 +150,8 @@ public class DeployMojoTest
         assertTrue( file.exists() );
 
         MavenProject project = (MavenProject) getVariableValueFromObject( mojo, "project" );
-        
+
+        setVariableValueToObject( mojo, "pluginContext", new ConcurrentHashMap<>() );
         setVariableValueToObject( mojo, "reactorProjects", Collections.singletonList( project ) );
         
         artifact = ( DeployArtifactStub ) project.getArtifact();
@@ -251,8 +258,11 @@ public class DeployMojoTest
         assertTrue( file.exists() );
 
         MavenProject project = (MavenProject) getVariableValueFromObject( mojo, "project" );
-        
+
+        setVariableValueToObject( mojo, "pluginDescriptor", new PluginDescriptor() );
+        setVariableValueToObject( mojo, "pluginContext", new ConcurrentHashMap<>() );
         setVariableValueToObject( mojo, "reactorProjects", Collections.singletonList( project ) );
+        setVariableValueToObject( mojo, "session", session );
 
         artifact = (DeployArtifactStub) project.getArtifact();
 
@@ -317,6 +327,7 @@ public class DeployMojoTest
         
         MavenProject project = (MavenProject) getVariableValueFromObject( mojo, "project" );
 
+        setVariableValueToObject( mojo, "pluginContext", new ConcurrentHashMap<>() );
         setVariableValueToObject( mojo, "reactorProjects", Collections.singletonList( project ) );
 
         artifact = (DeployArtifactStub) project.getArtifact();
@@ -382,6 +393,7 @@ public class DeployMojoTest
         
         MavenProject project = (MavenProject) getVariableValueFromObject( mojo, "project" );
 
+        setVariableValueToObject( mojo, "pluginContext", new ConcurrentHashMap<>() );
         setVariableValueToObject( mojo, "reactorProjects", Collections.singletonList( project ) );
 
         artifact = (DeployArtifactStub) project.getArtifact();
@@ -424,6 +436,7 @@ public class DeployMojoTest
 
         MavenProject project = (MavenProject) getVariableValueFromObject( mojo, "project" );
 
+        setVariableValueToObject( mojo, "pluginContext", new ConcurrentHashMap<>() );
         setVariableValueToObject( mojo, "reactorProjects", Collections.singletonList( project ) );
 
         artifact = (DeployArtifactStub) project.getArtifact();
@@ -525,6 +538,7 @@ public class DeployMojoTest
         
         MavenProject project = (MavenProject) getVariableValueFromObject( mojo, "project" );
 
+        setVariableValueToObject( mojo, "pluginContext", new ConcurrentHashMap<>() );
         setVariableValueToObject( mojo, "reactorProjects", Collections.singletonList( project ) );
 
         artifact = (DeployArtifactStub) project.getArtifact();
@@ -571,7 +585,7 @@ public class DeployMojoTest
         project.setVersion( "1.0-SNAPSHOT" );
 
         assertEquals( repository,
-                mojo.getDeploymentRepository() );
+                mojo.getDeploymentRepository( project, null, null, "altDeploymentRepository::default::http://localhost") );
 
     }
 
@@ -591,7 +605,7 @@ public class DeployMojoTest
 
         try
         {
-            mojo.getDeploymentRepository();
+            mojo.getDeploymentRepository( project, null, null, "altDeploymentRepository::legacy::http://localhost" );
             fail( "Should throw: Invalid legacy syntax and layout for repository." );
         }
         catch( MojoFailureException e )
@@ -616,7 +630,7 @@ public class DeployMojoTest
         project.setVersion( "1.0-SNAPSHOT" );
         try
         {
-            mojo.getDeploymentRepository();
+            mojo.getDeploymentRepository( project, null, null, "altDeploymentRepository::hey::wow::foo::http://localhost" );
             fail( "Should throw: Invalid legacy syntax and layout for repository." );
         }
         catch( MojoFailureException e )
@@ -641,7 +655,7 @@ public class DeployMojoTest
         project.setVersion( "1.0-SNAPSHOT" );
 
         assertEquals( repository,
-                mojo.getDeploymentRepository() );
+                mojo.getDeploymentRepository( project, null, null, "altDeploymentRepository::default::scm:svn:http://localhost" ) );
     }
     public void testLegacyScmSvnAltDeploymentRepository()
             throws Exception
@@ -658,7 +672,7 @@ public class DeployMojoTest
         project.setVersion( "1.0-SNAPSHOT" );
         try
         {
-            mojo.getDeploymentRepository();
+            mojo.getDeploymentRepository( project, null, null, "altDeploymentRepository::legacy::scm:svn:http://localhost" );
             fail( "Should throw: Invalid legacy syntax and layout for repository." );
         }
         catch( MojoFailureException e )
@@ -683,7 +697,7 @@ public class DeployMojoTest
         project.setVersion( "1.0-SNAPSHOT" );
 
         assertEquals( repository,
-                      mojo.getDeploymentRepository());
+                      mojo.getDeploymentRepository( project, "altSnapshotDeploymentRepository::http://localhost", null, null ));
     }
 
     public void testAltReleaseDeploymentRepository()
@@ -700,7 +714,7 @@ public class DeployMojoTest
         project.setVersion( "1.0" );
 
         assertEquals( repository,
-                      mojo.getDeploymentRepository());
+                      mojo.getDeploymentRepository( project, null, "altReleaseDeploymentRepository::http://localhost", null ));
     }
     
     private void addFileToList( File file, List<String> fileList )
