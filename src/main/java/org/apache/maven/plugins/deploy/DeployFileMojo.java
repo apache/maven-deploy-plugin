@@ -65,8 +65,6 @@ import org.eclipse.aether.util.artifact.SubArtifact;
 public class DeployFileMojo
     extends AbstractDeployMojo
 {
-    private static final String LS = System.getProperty( "line.separator" );
-
     /**
      * GroupId of the artifact to be deployed. Retrieved from POM file if specified.
      */
@@ -328,7 +326,6 @@ public class DeployFileMojo
         deployRequest.addArtifact( mainArtifact );
 
         File artifactLocalFile = getLocalRepositoryFile( session.getRepositorySession(), mainArtifact );
-        File pomLocalFile = getPomLocalRepositoryFile( session.getRepositorySession(), mainArtifact );
 
         if ( file.equals( artifactLocalFile ) )
         {
@@ -473,17 +470,6 @@ public class DeployFileMojo
     private File getLocalRepositoryFile( RepositorySystemSession session, Artifact artifact )
     {
         String path = session.getLocalRepositoryManager().getPathForLocalArtifact( artifact );
-        return new File( session.getLocalRepository().getBasedir(), path );
-    }
-
-    /**
-     * Gets the path of the specified artifact POM within the local repository. Note that the returned path need
-     * not exist (yet).
-     */
-    private File getPomLocalRepositoryFile( RepositorySystemSession session, Artifact artifact )
-    {
-        SubArtifact pomArtifact = new SubArtifact( artifact, "", "pom" );
-        String path = session.getLocalRepositoryManager().getPathForLocalArtifact( pomArtifact );
         return new File( session.getLocalRepository().getBasedir(), path );
     }
 
