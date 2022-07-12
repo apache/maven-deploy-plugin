@@ -274,8 +274,6 @@ public class DeployFileMojo
     public void execute()
         throws MojoExecutionException, MojoFailureException
     {
-        failIfOffline();
-
         if ( !file.exists() )
         {
             throw new MojoExecutionException( file.getPath() + " not found." );
@@ -302,6 +300,9 @@ public class DeployFileMojo
         {
             throw new MojoExecutionException( "The artifact information is not valid: uses invalid characters." );
         }
+
+        failIfOffline();
+        warnIfAffectedPackagingAndMaven( packaging );
 
         DeployRequest deployRequest = new DeployRequest();
         deployRequest.setRepository( remoteRepository );

@@ -187,6 +187,7 @@ public class DeployMojo
         else
         {
             failIfOffline();
+            warnIfAffectedPackagingAndMaven( project.getPackaging() );
 
             if ( !deployAtEnd )
             {
