@@ -123,27 +123,27 @@ public abstract class AbstractDeployMojo
 
     private RemoteRepository getRemoteRepository( ArtifactRepository remoteRepository )
     {
-        RemoteRepository aetherRepo = RepositoryUtils.toRepo( remoteRepository );
+        RemoteRepository result = RepositoryUtils.toRepo( remoteRepository );
 
-        if ( aetherRepo.getAuthentication() == null || aetherRepo.getProxy() == null )
+        if ( result.getAuthentication() == null || result.getProxy() == null )
         {
-            RemoteRepository.Builder builder = new RemoteRepository.Builder( aetherRepo );
+            RemoteRepository.Builder builder = new RemoteRepository.Builder( result );
 
-            if ( aetherRepo.getAuthentication() == null )
+            if ( result.getAuthentication() == null )
             {
                 builder.setAuthentication( session.getRepositorySession().getAuthenticationSelector()
-                        .getAuthentication( aetherRepo ) );
+                        .getAuthentication( result ) );
             }
 
-            if ( aetherRepo.getProxy() == null )
+            if ( result.getProxy() == null )
             {
-                builder.setProxy( session.getRepositorySession().getProxySelector().getProxy( aetherRepo ) );
+                builder.setProxy( session.getRepositorySession().getProxySelector().getProxy( result ) );
             }
 
-            aetherRepo = builder.build();
+            result = builder.build();
         }
 
-        return aetherRepo;
+        return result;
     }
 
     protected DeployRequest deployRequest( ArtifactRepository repository, List<Artifact> artifacts )
@@ -191,7 +191,7 @@ public abstract class AbstractDeployMojo
                 if ( count + 1 < retryFailedDeploymentCounter )
                 {
                     getLog().warn( "Encountered issue during deployment: " + e.getLocalizedMessage() );
-                    getLog().debug( e.getMessage() );
+                    getLog().debug( e );
                 }
                 if ( exception == null )
                 {
