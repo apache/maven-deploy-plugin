@@ -19,16 +19,18 @@ package org.apache.maven.plugins.deploy;
  * under the License.
  */
 
-import org.apache.maven.artifact.repository.ArtifactRepository;
-import org.apache.maven.artifact.repository.ArtifactRepositoryPolicy;
-import org.apache.maven.artifact.repository.MavenArtifactRepository;
-import org.apache.maven.artifact.repository.layout.DefaultRepositoryLayout;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
+import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.rtinfo.RuntimeInformation;
+import org.eclipse.aether.RepositorySystem;
+import org.eclipse.aether.RepositorySystemSession;
+import org.eclipse.aether.deployment.DeployRequest;
+import org.eclipse.aether.deployment.DeploymentException;
+import org.eclipse.aether.repository.RemoteRepository;
 import org.eclipse.aether.util.version.GenericVersionScheme;
 import org.eclipse.aether.version.InvalidVersionSpecificationException;
 import org.eclipse.aether.version.Version;
@@ -37,9 +39,8 @@ import org.eclipse.aether.version.Version;
  * Abstract class for Deploy mojo's.
  */
 public abstract class AbstractDeployMojo
-    extends AbstractMojo
+        extends AbstractMojo
 {
-
     /**
      * Flag whether Maven is currently in online/offline mode.
      */
@@ -49,17 +50,20 @@ public abstract class AbstractDeployMojo
     /**
      * Parameter used to control how many times a failed deployment will be retried before giving up and failing. If a
      * value outside the range 1-10 is specified it will be pulled to the nearest value within the range 1-10.
-     * 
+     *
      * @since 2.7
      */
     @Parameter( property = "retryFailedDeploymentCount", defaultValue = "1" )
     private int retryFailedDeploymentCount;
 
-    @Parameter( defaultValue = "${session}", readonly = true, required = true )
-    private MavenSession session;
-
     @Component
     private RuntimeInformation runtimeInformation;
+
+    @Parameter( defaultValue = "${session}", readonly = true, required = true )
+    protected MavenSession session;
+
+    @Component
+    protected RepositorySystem repositorySystem;
 
     private static final String AFFECTED_MAVEN_PACKAGING = "maven-plugin";
 
@@ -68,7 +72,7 @@ public abstract class AbstractDeployMojo
     /* Setters and Getters */
 
     void failIfOffline()
-        throws MojoFailureException
+            throws MojoFailureException
     {
         if ( offline )
         {
@@ -76,22 +80,9 @@ public abstract class AbstractDeployMojo
         }
     }
 
-    int getRetryFailedDeploymentCount()
-    {
-        return retryFailedDeploymentCount;
-    }
-
-    protected ArtifactRepository createDeploymentArtifactRepository( String id, String url )
-    {
-        return new MavenArtifactRepository( id, url, new DefaultRepositoryLayout(), new ArtifactRepositoryPolicy(),
-                                            new ArtifactRepositoryPolicy() );
-    }
-    
-    protected final MavenSession getSession()
-    {
-        return session;
-    }
-
+    /**
+     * If this plugin used in pre-3.9.0 Maven, the packaging {@code maven-plugin} will not deploy G level metadata.
+     */
     protected void warnIfAffectedPackagingAndMaven( final String packaging )
     {
         if ( AFFECTED_MAVEN_PACKAGING.equals( packaging ) )
@@ -114,6 +105,74 @@ public abstract class AbstractDeployMojo
             {
                 // skip it: Generic does not throw, only API contains this exception
             }
+        }
+    }
+
+    /**
+     * Creates resolver {@link RemoteRepository} equipped with needed whistles and bells.
+     */
+    protected RemoteRepository getRemoteRepository( final String repositoryId, final String url )
+    {
+        RemoteRepository result = new RemoteRepository.Builder( repositoryId, "default", url ).build();
+
+        if ( result.getAuthentication() == null || result.getProxy() == null )
+        {
+            RemoteRepository.Builder builder = new RemoteRepository.Builder( result );
+
+            if ( result.getAuthentication() == null )
+            {
+                builder.setAuthentication( session.getRepositorySession().getAuthenticationSelector()
+                        .getAuthentication( result ) );
+            }
+
+            if ( result.getProxy() == null )
+            {
+                builder.setProxy( session.getRepositorySession().getProxySelector().getProxy( result ) );
+            }
+
+            result = builder.build();
+        }
+
+        return result;
+    }
+
+    /**
+     * Handles high level retries (this was buried into MAT).
+     */
+    protected void deploy( RepositorySystemSession session, DeployRequest deployRequest ) throws MojoExecutionException
+    {
+        int retryFailedDeploymentCounter = Math.max( 1, Math.min( 10, retryFailedDeploymentCount ) );
+        DeploymentException exception = null;
+        for ( int count = 0; count < retryFailedDeploymentCounter; count++ )
+        {
+            try
+            {
+                if ( count > 0 )
+                {
+                    getLog().info( "Retrying deployment attempt " + ( count + 1 ) + " of "
+                            + retryFailedDeploymentCounter );
+                }
+
+                repositorySystem.deploy( session, deployRequest );
+                exception = null;
+                break;
+            }
+            catch ( DeploymentException e )
+            {
+                if ( count + 1 < retryFailedDeploymentCounter )
+                {
+                    getLog().warn( "Encountered issue during deployment: " + e.getLocalizedMessage() );
+                    getLog().debug( e );
+                }
+                if ( exception == null )
+                {
+                    exception = e;
+                }
+            }
+        }
+        if ( exception != null )
+        {
+            throw new MojoExecutionException( exception.getMessage(), exception );
         }
     }
 }

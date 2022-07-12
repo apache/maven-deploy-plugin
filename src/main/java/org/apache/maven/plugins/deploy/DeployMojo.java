@@ -19,26 +19,26 @@ package org.apache.maven.plugins.deploy;
  * under the License.
  */
 
+import java.io.File;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.maven.RepositoryUtils;
 import org.apache.maven.artifact.ArtifactUtils;
-import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.descriptor.PluginDescriptor;
-import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
-import org.apache.maven.project.ProjectBuildingRequest;
-import org.apache.maven.shared.transfer.artifact.deploy.ArtifactDeployerException;
-import org.apache.maven.shared.transfer.project.NoFileAssignedException;
-import org.apache.maven.shared.transfer.project.deploy.ProjectDeployer;
-import org.apache.maven.shared.transfer.project.deploy.ProjectDeployerRequest;
+import org.apache.maven.project.artifact.ProjectArtifact;
+import org.apache.maven.project.artifact.ProjectArtifactMetadata;
+import org.eclipse.aether.deployment.DeployRequest;
+import org.eclipse.aether.repository.RemoteRepository;
+import org.eclipse.aether.util.artifact.SubArtifact;
 
 /**
  * Deploys an artifact to remote repository.
@@ -128,12 +128,6 @@ public class DeployMojo
     @Parameter( property = "maven.deploy.skip", defaultValue = "false" )
     private String skip = Boolean.FALSE.toString();
 
-    /**
-     * Component used to deploy project.
-     */
-    @Component
-    private ProjectDeployer projectDeployer;
-
     private enum State
     {
         SKIPPED, DEPLOYED, TO_BE_DEPLOYED
@@ -175,7 +169,7 @@ public class DeployMojo
 
     private boolean hasState( MavenProject project )
     {
-        Map<String, Object> pluginContext = getSession().getPluginContext( pluginDescriptor, project );
+        Map<String, Object> pluginContext = session.getPluginContext( pluginDescriptor, project );
         return pluginContext.containsKey( DEPLOY_PROCESSED_MARKER );
     }
 
@@ -193,32 +187,23 @@ public class DeployMojo
         else
         {
             failIfOffline();
+            warnIfAffectedPackagingAndMaven( project.getPackaging() );
 
             if ( !deployAtEnd )
             {
-                // CHECKSTYLE_OFF: LineLength
-                // @formatter:off
-                ProjectDeployerRequest pdr = new ProjectDeployerRequest()
-                        .setProject( project )
-                        .setRetryFailedDeploymentCount( getRetryFailedDeploymentCount() )
-                        .setAltReleaseDeploymentRepository( altReleaseDeploymentRepository )
-                        .setAltSnapshotDeploymentRepository( altSnapshotDeploymentRepository )
-                        .setAltDeploymentRepository( altDeploymentRepository );
-                // @formatter:on
-                // CHECKSTYLE_ON: LineLength
-
-                ArtifactRepository repo = getDeploymentRepository( pdr );
-
-                deployProject( getSession().getProjectBuildingRequest(), pdr, repo );
+                deploy( session.getRepositorySession(),
+                        processProject( project,
+                        altSnapshotDeploymentRepository, altReleaseDeploymentRepository, altDeploymentRepository ) );
                 putState( State.DEPLOYED );
             }
             else
             {
-                putState( State.TO_BE_DEPLOYED );
                 putPluginContextValue( DEPLOY_ALT_RELEASE_DEPLOYMENT_REPOSITORY, altReleaseDeploymentRepository );
                 putPluginContextValue( DEPLOY_ALT_SNAPSHOT_DEPLOYMENT_REPOSITORY, altSnapshotDeploymentRepository );
                 putPluginContextValue( DEPLOY_ALT_DEPLOYMENT_REPOSITORY, altDeploymentRepository );
-                getLog().info( "Deferring deploy for " + getProjectReferenceId( project ) + " at end" );
+                putState( State.TO_BE_DEPLOYED );
+                getLog().info( "Deferring deploy for " + project.getGroupId()
+                        + ":" + project.getArtifactId() + ":" + project.getVersion() + " at end" );
             }
         }
 
@@ -226,7 +211,7 @@ public class DeployMojo
         {
             for ( MavenProject reactorProject : reactorProjects )
             {
-                Map<String, Object> pluginContext = getSession().getPluginContext( pluginDescriptor, reactorProject );
+                Map<String, Object> pluginContext = session.getPluginContext( pluginDescriptor, reactorProject );
                 State state = getState( pluginContext );
                 if ( state == State.TO_BE_DEPLOYED )
                 {
@@ -237,24 +222,13 @@ public class DeployMojo
                     String altDeploymentRepository =
                         getPluginContextValue( pluginContext, DEPLOY_ALT_DEPLOYMENT_REPOSITORY );
 
-                    ProjectDeployerRequest pdr = new ProjectDeployerRequest()
-                        .setProject( reactorProject )
-                        .setRetryFailedDeploymentCount( getRetryFailedDeploymentCount() )
-                        .setAltReleaseDeploymentRepository( altReleaseDeploymentRepository )
-                        .setAltSnapshotDeploymentRepository( altSnapshotDeploymentRepository )
-                        .setAltDeploymentRepository( altDeploymentRepository );
-
-                    ArtifactRepository repo = getDeploymentRepository( pdr );
-
-                    deployProject( getSession().getProjectBuildingRequest(), pdr, repo );
+                    deploy( session.getRepositorySession(),
+                            processProject( reactorProject,
+                            altSnapshotDeploymentRepository, altReleaseDeploymentRepository, altDeploymentRepository )
+                    );
                 }
             }
         }
-    }
-
-    private String getProjectReferenceId( MavenProject mavenProject )
-    {
-        return mavenProject.getGroupId() + ":" + mavenProject.getArtifactId() + ":" + mavenProject.getVersion();
     }
 
     private boolean allProjectsMarked()
@@ -269,35 +243,89 @@ public class DeployMojo
         return true;
     }
 
-    private void deployProject( ProjectBuildingRequest pbr, ProjectDeployerRequest pir, ArtifactRepository repo )
-        throws MojoFailureException, MojoExecutionException
+    private DeployRequest processProject( final MavenProject project,
+                                          final String altSnapshotDeploymentRepository,
+                                          final String altReleaseDeploymentRepository,
+                                          final String altDeploymentRepository )
+            throws MojoExecutionException, MojoFailureException
     {
-        try
+        DeployRequest request = new DeployRequest();
+        request.setRepository( getDeploymentRepository( project,
+                altSnapshotDeploymentRepository, altReleaseDeploymentRepository, altDeploymentRepository ) );
+
+        org.apache.maven.artifact.Artifact mavenMainArtifact = project.getArtifact();
+        String packaging = project.getPackaging();
+        File pomFile = project.getFile();
+        boolean isPomArtifact = "pom".equals( packaging );
+        boolean pomArtifactAttached = false;
+
+        if ( pomFile != null )
         {
-            warnIfAffectedPackagingAndMaven( pir.getProject().getPackaging() );
-            projectDeployer.deploy( pbr, pir, repo );
-        }
-        catch ( NoFileAssignedException e )
-        {
-            throw new MojoExecutionException( "NoFileAssignedException", e );
-        }
-        catch ( ArtifactDeployerException e )
-        {
-            throw new MojoExecutionException( "ArtifactDeployerException", e );
+            request.addArtifact( RepositoryUtils.toArtifact( new ProjectArtifact( project ) ) );
+            pomArtifactAttached = true;
         }
 
+        if ( !isPomArtifact )
+        {
+            File file = mavenMainArtifact.getFile();
+            if ( file != null && file.isFile() )
+            {
+                org.eclipse.aether.artifact.Artifact mainArtifact = RepositoryUtils.toArtifact( mavenMainArtifact );
+                request.addArtifact( mainArtifact );
+
+                if ( !pomArtifactAttached )
+                {
+                    for ( Object metadata : mavenMainArtifact.getMetadataList() )
+                    {
+                        if ( metadata instanceof ProjectArtifactMetadata )
+                        {
+                            request.addArtifact( new SubArtifact(
+                                    mainArtifact,
+                                    "",
+                                    "pom"
+                            ).setFile( ( (ProjectArtifactMetadata) metadata ).getFile() ) );
+                            pomArtifactAttached = true;
+                        }
+                    }
+                }
+            }
+            else if ( !project.getAttachedArtifacts().isEmpty() )
+            {
+                throw new MojoExecutionException( "The packaging plugin for this project did not assign "
+                        + "a main file to the project but it has attachments. Change packaging to 'pom'." );
+            }
+            else
+            {
+                throw new MojoExecutionException( "The packaging for this project did not assign "
+                        + "a file to the build artifact" );
+            }
+        }
+
+        if ( !pomArtifactAttached )
+        {
+            throw new MojoExecutionException( "The POM could not be attached" );
+        }
+
+        for ( org.apache.maven.artifact.Artifact attached : project.getAttachedArtifacts() )
+        {
+            getLog().debug( "Attaching for install: " + attached.getId() );
+            request.addArtifact( RepositoryUtils.toArtifact( attached ) );
+        }
+
+        return request;
     }
 
-    ArtifactRepository getDeploymentRepository( ProjectDeployerRequest pdr )
+    /**
+     * Visible for testing.
+     */
+    RemoteRepository getDeploymentRepository( final MavenProject project,
+                                              final String altSnapshotDeploymentRepository,
+                                              final String altReleaseDeploymentRepository,
+                                              final String altDeploymentRepository )
 
         throws MojoExecutionException, MojoFailureException
     {
-        MavenProject project = pdr.getProject();
-        String altDeploymentRepository = pdr.getAltDeploymentRepository();
-        String altReleaseDeploymentRepository = pdr.getAltReleaseDeploymentRepository();
-        String altSnapshotDeploymentRepository = pdr.getAltSnapshotDeploymentRepository();
-
-        ArtifactRepository repo = null;
+        RemoteRepository repo = null;
 
         String altDeploymentRepo;
         if ( ArtifactUtils.isSnapshot( project.getVersion() ) && altSnapshotDeploymentRepository != null )
@@ -329,7 +357,7 @@ public class DeployMojo
                 {
                     getLog().warn( "Using legacy syntax for alternative repository. "
                             + "Use \"" + id + "::" + url + "\" instead." );
-                    repo = createDeploymentArtifactRepository( id, url );
+                    repo = getRemoteRepository( id, url );
                 }
                 else
                 {
@@ -356,14 +384,14 @@ public class DeployMojo
                     String id = matcher.group( 1 ).trim();
                     String url = matcher.group( 2 ).trim();
 
-                    repo = createDeploymentArtifactRepository( id, url );
+                    repo = getRemoteRepository( id, url );
                 }
             }
         }
 
         if ( repo == null )
         {
-            repo = project.getDistributionManagementArtifactRepository();
+            repo = RepositoryUtils.toRepo( project.getDistributionManagementArtifactRepository() );
         }
 
         if ( repo == null )

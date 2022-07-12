@@ -97,7 +97,8 @@ public class DeployFileMojoTest
         DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
         repositorySession.setLocalRepositoryManager( new SimpleLocalRepositoryManagerFactory().newInstance( repositorySession, new LocalRepository( LOCAL_REPO ) ) );
         when( buildingRequest.getRepositorySession() ).thenReturn( repositorySession );
-        
+        when( session.getRepositorySession() ).thenReturn( repositorySession );
+
         String groupId = (String) getVariableValueFromObject( mojo, "groupId" );
 
         String artifactId = (String) getVariableValueFromObject( mojo, "artifactId" );
@@ -199,6 +200,7 @@ public class DeployFileMojoTest
         DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
         repositorySession.setLocalRepositoryManager( new SimpleLocalRepositoryManagerFactory().newInstance( repositorySession, new LocalRepository( LOCAL_REPO ) ) );
         when( buildingRequest.getRepositorySession() ).thenReturn( repositorySession );
+        when( session.getRepositorySession() ).thenReturn( repositorySession );
 
         String classifier = ( String ) getVariableValueFromObject( mojo, "classifier" );
 
@@ -248,6 +250,7 @@ public class DeployFileMojoTest
         DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
         repositorySession.setLocalRepositoryManager( new SimpleLocalRepositoryManagerFactory().newInstance( repositorySession, new LocalRepository( LOCAL_REPO ) ) );
         when( buildingRequest.getRepositorySession() ).thenReturn( repositorySession );
+        when( session.getRepositorySession() ).thenReturn( repositorySession );
 
         String groupId = (String) getVariableValueFromObject( mojo, "groupId" );
 

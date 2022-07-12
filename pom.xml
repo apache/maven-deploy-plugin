@@ -63,10 +63,10 @@ under the License.
   </distributionManagement>
 
   <properties>
+    <javaVersion>7</javaVersion>
     <mavenVersion>3.2.5</mavenVersion>
     <slf4jVersion>1.7.5</slf4jVersion> <!-- Keep in sync with resolver used in maven above -->
     <resolverVersion>1.0.0.v20140518</resolverVersion> <!-- Keep in sync with resolver used in maven above -->
-    <javaVersion>7</javaVersion>
     <project.build.outputTimestamp>2021-12-27T14:11:19Z</project.build.outputTimestamp>
   </properties>
 
@@ -103,16 +103,6 @@ under the License.
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.maven.shared</groupId>
-      <artifactId>maven-artifact-transfer</artifactId>
-      <version>0.13.1</version>
-    </dependency>
-    <dependency>
-      <groupId>commons-io</groupId>
-      <artifactId>commons-io</artifactId>
-      <version>2.6</version>
-    </dependency>
-    <dependency>
       <groupId>org.codehaus.plexus</groupId>
       <artifactId>plexus-utils</artifactId>
       <version>3.3.1</version>
@@ -121,11 +111,13 @@ under the License.
       <groupId>org.eclipse.aether</groupId>
       <artifactId>aether-api</artifactId>
       <version>${resolverVersion}</version>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.eclipse.aether</groupId>
       <artifactId>aether-util</artifactId>
       <version>${resolverVersion}</version>
+      <scope>compile</scope> <!-- To work in Maven versions older than 3.9.0 -->
     </dependency>
 
     <!-- dependencies to annotations -->
