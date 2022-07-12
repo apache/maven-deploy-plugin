@@ -80,6 +80,9 @@ public abstract class AbstractDeployMojo
         }
     }
 
+    /**
+     * If this plugin used in pre-3.9.0 Maven, the packaging {@code maven-plugin} will not deploy G level metadata.
+     */
     protected void warnIfAffectedPackagingAndMaven( final String packaging )
     {
         if ( AFFECTED_MAVEN_PACKAGING.equals( packaging ) )
@@ -105,6 +108,9 @@ public abstract class AbstractDeployMojo
         }
     }
 
+    /**
+     * Creates resolver {@link RemoteRepository} equipped with needed whistles and bells.
+     */
     protected RemoteRepository getRemoteRepository( final String repositoryId, final String url )
     {
         RemoteRepository result = new RemoteRepository.Builder( repositoryId, "default", url ).build();
