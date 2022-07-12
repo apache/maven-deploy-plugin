@@ -20,6 +20,7 @@ package org.apache.maven.plugins.deploy;
  */
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
@@ -31,7 +32,6 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.maven.artifact.repository.ArtifactRepository;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -46,9 +46,9 @@ import org.codehaus.plexus.util.FileUtils;
 import org.eclipse.aether.DefaultRepositorySystemSession;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.repository.LocalRepository;
+import org.eclipse.aether.repository.RemoteRepository;
 import org.junit.Ignore;
 import org.mockito.InjectMocks;
-import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.eclipse.aether.internal.impl.SimpleLocalRepositoryManagerFactory;
 
@@ -83,6 +83,9 @@ public class DeployMojoTest
         session = mock( MavenSession.class );
         when( session.getPluginContext(any(PluginDescriptor.class), any(MavenProject.class)))
                 .thenReturn( new ConcurrentHashMap<String, Object>() );
+        DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
+        repositorySession.setLocalRepositoryManager( new SimpleLocalRepositoryManagerFactory().newInstance( repositorySession, new LocalRepository( LOCAL_REPO ) ) );
+        when( session.getRepositorySession() ).thenReturn( repositorySession );
 
         remoteRepo = new File( REMOTE_REPO );
         
@@ -99,8 +102,6 @@ public class DeployMojoTest
         {
             FileUtils.deleteDirectory( remoteRepo );
         }
-        
-        
     }
 
     public void tearDown()
@@ -135,7 +136,7 @@ public class DeployMojoTest
         MockitoAnnotations.initMocks( this );
         
         assertNotNull( mojo );
-        
+
         ProjectBuildingRequest buildingRequest = mock ( ProjectBuildingRequest.class );
         when( session.getProjectBuildingRequest() ).thenReturn( buildingRequest );
         DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
@@ -150,6 +151,9 @@ public class DeployMojoTest
         assertTrue( file.exists() );
 
         MavenProject project = (MavenProject) getVariableValueFromObject( mojo, "project" );
+        project.setGroupId( "org.apache.maven.test" );
+        project.setArtifactId( "maven-deploy-test" );
+        project.setVersion( "1.0-SNAPSHOT" );
 
         setVariableValueToObject( mojo, "pluginContext", new ConcurrentHashMap<>() );
         setVariableValueToObject( mojo, "reactorProjects", Collections.singletonList( project ) );
@@ -326,6 +330,9 @@ public class DeployMojoTest
         assertTrue( pomFile.exists() );
         
         MavenProject project = (MavenProject) getVariableValueFromObject( mojo, "project" );
+        project.setGroupId( "org.apache.maven.test" );
+        project.setArtifactId( "maven-deploy-test" );
+        project.setVersion( "1.0-SNAPSHOT" );
 
         setVariableValueToObject( mojo, "pluginContext", new ConcurrentHashMap<>() );
         setVariableValueToObject( mojo, "reactorProjects", Collections.singletonList( project ) );
@@ -392,6 +399,9 @@ public class DeployMojoTest
         assertNotNull( mojo );
         
         MavenProject project = (MavenProject) getVariableValueFromObject( mojo, "project" );
+        project.setGroupId( "org.apache.maven.test" );
+        project.setArtifactId( "maven-deploy-test" );
+        project.setVersion( "1.0-SNAPSHOT" );
 
         setVariableValueToObject( mojo, "pluginContext", new ConcurrentHashMap<>() );
         setVariableValueToObject( mojo, "reactorProjects", Collections.singletonList( project ) );
@@ -435,6 +445,9 @@ public class DeployMojoTest
         when( session.getRepositorySession() ).thenReturn( repositorySession );
 
         MavenProject project = (MavenProject) getVariableValueFromObject( mojo, "project" );
+        project.setGroupId( "org.apache.maven.test" );
+        project.setArtifactId( "maven-deploy-test" );
+        project.setVersion( "1.0-SNAPSHOT" );
 
         setVariableValueToObject( mojo, "pluginContext", new ConcurrentHashMap<>() );
         setVariableValueToObject( mojo, "reactorProjects", Collections.singletonList( project ) );
@@ -573,18 +586,15 @@ public class DeployMojoTest
     public void testLegacyAltDeploymentRepositoryWithDefaultLayout()
         throws Exception
     {
-        DeployMojo mojo = spy( new DeployMojo() );
+        DeployMojo mojo = new DeployMojo();
 
         setVariableValueToObject( mojo, "project", project );
+        setVariableValueToObject( mojo, "session", session );
         setVariableValueToObject( mojo, "altDeploymentRepository",  "altDeploymentRepository::default::http://localhost" );
-
-        ArtifactRepository repository = mock( ArtifactRepository.class );
-        when( mojo.createDeploymentArtifactRepository( "altDeploymentRepository", "http://localhost"
-        ) ).thenReturn( repository );
 
         project.setVersion( "1.0-SNAPSHOT" );
 
-        assertEquals( repository,
+        assertEquals( new RemoteRepository.Builder( "altDeploymentRepository", "default", "http://localhost" ).build(),
                 mojo.getDeploymentRepository( project, null, null, "altDeploymentRepository::default::http://localhost") );
 
     }
@@ -592,17 +602,13 @@ public class DeployMojoTest
     public void testLegacyAltDeploymentRepositoryWithLegacyLayout()
         throws Exception
     {
-        DeployMojo mojo = spy( new DeployMojo() );
+        DeployMojo mojo = new DeployMojo();
 
         setVariableValueToObject( mojo, "project", project );
+        setVariableValueToObject( mojo, "session", session );
         setVariableValueToObject( mojo, "altDeploymentRepository",  "altDeploymentRepository::legacy::http://localhost" );
 
-        ArtifactRepository repository = mock( ArtifactRepository.class );
-        when( mojo.createDeploymentArtifactRepository( "altDeploymentRepository", "http://localhost"
-        ) ).thenReturn( repository );
-
         project.setVersion( "1.0-SNAPSHOT" );
-
         try
         {
             mojo.getDeploymentRepository( project, null, null, "altDeploymentRepository::legacy::http://localhost" );
@@ -618,14 +624,11 @@ public class DeployMojoTest
     public void testInsaneAltDeploymentRepository()
             throws Exception
     {
-        DeployMojo mojo = spy( new DeployMojo() );
+        DeployMojo mojo = new DeployMojo();
 
         setVariableValueToObject( mojo, "project", project );
+        setVariableValueToObject( mojo, "session", session );
         setVariableValueToObject( mojo, "altDeploymentRepository",  "altDeploymentRepository::hey::wow::foo::http://localhost" );
-
-        ArtifactRepository repository = mock( ArtifactRepository.class );
-        when( mojo.createDeploymentArtifactRepository( "altDeploymentRepository", "http://localhost"
-        ) ).thenReturn( repository );
 
         project.setVersion( "1.0-SNAPSHOT" );
         try
@@ -643,31 +646,24 @@ public class DeployMojoTest
     public void testDefaultScmSvnAltDeploymentRepository()
             throws Exception
     {
-        DeployMojo mojo = spy( new DeployMojo() );
+        DeployMojo mojo = new DeployMojo();
 
         setVariableValueToObject( mojo, "project", project );
+        setVariableValueToObject( mojo, "session", session );
         setVariableValueToObject( mojo, "altDeploymentRepository",  "altDeploymentRepository::default::scm:svn:http://localhost" );
-
-        ArtifactRepository repository = mock( ArtifactRepository.class );
-        when( mojo.createDeploymentArtifactRepository( "altDeploymentRepository", "scm:svn:http://localhost"
-        ) ).thenReturn( repository );
 
         project.setVersion( "1.0-SNAPSHOT" );
 
-        assertEquals( repository,
+        assertEquals( new RemoteRepository.Builder( "altDeploymentRepository", "default", "scm:svn:http://localhost" ).build(),
                 mojo.getDeploymentRepository( project, null, null, "altDeploymentRepository::default::scm:svn:http://localhost" ) );
     }
     public void testLegacyScmSvnAltDeploymentRepository()
             throws Exception
     {
-        DeployMojo mojo = spy( new DeployMojo() );
+        DeployMojo mojo = new DeployMojo();
 
         setVariableValueToObject( mojo, "project", project );
         setVariableValueToObject( mojo, "altDeploymentRepository",  "altDeploymentRepository::legacy::scm:svn:http://localhost" );
-
-        ArtifactRepository repository = mock( ArtifactRepository.class );
-        when( mojo.createDeploymentArtifactRepository( "altDeploymentRepository", "http://localhost"
-        ) ).thenReturn( repository );
 
         project.setVersion( "1.0-SNAPSHOT" );
         try
@@ -685,35 +681,30 @@ public class DeployMojoTest
     public void testAltSnapshotDeploymentRepository()
         throws Exception
     {
-        DeployMojo mojo = spy( new DeployMojo() );
+        DeployMojo mojo = new DeployMojo();
 
         setVariableValueToObject( mojo, "project", project );
+        setVariableValueToObject( mojo, "session", session );
         setVariableValueToObject( mojo, "altSnapshotDeploymentRepository",  "altSnapshotDeploymentRepository::http://localhost" );
-
-        ArtifactRepository repository = mock( ArtifactRepository.class );
-        when( mojo.createDeploymentArtifactRepository( "altSnapshotDeploymentRepository", "http://localhost"
-                                                       ) ).thenReturn( repository );
 
         project.setVersion( "1.0-SNAPSHOT" );
 
-        assertEquals( repository,
+        assertEquals( new RemoteRepository.Builder( "altSnapshotDeploymentRepository", "default", "http://localhost" ).build(),
                       mojo.getDeploymentRepository( project, "altSnapshotDeploymentRepository::http://localhost", null, null ));
     }
 
     public void testAltReleaseDeploymentRepository()
         throws Exception
     {
-        DeployMojo mojo = spy( new DeployMojo() );
+        DeployMojo mojo = new DeployMojo();
 
         setVariableValueToObject( mojo, "project", project );
+        setVariableValueToObject( mojo, "session", session );
         setVariableValueToObject( mojo, "altReleaseDeploymentRepository",  "altReleaseDeploymentRepository::http://localhost" );
-
-        ArtifactRepository repository = mock( ArtifactRepository.class );
-        when( mojo.createDeploymentArtifactRepository( "altReleaseDeploymentRepository", "http://localhost" ) ).thenReturn( repository );
 
         project.setVersion( "1.0" );
 
-        assertEquals( repository,
+        assertEquals( new RemoteRepository.Builder("altReleaseDeploymentRepository", "default", "http://localhost").build(),
                       mojo.getDeploymentRepository( project, null, "altReleaseDeploymentRepository::http://localhost", null ));
     }
     
