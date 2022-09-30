@@ -180,7 +180,7 @@ public class DeployMojoTest
         assertEquals( "deploy-test", repo.getId() );
         assertEquals( "deploy-test", repo.getKey() );
         assertEquals( "file", repo.getProtocol() );
-        assertEquals( "file://" + getBasedir() + "/target/remote-repo/basic-deploy-test", repo.getUrl() );
+        assertEquals( "file://" + new File( getBasedir(), "/target/remote-repo/basic-deploy-test" ), repo.getUrl() );
 
         mojo.execute();
 
@@ -290,7 +290,7 @@ public class DeployMojoTest
         assertEquals( "deploy-test", repo.getId() );
         assertEquals( "deploy-test", repo.getKey() );
         assertEquals( "file", repo.getProtocol() );
-        assertEquals( "file://" + getBasedir() + "/target/remote-repo/basic-deploy-test", repo.getUrl() );
+        assertEquals( "file://" + new File( getBasedir(), "/target/remote-repo/basic-deploy-test" ), repo.getUrl() );
 
         setVariableValueToObject( mojo, "skip", Boolean.TRUE.toString() );
 
@@ -718,13 +718,15 @@ public class DeployMojoTest
         }
         catch( MojoFailureException e )
         {
-            assertEquals( e.getMessage(),
-                "Project version org.apache.maven.test:maven-deploy-test:1.0 already deployed with a differing POM.");
-            assertEquals( e.getLongMessage(),
+            assertEquals(
+                "Project version org.apache.maven.test:maven-deploy-test:1.0 already deployed with a differing POM.",
+                e.getMessage() );
+            assertEquals(
                 "Project version org.apache.maven.test:maven-deploy-test:1.0 already deployed and the POM "
                 + "'org.apache.maven.test:maven-deploy-test:pom:1.0' deployed in repository "
                 + "'file://" + remoteRepo.getPath() + "' differs from the POM that would be deployed. "
-                + "No artifacts will be deployed.");
+                + "No artifacts will be deployed.",
+                e.getLongMessage() );
         }
 
         //check the artifacts in remote repository

@@ -19,6 +19,7 @@ package org.apache.maven.plugins.deploy.stubs;
  * under the License.
  */
 
+import java.io.File;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.artifact.metadata.ArtifactMetadata;
 import org.apache.maven.artifact.repository.ArtifactRepository;
@@ -31,9 +32,9 @@ public class ArtifactRepositoryStub
     extends StubArtifactRepository
 {
     private boolean blacklisted;
-    
+
     private ArtifactRepositoryLayout layout;
-    
+
     private String url;
     
     private final String basedir = System.getProperty( "basedir" );
@@ -42,7 +43,7 @@ public class ArtifactRepositoryStub
     {
         super( null );
     }
-    
+
     public ArtifactRepositoryStub( String dir )
     {
         super( dir );
@@ -52,54 +53,54 @@ public class ArtifactRepositoryStub
     {
         return getLayout().pathOf( artifact );
     }
-    
+
     public String pathOfRemoteRepositoryMetadata( ArtifactMetadata artifactMetadata )
     {
         return getLayout().pathOfRemoteRepositoryMetadata( artifactMetadata );
     }
-    
+
     public String pathOfLocalRepositoryMetadata( ArtifactMetadata metadata, ArtifactRepository repository )
     {
         return getLayout().pathOfLocalRepositoryMetadata( metadata, repository );
     }
-    
+
     public String getUrl()
     {
         return url;
     }
-    
+
     public void setAppendToUrl( String dir )
     {
-        this.url = "file://" + basedir + "/target/remote-repo/" + dir;
+        this.url = "file://" + new File( basedir + "/target/remote-repo/", dir ).getPath();
     }
-    
+
     public String getBasedir()
     {
         return basedir;
     }
-    
+
     public String getProtocol()
     {
         return "file";
     }
-    
+
     public String getId()
     {
         return "deploy-test";
     }
-    
+
     public ArtifactRepositoryPolicy getSnapshots()
     {
         return new ArtifactRepositoryPolicy( true, ArtifactRepositoryPolicy.UPDATE_POLICY_ALWAYS,
                                              ArtifactRepositoryPolicy.CHECKSUM_POLICY_IGNORE );
     }
-    
+
     public ArtifactRepositoryPolicy getReleases()
     {
         return new ArtifactRepositoryPolicy( true, ArtifactRepositoryPolicy.UPDATE_POLICY_ALWAYS,
                                              ArtifactRepositoryPolicy.CHECKSUM_POLICY_IGNORE );
     }
-    
+
     public ArtifactRepositoryLayout getLayout()
     {
         if( layout != null )
@@ -111,7 +112,7 @@ public class ArtifactRepositoryStub
             return new DefaultRepositoryLayout();
         }
     }
-    
+
     public String getKey()
     {
         return getId();
@@ -121,7 +122,7 @@ public class ArtifactRepositoryStub
     {
         return false;
     }
-   
+
     public void setBlacklisted( boolean blackListed )
     {
         this.blacklisted = blackListed;
