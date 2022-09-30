@@ -44,6 +44,12 @@ class LogInspector
 
 
 assert new File( basedir, "repo/org/apache/maven/its/deploy/comparepom/test/maven-metadata.xml" ).exists()
+
+File snDir = new File( basedir, "repo/org/apache/maven/its/deploy/comparepom/test/1.0-SNAPSHOT/" )
+assert snDir.list( {d, f -> f ==~ /test-1.0-.*-first.jar/} as FilenameFilter ).size() == 1
+assert snDir.list( {d, f -> f ==~ /test-1.0-.*-second.jar/} as FilenameFilter ).size() == 1
+assert snDir.list( {d, f -> f ==~ /test-1.0-.*.pom/} as FilenameFilter ).size() == 2
+
 assert new File( basedir, "repo/org/apache/maven/its/deploy/comparepom/test/1.0/test-1.0-first.jar" ).exists()
 assert new File( basedir, "repo/org/apache/maven/its/deploy/comparepom/test/1.0/test-1.0-second.jar").exists()
 
@@ -62,18 +68,22 @@ assert buildLog.exists()
 LogInspector li = new LogInspector( buildLog )
 String groupUrl = "file:///${basedir}/repo/org/apache/maven/its/deploy/comparepom"
 
-// First run: The POM tried to be downloaded and uploaded:
+// 1st and 2nd run: The POM tried to be downloaded and uploaded:
+assert li.containsAfter( "[INFO] Downloading from it: ${groupUrl}/test/1.0-SNAPSHOT/test-1.0-SNAPSHOT.pom" )
+assert li.containsAfter( "[INFO] Downloading from it: ${groupUrl}/test/1.0-SNAPSHOT/test-1.0-SNAPSHOT.pom" )
+
+// 3rd run: The POM tried to be downloaded and uploaded:
 assert li.containsAfter( "[INFO] Downloading from it: ${groupUrl}/test/1.0/test-1.0.pom" )
 assert li.containsAfter( "[INFO] Uploaded to it: ${groupUrl}/test/1.0/test-1.0.pom" )
 
 // After that, it is never tried to be uploaded:
 assert -1 == buildLog.text.indexOf( "[INFO] Uploading to it: ${groupUrl}/test/1.0/test-1.0.pom", li.index + 1 )
 
-// Second run: POM is downloaded and not uploaded:
+// 4th run: POM is downloaded and not uploaded:
 assert li.containsAfter( "[INFO] Downloaded from it: ${groupUrl}/test/1.0/test-1.0.pom" )
 assert li.containsAfter( "[INFO] Not deploying POM, since deployed POM is equal to current POM." )
 
-// Third run: POM is downloaded, nothing is tried to be uploaded after that, and the build fails with error:
+// 5th run: POM is downloaded, nothing is tried to be uploaded after that, and the build fails with error:
 assert li.containsAfter( "[INFO] Downloaded from it: ${groupUrl}/test/1.0/test-1.0.pom" )
 assert -1 == buildLog.text.indexOf( "[INFO] Uploading to", li.index + 1 )
 assert li.containsAfter( "[ERROR] Project version org.apache.maven.its.deploy.comparepom:test:1.0 already deployed with a differing POM." )
