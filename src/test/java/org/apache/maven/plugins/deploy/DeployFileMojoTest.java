@@ -114,6 +114,8 @@ public class DeployFileMojoTest
 
         String url = (String) getVariableValueFromObject( mojo, "url" );
 
+        String skip = (String) getVariableValueFromObject( mojo, "skip" );
+
         assertEquals( "org.apache.maven.test", groupId );
 
         assertEquals( "maven-deploy-file-test", artifactId );
@@ -121,6 +123,8 @@ public class DeployFileMojoTest
         assertEquals( "1.0", version );
 
         assertEquals( "jar", packaging );
+
+        assertEquals( "snapshots", skip );
 
         assertTrue( file.exists() );
 
