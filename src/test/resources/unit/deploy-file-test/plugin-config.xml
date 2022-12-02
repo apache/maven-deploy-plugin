@@ -32,6 +32,7 @@ under the License.
           <url>file://${basedir}/target/remote-repo/deploy-file-test</url>
           <description>POM was created from deploy:deploy-file</description>
           <generatePom>true</generatePom>
+          <skip>snapshots</skip>
         </configuration>
       </plugin>
     </plugins>
