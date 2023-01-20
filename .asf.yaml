@@ -8,3 +8,9 @@ github:
     - apache-maven
     - maven-plugins
     - maven-deploy-plugin
+  enabled_merge_buttons:
+    squash: true
+    merge: false
+    rebase: true
+  autolink_jira:
+    - MDEPLOY
