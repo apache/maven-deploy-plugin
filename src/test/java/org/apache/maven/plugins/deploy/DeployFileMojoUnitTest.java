@@ -1,5 +1,3 @@
-package org.apache.maven.plugins.deploy;
-
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -9,7 +7,7 @@ package org.apache.maven.plugins.deploy;
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -18,6 +16,9 @@ package org.apache.maven.plugins.deploy;
  * specific language governing permissions and limitations
  * under the License.
  */
+package org.apache.maven.plugins.deploy;
+
+import java.io.File;
 
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Parent;
@@ -26,36 +27,31 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.File;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
  * @author <a href="jerome@coffeebreaks.org">Jerome Lacoste</a>
  */
-public class DeployFileMojoUnitTest
-{
+public class DeployFileMojoUnitTest {
     MockDeployFileMojo mojo;
     Parent parent;
 
     @Before
-    public void setUp()
-    {
+    public void setUp() {
         Model pomModel = new Model();
-        pomModel.setPackaging( null );
+        pomModel.setPackaging(null);
 
         parent = new Parent();
-        parent.setGroupId( "parentGroup" );
-        parent.setArtifactId( "parentArtifact" );
-        parent.setVersion( "parentVersion" );
+        parent.setGroupId("parentGroup");
+        parent.setArtifactId("parentArtifact");
+        parent.setVersion("parentVersion");
 
-        mojo = new MockDeployFileMojo( pomModel );
+        mojo = new MockDeployFileMojo(pomModel);
     }
 
     @After
-    public void tearDown()
-    {
+    public void tearDown() {
         mojo = null;
     }
 
@@ -70,64 +66,58 @@ public class DeployFileMojoUnitTest
             this.model = model;
         }
 
-        protected Model readModel(File pomFile)
-        {
+        protected Model readModel(File pomFile) {
             return model;
         }
     }
 
     @Test
-    public void testProcessPomFromPomFileWithParent1()
-    {
-        mojo.setPomFile( new File( "foo.bar" ) );
+    public void testProcessPomFromPomFileWithParent1() {
+        mojo.setPomFile(new File("foo.bar"));
 
-        setMojoModel( mojo.model, null, null, null, null, parent );
+        setMojoModel(mojo.model, null, null, null, null, parent);
 
         try {
             mojo.initProperties();
         } catch (MojoExecutionException expected) {
-            assertTrue( true ); // missing artifactId and packaging
+            assertTrue(true); // missing artifactId and packaging
         }
 
         checkMojoProperties("parentGroup", null, "parentVersion", null);
     }
 
     @Test
-    public void testProcessPomFromPomFileWithParent2()
-    {
-        mojo.setPomFile( new File( "foo.bar" ) );
-        setMojoModel( mojo.model, null, "artifact", null, null, parent );
+    public void testProcessPomFromPomFileWithParent2() {
+        mojo.setPomFile(new File("foo.bar"));
+        setMojoModel(mojo.model, null, "artifact", null, null, parent);
 
         try {
             mojo.initProperties();
         } catch (MojoExecutionException expected) {
-            assertTrue( true ); // missing packaging
+            assertTrue(true); // missing packaging
         }
 
-        checkMojoProperties("parentGroup", "artifact", "parentVersion", null );
-
+        checkMojoProperties("parentGroup", "artifact", "parentVersion", null);
     }
 
     @Test
-    public void testProcessPomFromPomFileWithParent3()
-    {
-        mojo.setPomFile( new File( "foo.bar" ) );
-        setMojoModel( mojo.model, null, "artifact", "version", null, parent );
+    public void testProcessPomFromPomFileWithParent3() {
+        mojo.setPomFile(new File("foo.bar"));
+        setMojoModel(mojo.model, null, "artifact", "version", null, parent);
 
         try {
             mojo.initProperties();
         } catch (MojoExecutionException expected) {
-            assertTrue( true ); // missing version and packaging
+            assertTrue(true); // missing version and packaging
         }
 
-        checkMojoProperties( "parentGroup", "artifact", "version", null );
+        checkMojoProperties("parentGroup", "artifact", "version", null);
     }
 
     @Test
-    public void testProcessPomFromPomFileWithParent4() throws MojoExecutionException
-    {
-        mojo.setPomFile( new File( "foo.bar" ) );
-        setMojoModel( mojo.model, null, "artifact", "version", "packaging", parent );
+    public void testProcessPomFromPomFileWithParent4() throws MojoExecutionException {
+        mojo.setPomFile(new File("foo.bar"));
+        setMojoModel(mojo.model, null, "artifact", "version", "packaging", parent);
 
         mojo.initProperties();
 
@@ -135,10 +125,9 @@ public class DeployFileMojoUnitTest
     }
 
     @Test
-    public void testProcessPomFromPomFileWithParent5() throws MojoExecutionException
-    {
-        mojo.setPomFile( new File( "foo.bar" ) );
-        setMojoModel( mojo.model, "group", "artifact", "version", "packaging", parent );
+    public void testProcessPomFromPomFileWithParent5() throws MojoExecutionException {
+        mojo.setPomFile(new File("foo.bar"));
+        setMojoModel(mojo.model, "group", "artifact", "version", "packaging", parent);
 
         mojo.initProperties();
 
@@ -146,46 +135,47 @@ public class DeployFileMojoUnitTest
     }
 
     @Test
-    public void testProcessPomFromPomFileWithParent6() throws MojoExecutionException
-    {
-        mojo.setPomFile( new File( "foo.bar" ) );
-        setMojoModel( mojo.model, "group", "artifact", "version", "packaging", null );
+    public void testProcessPomFromPomFileWithParent6() throws MojoExecutionException {
+        mojo.setPomFile(new File("foo.bar"));
+        setMojoModel(mojo.model, "group", "artifact", "version", "packaging", null);
 
         mojo.initProperties();
 
         checkMojoProperties("group", "artifact", "version", "packaging");
-
     }
 
     @Test
-    public void testProcessPomFromPomFileWithOverrides() throws MojoExecutionException
-    {
-        mojo.setPomFile( new File( "foo.bar" ) );
-        setMojoModel( mojo.model, "group", "artifact", "version", "packaging", null );
+    public void testProcessPomFromPomFileWithOverrides() throws MojoExecutionException {
+        mojo.setPomFile(new File("foo.bar"));
+        setMojoModel(mojo.model, "group", "artifact", "version", "packaging", null);
 
-        mojo.setGroupId( "groupO" );
-        mojo.setArtifactId( "artifactO" );
-        mojo.setVersion( "versionO" );
-        mojo.setPackaging( "packagingO" );
+        mojo.setGroupId("groupO");
+        mojo.setArtifactId("artifactO");
+        mojo.setVersion("versionO");
+        mojo.setPackaging("packagingO");
 
         mojo.initProperties();
 
         checkMojoProperties("groupO", "artifactO", "versionO", "packagingO");
     }
 
-    private void checkMojoProperties(final String expectedGroup, final String expectedArtifact, final String expectedVersion, final String expectedPackaging) {
-        assertEquals( expectedGroup, mojo.getGroupId() );
-        assertEquals( expectedArtifact, mojo.getArtifactId() );
-        assertEquals( expectedVersion, mojo.getVersion() );
-        assertEquals( expectedPackaging, mojo.getPackaging() );
+    private void checkMojoProperties(
+            final String expectedGroup,
+            final String expectedArtifact,
+            final String expectedVersion,
+            final String expectedPackaging) {
+        assertEquals(expectedGroup, mojo.getGroupId());
+        assertEquals(expectedArtifact, mojo.getArtifactId());
+        assertEquals(expectedVersion, mojo.getVersion());
+        assertEquals(expectedPackaging, mojo.getPackaging());
     }
 
-    private void setMojoModel(Model model, String group, String artifact, String version, String packaging, Parent parent ) {
-        model.setGroupId( group );
-        model.setArtifactId( artifact );
-        model.setVersion( version );
-        model.setPackaging( packaging );
-        model.setParent( parent );
+    private void setMojoModel(
+            Model model, String group, String artifact, String version, String packaging, Parent parent) {
+        model.setGroupId(group);
+        model.setArtifactId(artifact);
+        model.setVersion(version);
+        model.setPackaging(packaging);
+        model.setParent(parent);
     }
-
 }

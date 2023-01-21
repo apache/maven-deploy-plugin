@@ -1,5 +1,3 @@
-package org.apache.maven.plugins.deploy;
-
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -18,6 +16,7 @@ package org.apache.maven.plugins.deploy;
  * specific language governing permissions and limitations
  * under the License.
  */
+package org.apache.maven.plugins.deploy;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,10 +33,9 @@ import org.eclipse.aether.util.ChecksumUtils;
  *
  * @author Benjamin Bentmann
  */
-public class Utils
-{
+public class Utils {
 
-    public static final List<String> CHECKSUM_ALGORITHMS = Arrays.asList( "MD5", "SHA-1" );
+    public static final List<String> CHECKSUM_ALGORITHMS = Arrays.asList("MD5", "SHA-1");
 
     /**
      * Verifies the checksum files in the local repo for the given file.
@@ -46,19 +44,14 @@ public class Utils
      * @throws MojoExecutionException In case the checksums were incorrect.
      * @throws IOException If the files couldn't be read.
      */
-    public static void verifyChecksum( File file )
-        throws MojoExecutionException, IOException
-    {
-        Map<String, Object> checksums = ChecksumUtils.calc( file, CHECKSUM_ALGORITHMS );
-        for ( Map.Entry<String, Object> entry : checksums.entrySet() )
-        {
-            File cksumFile = new File( file + "." + entry.getKey().toLowerCase().replace( "-", "" ) );
-            String actualChecksum = ChecksumUtils.read( cksumFile );
-            if ( !actualChecksum.equals( entry.getValue() ) )
-            {
-                throw new MojoExecutionException( "Incorrect " + entry.getKey() + " checksum for file: " + file );
+    public static void verifyChecksum(File file) throws MojoExecutionException, IOException {
+        Map<String, Object> checksums = ChecksumUtils.calc(file, CHECKSUM_ALGORITHMS);
+        for (Map.Entry<String, Object> entry : checksums.entrySet()) {
+            File cksumFile = new File(file + "." + entry.getKey().toLowerCase().replace("-", ""));
+            String actualChecksum = ChecksumUtils.read(cksumFile);
+            if (!actualChecksum.equals(entry.getValue())) {
+                throw new MojoExecutionException("Incorrect " + entry.getKey() + " checksum for file: " + file);
             }
         }
     }
-
 }

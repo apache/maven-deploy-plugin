@@ -1,5 +1,3 @@
-package org.apache.maven.plugins.deploy.stubs;
-
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -9,7 +7,7 @@ package org.apache.maven.plugins.deploy.stubs;
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -18,43 +16,35 @@ package org.apache.maven.plugins.deploy.stubs;
  * specific language governing permissions and limitations
  * under the License.
  */
+package org.apache.maven.plugins.deploy.stubs;
 
-public class ArtifactRepositoryStub2
-    extends ArtifactRepositoryStub
-{
+public class ArtifactRepositoryStub2 extends ArtifactRepositoryStub {
     private String protocol;
-    
-    public ArtifactRepositoryStub2()
-    {
+
+    public ArtifactRepositoryStub2() {
         super();
     }
-    
-    public ArtifactRepositoryStub2( String dir )
-    {
-        super( dir );
+
+    public ArtifactRepositoryStub2(String dir) {
+        super(dir);
     }
 
-    public String getUrl()
-    {
-        return "file://" + System.getProperty( "basedir" ) + "/target/remote-repo/basic-deploy-scp";
+    public String getUrl() {
+        return "file://" + System.getProperty("basedir") + "/target/remote-repo/basic-deploy-scp";
     }
-    
-    public String getBasedir()
-    {
-        return System.getProperty( "basedir" );
+
+    public String getBasedir() {
+        return System.getProperty("basedir");
     }
-    
-    public String getProtocol()
-    {
-        if( this.protocol == null || this.protocol.equals("") )
-        {
+
+    public String getProtocol() {
+        if (this.protocol == null || this.protocol.equals("")) {
             this.protocol = "scp";
         }
         return this.protocol;
     }
-    
-    public void setProtocol( String protocol )
-    {
+
+    public void setProtocol(String protocol) {
         this.protocol = protocol;
     }
 }
