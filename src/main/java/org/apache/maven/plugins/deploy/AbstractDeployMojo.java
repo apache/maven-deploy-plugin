@@ -1,5 +1,3 @@
-package org.apache.maven.plugins.deploy;
-
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -9,7 +7,7 @@ package org.apache.maven.plugins.deploy;
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -18,6 +16,7 @@ package org.apache.maven.plugins.deploy;
  * specific language governing permissions and limitations
  * under the License.
  */
+package org.apache.maven.plugins.deploy;
 
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
@@ -38,13 +37,11 @@ import org.eclipse.aether.version.Version;
 /**
  * Abstract class for Deploy mojo's.
  */
-public abstract class AbstractDeployMojo
-        extends AbstractMojo
-{
+public abstract class AbstractDeployMojo extends AbstractMojo {
     /**
      * Flag whether Maven is currently in online/offline mode.
      */
-    @Parameter( defaultValue = "${settings.offline}", readonly = true )
+    @Parameter(defaultValue = "${settings.offline}", readonly = true)
     private boolean offline;
 
     /**
@@ -53,13 +50,13 @@ public abstract class AbstractDeployMojo
      *
      * @since 2.7
      */
-    @Parameter( property = "retryFailedDeploymentCount", defaultValue = "1" )
+    @Parameter(property = "retryFailedDeploymentCount", defaultValue = "1")
     private int retryFailedDeploymentCount;
 
     @Component
     private RuntimeInformation runtimeInformation;
 
-    @Parameter( defaultValue = "${session}", readonly = true, required = true )
+    @Parameter(defaultValue = "${session}", readonly = true, required = true)
     protected MavenSession session;
 
     @Component
@@ -71,38 +68,29 @@ public abstract class AbstractDeployMojo
 
     /* Setters and Getters */
 
-    void failIfOffline()
-            throws MojoFailureException
-    {
-        if ( offline )
-        {
-            throw new MojoFailureException( "Cannot deploy artifacts when Maven is in offline mode" );
+    void failIfOffline() throws MojoFailureException {
+        if (offline) {
+            throw new MojoFailureException("Cannot deploy artifacts when Maven is in offline mode");
         }
     }
 
     /**
      * If this plugin used in pre-3.9.0 Maven, the packaging {@code maven-plugin} will not deploy G level metadata.
      */
-    protected void warnIfAffectedPackagingAndMaven( final String packaging )
-    {
-        if ( AFFECTED_MAVEN_PACKAGING.equals( packaging ) )
-        {
-            try
-            {
+    protected void warnIfAffectedPackagingAndMaven(final String packaging) {
+        if (AFFECTED_MAVEN_PACKAGING.equals(packaging)) {
+            try {
                 GenericVersionScheme versionScheme = new GenericVersionScheme();
-                Version fixedMavenVersion = versionScheme.parseVersion( FIXED_MAVEN_VERSION );
-                Version currentMavenVersion = versionScheme.parseVersion( runtimeInformation.getMavenVersion() );
-                if ( fixedMavenVersion.compareTo( currentMavenVersion ) > 0 )
-                {
-                    getLog().warn( "" );
-                    getLog().warn( "You are about to deploy a maven-plugin using Maven " + currentMavenVersion + "." );
-                    getLog().warn( "This plugin should be used ONLY with Maven 3.9.0 and newer, as MNG-7055" );
-                    getLog().warn( "is fixed in those versions of Maven only!" );
-                    getLog().warn( "" );
+                Version fixedMavenVersion = versionScheme.parseVersion(FIXED_MAVEN_VERSION);
+                Version currentMavenVersion = versionScheme.parseVersion(runtimeInformation.getMavenVersion());
+                if (fixedMavenVersion.compareTo(currentMavenVersion) > 0) {
+                    getLog().warn("");
+                    getLog().warn("You are about to deploy a maven-plugin using Maven " + currentMavenVersion + ".");
+                    getLog().warn("This plugin should be used ONLY with Maven 3.9.0 and newer, as MNG-7055");
+                    getLog().warn("is fixed in those versions of Maven only!");
+                    getLog().warn("");
                 }
-            }
-            catch ( InvalidVersionSpecificationException e )
-            {
+            } catch (InvalidVersionSpecificationException e) {
                 // skip it: Generic does not throw, only API contains this exception
             }
         }
@@ -111,23 +99,21 @@ public abstract class AbstractDeployMojo
     /**
      * Creates resolver {@link RemoteRepository} equipped with needed whistles and bells.
      */
-    protected RemoteRepository getRemoteRepository( final String repositoryId, final String url )
-    {
-        RemoteRepository result = new RemoteRepository.Builder( repositoryId, "default", url ).build();
+    protected RemoteRepository getRemoteRepository(final String repositoryId, final String url) {
+        RemoteRepository result = new RemoteRepository.Builder(repositoryId, "default", url).build();
 
-        if ( result.getAuthentication() == null || result.getProxy() == null )
-        {
-            RemoteRepository.Builder builder = new RemoteRepository.Builder( result );
+        if (result.getAuthentication() == null || result.getProxy() == null) {
+            RemoteRepository.Builder builder = new RemoteRepository.Builder(result);
 
-            if ( result.getAuthentication() == null )
-            {
-                builder.setAuthentication( session.getRepositorySession().getAuthenticationSelector()
-                        .getAuthentication( result ) );
+            if (result.getAuthentication() == null) {
+                builder.setAuthentication(session.getRepositorySession()
+                        .getAuthenticationSelector()
+                        .getAuthentication(result));
             }
 
-            if ( result.getProxy() == null )
-            {
-                builder.setProxy( session.getRepositorySession().getProxySelector().getProxy( result ) );
+            if (result.getProxy() == null) {
+                builder.setProxy(
+                        session.getRepositorySession().getProxySelector().getProxy(result));
             }
 
             result = builder.build();
@@ -139,40 +125,30 @@ public abstract class AbstractDeployMojo
     /**
      * Handles high level retries (this was buried into MAT).
      */
-    protected void deploy( RepositorySystemSession session, DeployRequest deployRequest ) throws MojoExecutionException
-    {
-        int retryFailedDeploymentCounter = Math.max( 1, Math.min( 10, retryFailedDeploymentCount ) );
+    protected void deploy(RepositorySystemSession session, DeployRequest deployRequest) throws MojoExecutionException {
+        int retryFailedDeploymentCounter = Math.max(1, Math.min(10, retryFailedDeploymentCount));
         DeploymentException exception = null;
-        for ( int count = 0; count < retryFailedDeploymentCounter; count++ )
-        {
-            try
-            {
-                if ( count > 0 )
-                {
-                    getLog().info( "Retrying deployment attempt " + ( count + 1 ) + " of "
-                            + retryFailedDeploymentCounter );
+        for (int count = 0; count < retryFailedDeploymentCounter; count++) {
+            try {
+                if (count > 0) {
+                    getLog().info("Retrying deployment attempt " + (count + 1) + " of " + retryFailedDeploymentCounter);
                 }
 
-                repositorySystem.deploy( session, deployRequest );
+                repositorySystem.deploy(session, deployRequest);
                 exception = null;
                 break;
-            }
-            catch ( DeploymentException e )
-            {
-                if ( count + 1 < retryFailedDeploymentCounter )
-                {
-                    getLog().warn( "Encountered issue during deployment: " + e.getLocalizedMessage() );
-                    getLog().debug( e );
+            } catch (DeploymentException e) {
+                if (count + 1 < retryFailedDeploymentCounter) {
+                    getLog().warn("Encountered issue during deployment: " + e.getLocalizedMessage());
+                    getLog().debug(e);
                 }
-                if ( exception == null )
-                {
+                if (exception == null) {
                     exception = e;
                 }
             }
         }
-        if ( exception != null )
-        {
-            throw new MojoExecutionException( exception.getMessage(), exception );
+        if (exception != null) {
+            throw new MojoExecutionException(exception.getMessage(), exception);
         }
     }
 }

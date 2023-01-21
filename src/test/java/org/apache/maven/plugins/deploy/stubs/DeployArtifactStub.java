@@ -1,5 +1,3 @@
-package org.apache.maven.plugins.deploy.stubs;
-
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -9,7 +7,7 @@ package org.apache.maven.plugins.deploy.stubs;
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -18,6 +16,7 @@ package org.apache.maven.plugins.deploy.stubs;
  * specific language governing permissions and limitations
  * under the License.
  */
+package org.apache.maven.plugins.deploy.stubs;
 
 import java.io.File;
 import java.util.Collection;
@@ -30,103 +29,81 @@ import org.apache.maven.artifact.handler.DefaultArtifactHandler;
 import org.apache.maven.artifact.metadata.ArtifactMetadata;
 import org.apache.maven.plugin.testing.stubs.ArtifactStub;
 
-public class DeployArtifactStub
-    extends ArtifactStub
-{
+public class DeployArtifactStub extends ArtifactStub {
     private Map<Object, ArtifactMetadata> metadataMap;
-    
+
     private File file;
-    
+
     private boolean release;
-    
+
     private String extension;
-    
-    public String getArtifactId()
-    {
+
+    public String getArtifactId() {
         return "maven-deploy-test";
     }
 
-    public String getGroupId()
-    {
+    public String getGroupId() {
         return "org.apache.maven.test";
     }
 
-    public String getVersion()
-    {
+    public String getVersion() {
         return "1.0-SNAPSHOT";
     }
-    
-    public String getBaseVersion()
-    {
+
+    public String getBaseVersion() {
         return getVersion();
     }
-    
+
     @Override
-    public String getType()
-    {
+    public String getType() {
         return "jar";
     }
-    
-    public void setFile( File file )
-    {
+
+    public void setFile(File file) {
         this.file = file;
     }
-    
-    public File getFile()
-    {
+
+    public File getFile() {
         return file;
     }
-    
-    public ArtifactHandler getArtifactHandler()
-    {
-        return new DefaultArtifactHandler()
-        {
-            public String getExtension()
-            {
-                if( extension == null )
-                {
+
+    public ArtifactHandler getArtifactHandler() {
+        return new DefaultArtifactHandler() {
+            public String getExtension() {
+                if (extension == null) {
                     extension = "jar";
                 }
                 return extension;
             }
         };
     }
-    
-    public void setArtifactHandlerExtension( String extension )
-    {
+
+    public void setArtifactHandlerExtension(String extension) {
         this.extension = extension;
     }
-    
-    public void addMetadata( ArtifactMetadata metadata )
-    {
-        if ( metadataMap == null )
-        {
+
+    public void addMetadata(ArtifactMetadata metadata) {
+        if (metadataMap == null) {
             metadataMap = new HashMap<>();
         }
 
-        ArtifactMetadata m = metadataMap.get( metadata.getKey() );
-        if ( m != null )
-        {
-            m.merge( metadata );
-        }
-        else
-        {
-            metadataMap.put( metadata.getKey(), metadata );
+        ArtifactMetadata m = metadataMap.get(metadata.getKey());
+        if (m != null) {
+            m.merge(metadata);
+        } else {
+            metadataMap.put(metadata.getKey(), metadata);
         }
     }
-    
-    public Collection<ArtifactMetadata> getMetadataList()
-    {
+
+    public Collection<ArtifactMetadata> getMetadataList() {
         return metadataMap == null ? Collections.emptyList() : metadataMap.values();
     }
 
-    public boolean isRelease()
-    {
+    public boolean isRelease() {
         return release;
     }
 
-    public void setRelease( boolean release )
-    {
+    public void setRelease(boolean release) {
         this.release = release;
     }
 
