@@ -20,6 +20,8 @@ package org.apache.maven.plugins.deploy;
  */
 
 import java.io.File;
+import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -36,13 +38,22 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.artifact.ProjectArtifact;
 import org.apache.maven.project.artifact.ProjectArtifactMetadata;
+import org.codehaus.plexus.util.ReaderFactory;
+import org.codehaus.plexus.util.xml.Xpp3Dom;
+import org.codehaus.plexus.util.xml.Xpp3DomBuilder;
+import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
+import org.eclipse.aether.artifact.Artifact;
+import org.eclipse.aether.artifact.DefaultArtifact;
 import org.eclipse.aether.deployment.DeployRequest;
 import org.eclipse.aether.repository.RemoteRepository;
+import org.eclipse.aether.resolution.ArtifactRequest;
+import org.eclipse.aether.resolution.ArtifactResolutionException;
+import org.eclipse.aether.resolution.ArtifactResult;
 import org.eclipse.aether.util.artifact.SubArtifact;
 
 /**
  * Deploys an artifact to remote repository.
- * 
+ *
  * @author <a href="mailto:evenisse@apache.org">Emmanuel Venisse</a>
  * @author <a href="mailto:jdcasey@apache.org">John Casey (refactoring only)</a>
  */
@@ -67,7 +78,7 @@ public class DeployMojo
      * Whether every project should be deployed during its own deploy-phase or at the end of the multimodule build. If
      * set to {@code true} and the build fails, none of the reactor projects is deployed.
      * <strong>(experimental)</strong>
-     * 
+     *
      * @since 2.8
      */
     @Parameter( defaultValue = "false", property = "deployAtEnd" )
@@ -128,6 +139,13 @@ public class DeployMojo
     @Parameter( property = "maven.deploy.skip", defaultValue = "false" )
     private String skip = Boolean.FALSE.toString();
 
+    /**
+     *
+     * @since 3.0.1
+     */
+    @Parameter( property = "comparePomWithDeployed", defaultValue = "false" )
+    private boolean comparePomWithDeployed;
+
     private enum State
     {
         SKIPPED, DEPLOYED, TO_BE_DEPLOYED
@@ -173,6 +191,7 @@ public class DeployMojo
         return pluginContext.containsKey( DEPLOY_PROCESSED_MARKER );
     }
 
+    @Override
     public void execute()
         throws MojoExecutionException, MojoFailureException
     {
@@ -261,7 +280,8 @@ public class DeployMojo
 
         if ( pomFile != null )
         {
-            request.addArtifact( RepositoryUtils.toArtifact( new ProjectArtifact( project ) ) );
+            Artifact pomArtifact = RepositoryUtils.toArtifact( new ProjectArtifact( project ) );
+            new DeployedPomChecker( pomArtifact, request ).addPomConditionally();
             pomArtifactAttached = true;
         }
 
@@ -279,11 +299,12 @@ public class DeployMojo
                     {
                         if ( metadata instanceof ProjectArtifactMetadata )
                         {
-                            request.addArtifact( new SubArtifact(
+                            Artifact pomArtifact = new SubArtifact(
                                     mainArtifact,
                                     "",
                                     "pom"
-                            ).setFile( ( (ProjectArtifactMetadata) metadata ).getFile() ) );
+                            ).setFile( ( (ProjectArtifactMetadata) metadata ).getFile() );
+                            new DeployedPomChecker( pomArtifact, request ).addPomConditionally();
                             pomArtifactAttached = true;
                         }
                     }
@@ -313,6 +334,102 @@ public class DeployMojo
         }
 
         return request;
+    }
+
+    private class DeployedPomChecker
+    {
+        final Artifact pomArtifact;
+        final DeployRequest request;
+        final RemoteRepository repo;
+
+        DeployedPomChecker( Artifact pomArtifact, DeployRequest request )
+        {
+            this.pomArtifact = pomArtifact;
+            this.request = request;
+            this.repo = request.getRepository();
+        }
+
+        public void addPomConditionally ()
+        throws MojoExecutionException, MojoFailureException
+        {
+            if ( comparePomWithDeployed )
+            {
+                try
+                {
+                    if ( deployedPomIsEqual() )
+                    {
+                        return;
+                    }
+                }
+                catch ( IOException | XmlPullParserException e )
+                {
+                    throw new MojoExecutionException( "Failed to compare POM with a version "
+                            + "previously deployed to the repository: " + e.getMessage(), e );
+                }
+            }
+
+            request.addArtifact( pomArtifact );
+        }
+
+        private boolean deployedPomIsEqual()
+                throws IOException, XmlPullParserException, MojoFailureException
+        {
+            Xpp3Dom deployedPomDom = retrieveDeployedPom();
+            if ( deployedPomDom == null )
+            {
+                return false;
+            }
+
+            File pomFile = pomArtifact.getFile();
+            Xpp3Dom newPomDom = Xpp3DomBuilder.build( ReaderFactory.newXmlReader( pomFile ) );
+
+            if ( newPomDom.equals( deployedPomDom ) )
+            {
+                getLog().info( "Not deploying POM, since deployed POM is equal to current POM." );
+                return true;
+            }
+            else
+            {
+                String artifactId = RepositoryUtils.toArtifact( pomArtifact ).getId();
+                String gav = pomArtifact.getGroupId() + ":" + pomArtifact.getArtifactId()
+                      + ":" + pomArtifact.getVersion();
+
+                String shortMsg = "Project version " + gav + " already deployed with a differing POM.";
+                getLog().error( shortMsg );
+
+                throw new MojoFailureException( artifactId,
+                        shortMsg,
+                        "Project version " + gav + " already deployed and the POM '" + artifactId + "' "
+                      + "deployed in repository '" + repo.getUrl() + "' "
+                      + "differs from the POM that would be deployed. No artifacts will be deployed." );
+            }
+        }
+
+        private Xpp3Dom retrieveDeployedPom ()
+                throws IOException, XmlPullParserException
+        {
+            Artifact lookupArtifact =
+                new DefaultArtifact( pomArtifact.getGroupId(), pomArtifact.getArtifactId(),
+                                     pomArtifact.getClassifier(), pomArtifact.getExtension(),
+                                     pomArtifact.getVersion(), pomArtifact.getProperties(),
+                                     (File) null );
+            List<RemoteRepository> repos = Collections.singletonList( repo );
+
+            ArtifactRequest request = new ArtifactRequest( lookupArtifact, repos, null );
+
+            try ( TempLocalRepoSession tempRepoSession =
+                    TempLocalRepoSession.create( session.getRepositorySession(), repositorySystem ) )
+            {
+                ArtifactResult result = repositorySystem.resolveArtifact( tempRepoSession, request );
+
+                File deployedPom = result.getArtifact().getFile();
+                return Xpp3DomBuilder.build( ReaderFactory.newXmlReader( deployedPom ) );
+            }
+            catch ( ArtifactResolutionException ex )
+            {
+                return null;
+            }
+        }
     }
 
     /**
