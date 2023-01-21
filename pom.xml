@@ -25,7 +25,7 @@ under the License.
   <parent>
     <groupId>org.apache.maven.plugins</groupId>
     <artifactId>maven-plugins</artifactId>
-    <version>37</version>
+    <version>39</version>
     <relativePath />
   </parent>
 
@@ -65,8 +65,10 @@ under the License.
   <properties>
     <javaVersion>8</javaVersion>
     <mavenVersion>3.2.5</mavenVersion>
-    <slf4jVersion>1.7.5</slf4jVersion> <!-- Keep in sync with resolver used in maven above -->
-    <resolverVersion>1.0.0.v20140518</resolverVersion> <!-- Keep in sync with resolver used in maven above -->
+    <!-- Keep in sync with resolver used in maven above -->
+    <slf4jVersion>1.7.5</slf4jVersion>
+    <!-- Keep in sync with resolver used in maven above -->
+    <resolverVersion>1.0.0.v20140518</resolverVersion>
     <project.build.outputTimestamp>2022-07-16T16:14:30Z</project.build.outputTimestamp>
   </properties>
 
@@ -105,7 +107,6 @@ under the License.
     <dependency>
       <groupId>org.codehaus.plexus</groupId>
       <artifactId>plexus-utils</artifactId>
-      <version>3.3.1</version>
     </dependency>
     <dependency>
       <groupId>org.eclipse.aether</groupId>
@@ -117,7 +118,8 @@ under the License.
       <groupId>org.eclipse.aether</groupId>
       <artifactId>aether-util</artifactId>
       <version>${resolverVersion}</version>
-      <scope>compile</scope> <!-- To work in Maven versions older than 3.9.0 -->
+      <!-- To work in Maven versions older than 3.9.0 -->
+      <scope>compile</scope>
     </dependency>
 
     <!-- dependencies to annotations -->
@@ -134,7 +136,8 @@ under the License.
       <version>3.3.0</version>
       <scope>test</scope>
     </dependency>
-    <dependency> <!-- used by maven-plugin-testing-harness, don't give it compile scope! -->
+    <dependency>
+      <!-- used by maven-plugin-testing-harness, don't give it compile scope! -->
       <groupId>org.apache.maven</groupId>
       <artifactId>maven-compat</artifactId>
       <version>${mavenVersion}</version>
@@ -192,20 +195,6 @@ under the License.
     </contributor>
   </contributors>
 
-  <build>
-    <plugins>
-      <!-- https://issues.apache.org/jira/browse/MPOM-226 -->
-      <plugin>
-        <groupId>org.apache.rat</groupId>
-        <artifactId>apache-rat-plugin</artifactId>
-        <configuration>
-          <excludes combine.children="append">
-            <exclude>.asf.yaml</exclude><!-- Can be removed with upgrade to maven-plugins:34 -->
-          </excludes>
-        </configuration>
-      </plugin>
-    </plugins>
-  </build>
   <profiles>
     <profile>
       <id>run-its</id>
