@@ -49,14 +49,14 @@ under the License.
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-antrun-plugin</artifactId>
-        <version>1.1</version>
+        <version>@mavenAntrunPluginVersion@</version>
         <configuration>
-          <tasks>
+          <target>
             <!--
             NOTE: The Compiler Plugin sets this as the main artifact file, should be non-existent for this test.
             -->
             <delete dir="target/classes"/>
-          </tasks>
+          </target>
         </configuration>
         <executions>
           <execution>
@@ -71,7 +71,7 @@ under the License.
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>2.0.2</version>
+        <version>@mavenCompilerPluginVersion@</version>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -81,7 +81,7 @@ under the License.
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
-        <version>2.1</version>
+        <version>@mavenJarPluginVersion@</version>
         <configuration>
           <classifier>it</classifier>
         </configuration>
@@ -89,17 +89,17 @@ under the License.
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-install-plugin</artifactId>
-        <version>2.3</version>
+        <version>@mavenInstallPluginVersion@</version>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-resources-plugin</artifactId>
-        <version>2.2</version>
+        <version>@mavenResourcesPluginVersion@</version>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>2.3.1</version>
+        <version>@mavenSurefirePluginVersion@</version>
       </plugin>
     </plugins>
   </build>
