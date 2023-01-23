@@ -18,7 +18,11 @@
  */
 package org.apache.maven.plugins.deploy.stubs;
 
+import java.util.Collections;
+
 import org.apache.maven.artifact.repository.ArtifactRepository;
+import org.apache.maven.model.Build;
+import org.apache.maven.model.Plugin;
 
 public class MavenProjectStub extends org.apache.maven.plugin.testing.stubs.MavenProjectStub {
 
@@ -26,5 +30,13 @@ public class MavenProjectStub extends org.apache.maven.plugin.testing.stubs.Mave
 
     public ArtifactRepository getDistributionManagementArtifactRepository() {
         return deploymentRepository;
+    }
+
+    @Override
+    public Build getBuild() {
+        Plugin plugin = new Plugin();
+        Build build = new Build();
+        build.setPlugins(Collections.singletonList(plugin));
+        return build;
     }
 }
