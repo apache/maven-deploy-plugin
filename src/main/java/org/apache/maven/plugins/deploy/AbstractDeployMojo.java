@@ -26,7 +26,6 @@ import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.rtinfo.RuntimeInformation;
 import org.eclipse.aether.RepositorySystem;
-import org.eclipse.aether.RepositorySystemSession;
 import org.eclipse.aether.deployment.DeployRequest;
 import org.eclipse.aether.deployment.DeploymentException;
 import org.eclipse.aether.repository.RemoteRepository;
@@ -122,10 +121,13 @@ public abstract class AbstractDeployMojo extends AbstractMojo {
         return result;
     }
 
-    /**
-     * Handles high level retries (this was buried into MAT).
-     */
-    protected void deploy(RepositorySystemSession session, DeployRequest deployRequest) throws MojoExecutionException {
+    // I'm not sure if retries will work with deploying on client level ...
+    // Most repository managers block a duplicate artifacts.
+
+    // Eg, when we have an artifact list, even simple pom and jar in one request with released version,
+    // next try can fail due to duplicate.
+
+    protected void deploy(DeployRequest deployRequest) throws MojoExecutionException {
         int retryFailedDeploymentCounter = Math.max(1, Math.min(10, retryFailedDeploymentCount));
         DeploymentException exception = null;
         for (int count = 0; count < retryFailedDeploymentCounter; count++) {
@@ -134,7 +136,7 @@ public abstract class AbstractDeployMojo extends AbstractMojo {
                     getLog().info("Retrying deployment attempt " + (count + 1) + " of " + retryFailedDeploymentCounter);
                 }
 
-                repositorySystem.deploy(session, deployRequest);
+                repositorySystem.deploy(session.getRepositorySession(), deployRequest);
                 exception = null;
                 break;
             } catch (DeploymentException e) {

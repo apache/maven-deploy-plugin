@@ -38,7 +38,7 @@ under the License.
   <distributionManagement>
     <repository>
       <id>it</id>
-      <url>file:///${basedir}/target/repo</url>
+      <url>file:///@remoteRepo@/deploy-at-end-pass</url>
     </repository>
   </distributionManagement>
 
@@ -95,5 +95,8 @@ under the License.
 
   <modules>
     <module>module1</module>
+    <module>module2</module>
+    <module>module3</module>
+    <module>module4</module>
   </modules>
 </project>

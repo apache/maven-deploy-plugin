@@ -19,6 +19,8 @@
 package org.apache.maven.plugins.deploy;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -26,6 +28,8 @@ import java.util.regex.Pattern;
 
 import org.apache.maven.RepositoryUtils;
 import org.apache.maven.artifact.ArtifactUtils;
+import org.apache.maven.model.Plugin;
+import org.apache.maven.model.PluginExecution;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.descriptor.PluginDescriptor;
@@ -34,10 +38,8 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.artifact.ProjectArtifact;
-import org.apache.maven.project.artifact.ProjectArtifactMetadata;
 import org.eclipse.aether.deployment.DeployRequest;
 import org.eclipse.aether.repository.RemoteRepository;
-import org.eclipse.aether.util.artifact.SubArtifact;
 
 /**
  * Deploys an artifact to remote repository.
@@ -63,7 +65,6 @@ public class DeployMojo extends AbstractDeployMojo {
     /**
      * Whether every project should be deployed during its own deploy-phase or at the end of the multimodule build. If
      * set to {@code true} and the build fails, none of the reactor projects is deployed.
-     * <strong>(experimental)</strong>
      *
      * @since 2.8
      */
@@ -176,17 +177,21 @@ public class DeployMojo extends AbstractDeployMojo {
             warnIfAffectedPackagingAndMaven(project.getPackaging());
 
             if (!deployAtEnd) {
-                deploy(
-                        session.getRepositorySession(),
-                        processProject(
-                                project,
-                                altSnapshotDeploymentRepository,
-                                altReleaseDeploymentRepository,
-                                altDeploymentRepository));
+
+                RemoteRepository deploymentRepository = getDeploymentRepository(
+                        project,
+                        altSnapshotDeploymentRepository,
+                        altReleaseDeploymentRepository,
+                        altDeploymentRepository);
+
+                DeployRequest request = new DeployRequest();
+                request.setRepository(deploymentRepository);
+                processProject(project, request);
+                deploy(request);
                 putState(State.DEPLOYED);
             } else {
-                putPluginContextValue(DEPLOY_ALT_RELEASE_DEPLOYMENT_REPOSITORY, altReleaseDeploymentRepository);
                 putPluginContextValue(DEPLOY_ALT_SNAPSHOT_DEPLOYMENT_REPOSITORY, altSnapshotDeploymentRepository);
+                putPluginContextValue(DEPLOY_ALT_RELEASE_DEPLOYMENT_REPOSITORY, altReleaseDeploymentRepository);
                 putPluginContextValue(DEPLOY_ALT_DEPLOYMENT_REPOSITORY, altDeploymentRepository);
                 putState(State.TO_BE_DEPLOYED);
                 getLog().info("Deferring deploy for " + project.getGroupId() + ":" + project.getArtifactId() + ":"
@@ -194,32 +199,41 @@ public class DeployMojo extends AbstractDeployMojo {
             }
         }
 
-        if (allProjectsMarked()) {
-            for (MavenProject reactorProject : reactorProjects) {
+        List<MavenProject> allProjectsUsingPlugin = getAllProjectsUsingPlugin();
+
+        if (allProjectsMarked(allProjectsUsingPlugin)) {
+            Map<RemoteRepository, DeployRequest> requests = new LinkedHashMap<>();
+
+            // collect all arifacts from all modules to deploy
+            // requests are grouped by used remote repository
+            for (MavenProject reactorProject : allProjectsUsingPlugin) {
                 Map<String, Object> pluginContext = session.getPluginContext(pluginDescriptor, reactorProject);
                 State state = getState(pluginContext);
                 if (state == State.TO_BE_DEPLOYED) {
-                    String altReleaseDeploymentRepository =
-                            getPluginContextValue(pluginContext, DEPLOY_ALT_RELEASE_DEPLOYMENT_REPOSITORY);
-                    String altSnapshotDeploymentRepository =
-                            getPluginContextValue(pluginContext, DEPLOY_ALT_SNAPSHOT_DEPLOYMENT_REPOSITORY);
-                    String altDeploymentRepository =
-                            getPluginContextValue(pluginContext, DEPLOY_ALT_DEPLOYMENT_REPOSITORY);
 
-                    deploy(
-                            session.getRepositorySession(),
-                            processProject(
-                                    reactorProject,
-                                    altSnapshotDeploymentRepository,
-                                    altReleaseDeploymentRepository,
-                                    altDeploymentRepository));
+                    RemoteRepository deploymentRepository = getDeploymentRepository(
+                            reactorProject,
+                            getPluginContextValue(pluginContext, DEPLOY_ALT_SNAPSHOT_DEPLOYMENT_REPOSITORY),
+                            getPluginContextValue(pluginContext, DEPLOY_ALT_RELEASE_DEPLOYMENT_REPOSITORY),
+                            getPluginContextValue(pluginContext, DEPLOY_ALT_DEPLOYMENT_REPOSITORY));
+
+                    DeployRequest request = requests.computeIfAbsent(deploymentRepository, repo -> {
+                        DeployRequest newRequest = new DeployRequest();
+                        newRequest.setRepository(repo);
+                        return newRequest;
+                    });
+                    processProject(reactorProject, request);
                 }
+            }
+            // finally execute all deployments request, lets resolver to optimize deployment
+            for (DeployRequest request : requests.values()) {
+                deploy(request);
             }
         }
     }
 
-    private boolean allProjectsMarked() {
-        for (MavenProject reactorProject : reactorProjects) {
+    private boolean allProjectsMarked(List<MavenProject> allProjectsUsingPlugin) {
+        for (MavenProject reactorProject : allProjectsUsingPlugin) {
             if (!hasState(reactorProject)) {
                 return false;
             }
@@ -227,61 +241,58 @@ public class DeployMojo extends AbstractDeployMojo {
         return true;
     }
 
-    private DeployRequest processProject(
-            final MavenProject project,
-            final String altSnapshotDeploymentRepository,
-            final String altReleaseDeploymentRepository,
-            final String altDeploymentRepository)
-            throws MojoExecutionException, MojoFailureException {
-        DeployRequest request = new DeployRequest();
-        request.setRepository(getDeploymentRepository(
-                project, altSnapshotDeploymentRepository, altReleaseDeploymentRepository, altDeploymentRepository));
+    private List<MavenProject> getAllProjectsUsingPlugin() {
+        ArrayList<MavenProject> result = new ArrayList<>();
+        for (MavenProject reactorProject : reactorProjects) {
+            if (hasExecution(reactorProject.getPlugin("org.apache.maven.plugins:maven-deploy-plugin"))) {
+                result.add(reactorProject);
+            }
+        }
+        return result;
+    }
 
-        org.apache.maven.artifact.Artifact mavenMainArtifact = project.getArtifact();
-        String packaging = project.getPackaging();
-        File pomFile = project.getFile();
-        boolean isPomArtifact = "pom".equals(packaging);
-        boolean pomArtifactAttached = false;
-
-        if (pomFile != null) {
-            request.addArtifact(RepositoryUtils.toArtifact(new ProjectArtifact(project)));
-            pomArtifactAttached = true;
+    private boolean hasExecution(Plugin plugin) {
+        if (plugin == null) {
+            return false;
         }
 
-        if (!isPomArtifact) {
-            File file = mavenMainArtifact.getFile();
-            if (file != null && file.isFile()) {
-                org.eclipse.aether.artifact.Artifact mainArtifact = RepositoryUtils.toArtifact(mavenMainArtifact);
-                request.addArtifact(mainArtifact);
+        for (PluginExecution execution : plugin.getExecutions()) {
+            if (!execution.getGoals().isEmpty() && !"none".equalsIgnoreCase(execution.getPhase())) {
+                return true;
+            }
+        }
+        return false;
+    }
 
-                if (!pomArtifactAttached) {
-                    for (Object metadata : mavenMainArtifact.getMetadataList()) {
-                        if (metadata instanceof ProjectArtifactMetadata) {
-                            request.addArtifact(new SubArtifact(mainArtifact, "", "pom")
-                                    .setFile(((ProjectArtifactMetadata) metadata).getFile()));
-                            pomArtifactAttached = true;
-                        }
-                    }
-                }
+    private void processProject(final MavenProject project, DeployRequest request) throws MojoExecutionException {
+
+        if (isFile(project.getFile())) {
+            request.addArtifact(RepositoryUtils.toArtifact(new ProjectArtifact(project)));
+        } else {
+            throw new MojoExecutionException("The project POM could not be attached");
+        }
+
+        if (!"pom".equals(project.getPackaging())) {
+            org.apache.maven.artifact.Artifact mavenMainArtifact = project.getArtifact();
+            if (isFile(mavenMainArtifact.getFile())) {
+                request.addArtifact(RepositoryUtils.toArtifact(mavenMainArtifact));
             } else if (!project.getAttachedArtifacts().isEmpty()) {
                 throw new MojoExecutionException("The packaging plugin for this project did not assign "
                         + "a main file to the project but it has attachments. Change packaging to 'pom'.");
             } else {
                 throw new MojoExecutionException(
-                        "The packaging for this project did not assign " + "a file to the build artifact");
+                        "The packaging for this project did not assign a file to the build artifact");
             }
         }
 
-        if (!pomArtifactAttached) {
-            throw new MojoExecutionException("The POM could not be attached");
-        }
-
         for (org.apache.maven.artifact.Artifact attached : project.getAttachedArtifacts()) {
-            getLog().debug("Attaching for install: " + attached.getId());
+            getLog().debug("Attaching for deploy: " + attached.getId());
             request.addArtifact(RepositoryUtils.toArtifact(attached));
         }
+    }
 
-        return request;
+    private boolean isFile(File file) {
+        return file != null && file.isFile();
     }
 
     /**
