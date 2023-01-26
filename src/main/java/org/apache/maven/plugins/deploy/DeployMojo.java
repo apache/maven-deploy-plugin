@@ -23,6 +23,10 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -70,6 +74,14 @@ public class DeployMojo extends AbstractDeployMojo {
      */
     @Parameter(defaultValue = "false", property = "deployAtEnd")
     private boolean deployAtEnd;
+
+    /**
+     * The number of parallel threads which will be used for deployment with the {@code deployAtEnd} feature.
+     *
+     * @since 3.1.0
+     */
+    @Parameter(property = "maven.deploy.parallelThreads", defaultValue = "1")
+    private int parallelThreads;
 
     /**
      * Specifies an alternative repository to which the project artifacts should be deployed (other than those specified
@@ -202,32 +214,93 @@ public class DeployMojo extends AbstractDeployMojo {
         List<MavenProject> allProjectsUsingPlugin = getAllProjectsUsingPlugin();
 
         if (allProjectsMarked(allProjectsUsingPlugin)) {
-            Map<RemoteRepository, DeployRequest> requests = new LinkedHashMap<>();
-
-            // collect all arifacts from all modules to deploy
-            // requests are grouped by used remote repository
-            for (MavenProject reactorProject : allProjectsUsingPlugin) {
-                Map<String, Object> pluginContext = session.getPluginContext(pluginDescriptor, reactorProject);
-                State state = getState(pluginContext);
-                if (state == State.TO_BE_DEPLOYED) {
-
-                    RemoteRepository deploymentRepository = getDeploymentRepository(
-                            reactorProject,
-                            getPluginContextValue(pluginContext, DEPLOY_ALT_SNAPSHOT_DEPLOYMENT_REPOSITORY),
-                            getPluginContextValue(pluginContext, DEPLOY_ALT_RELEASE_DEPLOYMENT_REPOSITORY),
-                            getPluginContextValue(pluginContext, DEPLOY_ALT_DEPLOYMENT_REPOSITORY));
-
-                    DeployRequest request = requests.computeIfAbsent(deploymentRepository, repo -> {
-                        DeployRequest newRequest = new DeployRequest();
-                        newRequest.setRepository(repo);
-                        return newRequest;
-                    });
-                    processProject(reactorProject, request);
-                }
+            if (parallelThreads <= 1) {
+                deployAllAtOnce(allProjectsUsingPlugin);
+            } else {
+                deployInParallel(allProjectsUsingPlugin);
             }
-            // finally execute all deployments request, lets resolver to optimize deployment
-            for (DeployRequest request : requests.values()) {
-                deploy(request);
+        }
+    }
+
+    private void deployAllAtOnce(List<MavenProject> allProjectsUsingPlugin) throws MojoExecutionException {
+        Map<RemoteRepository, DeployRequest> requests = new LinkedHashMap<>();
+
+        // collect all arifacts from all modules to deploy
+        // requests are grouped by used remote repository
+        for (MavenProject reactorProject : allProjectsUsingPlugin) {
+            Map<String, Object> pluginContext = session.getPluginContext(pluginDescriptor, reactorProject);
+            State state = getState(pluginContext);
+            if (state == State.TO_BE_DEPLOYED) {
+
+                RemoteRepository deploymentRepository = getDeploymentRepository(
+                        reactorProject,
+                        getPluginContextValue(pluginContext, DEPLOY_ALT_SNAPSHOT_DEPLOYMENT_REPOSITORY),
+                        getPluginContextValue(pluginContext, DEPLOY_ALT_RELEASE_DEPLOYMENT_REPOSITORY),
+                        getPluginContextValue(pluginContext, DEPLOY_ALT_DEPLOYMENT_REPOSITORY));
+
+                DeployRequest request = requests.computeIfAbsent(deploymentRepository, repo -> {
+                    DeployRequest newRequest = new DeployRequest();
+                    newRequest.setRepository(repo);
+                    return newRequest;
+                });
+                processProject(reactorProject, request);
+            }
+        }
+        // finally execute all deployments request, lets resolver to optimize deployment
+        for (DeployRequest request : requests.values()) {
+            deploy(request);
+        }
+    }
+
+    private void deployInParallel(List<MavenProject> allProjectsUsingPlugin) throws MojoExecutionException {
+
+        List<Callable<Void>> requestTasks = new ArrayList<>();
+        AtomicBoolean hasError = new AtomicBoolean(false);
+
+        for (MavenProject reactorProject : allProjectsUsingPlugin) {
+            Map<String, Object> pluginContext = session.getPluginContext(pluginDescriptor, reactorProject);
+            State state = getState(pluginContext);
+            if (state == State.TO_BE_DEPLOYED) {
+
+                RemoteRepository deploymentRepository = getDeploymentRepository(
+                        reactorProject,
+                        getPluginContextValue(pluginContext, DEPLOY_ALT_SNAPSHOT_DEPLOYMENT_REPOSITORY),
+                        getPluginContextValue(pluginContext, DEPLOY_ALT_RELEASE_DEPLOYMENT_REPOSITORY),
+                        getPluginContextValue(pluginContext, DEPLOY_ALT_DEPLOYMENT_REPOSITORY));
+
+                DeployRequest request = new DeployRequest();
+                request.setRepository(deploymentRepository);
+
+                processProject(reactorProject, request);
+
+                requestTasks.add(() -> {
+                    try {
+                        if (!hasError.get()) {
+                            deploy(request);
+                        }
+                    } catch (MojoExecutionException e) {
+                        hasError.set(true);
+                        getLog().error(e.getMessage(), e);
+                    }
+                    return null;
+                });
+            }
+        }
+
+        if (!requestTasks.isEmpty()) {
+            ExecutorService executorService = Executors.newFixedThreadPool(parallelThreads);
+
+            try {
+                executorService.invokeAll(requestTasks);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new MojoExecutionException(e.getMessage(), e);
+            }
+
+            executorService.shutdown();
+
+            if (hasError.get()) {
+                throw new MojoExecutionException("Deployment errors");
             }
         }
     }
@@ -303,7 +376,7 @@ public class DeployMojo extends AbstractDeployMojo {
             final String altSnapshotDeploymentRepository,
             final String altReleaseDeploymentRepository,
             final String altDeploymentRepository)
-            throws MojoExecutionException, MojoFailureException {
+            throws MojoExecutionException {
         RemoteRepository repo = null;
 
         String altDeploymentRepo;
@@ -330,7 +403,7 @@ public class DeployMojo extends AbstractDeployMojo {
                             + "\" instead.");
                     repo = getRemoteRepository(id, url);
                 } else {
-                    throw new MojoFailureException(
+                    throw new MojoExecutionException(
                             altDeploymentRepo,
                             "Invalid legacy syntax and layout for repository.",
                             "Invalid legacy syntax and layout for alternative repository. Use \"" + id + "::" + url
@@ -340,7 +413,7 @@ public class DeployMojo extends AbstractDeployMojo {
                 matcher = ALT_REPO_SYNTAX_PATTERN.matcher(altDeploymentRepo);
 
                 if (!matcher.matches()) {
-                    throw new MojoFailureException(
+                    throw new MojoExecutionException(
                             altDeploymentRepo,
                             "Invalid syntax for repository.",
                             "Invalid syntax for alternative repository. Use \"id::url\".");

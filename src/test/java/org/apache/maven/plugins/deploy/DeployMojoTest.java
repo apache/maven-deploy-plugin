@@ -28,7 +28,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.descriptor.PluginDescriptor;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 import org.apache.maven.plugin.testing.stubs.MavenProjectStub;
@@ -581,7 +580,7 @@ public class DeployMojoTest extends AbstractMojoTestCase {
         try {
             mojo.getDeploymentRepository(project, null, null, "altDeploymentRepository::legacy::http://localhost");
             fail("Should throw: Invalid legacy syntax and layout for repository.");
-        } catch (MojoFailureException e) {
+        } catch (MojoExecutionException e) {
             assertEquals(e.getMessage(), "Invalid legacy syntax and layout for repository.");
             assertEquals(
                     e.getLongMessage(),
@@ -602,7 +601,7 @@ public class DeployMojoTest extends AbstractMojoTestCase {
             mojo.getDeploymentRepository(
                     project, null, null, "altDeploymentRepository::hey::wow::foo::http://localhost");
             fail("Should throw: Invalid legacy syntax and layout for repository.");
-        } catch (MojoFailureException e) {
+        } catch (MojoExecutionException e) {
             assertEquals(e.getMessage(), "Invalid legacy syntax and layout for repository.");
             assertEquals(
                     e.getLongMessage(),
@@ -638,7 +637,7 @@ public class DeployMojoTest extends AbstractMojoTestCase {
             mojo.getDeploymentRepository(
                     project, null, null, "altDeploymentRepository::legacy::scm:svn:http://localhost");
             fail("Should throw: Invalid legacy syntax and layout for repository.");
-        } catch (MojoFailureException e) {
+        } catch (MojoExecutionException e) {
             assertEquals(e.getMessage(), "Invalid legacy syntax and layout for repository.");
             assertEquals(
                     e.getLongMessage(),
