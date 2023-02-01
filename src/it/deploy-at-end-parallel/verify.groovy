@@ -33,5 +33,6 @@ assert buildLog.text.contains( "[INFO] Deferring deploy for org.apache.maven.its
 assert buildLog.text.contains( "[INFO] Deferring deploy for org.apache.maven.its.deploy.dae.parallel:module1:1.0 at end" )
 assert buildLog.text.contains( "[INFO] Deferring deploy for org.apache.maven.its.deploy.dae.parallel:module2:1.0 at end" )
 assert buildLog.text.contains( "[INFO] Deferring deploy for org.apache.maven.its.deploy.dae.parallel:module3:1.0 at end" )
-assert buildLog.text.contains( "[INFO] Deferring deploy for org.apache.maven.its.deploy.dae.parallel:module4:1.0 at end" )
+// Last module does not emit this misleading message, as it IS "the end", not deferring anymore
+//assert buildLog.text.contains( "[INFO] Deferring deploy for org.apache.maven.its.deploy.dae.parallel:module4:1.0 at end" )
 
