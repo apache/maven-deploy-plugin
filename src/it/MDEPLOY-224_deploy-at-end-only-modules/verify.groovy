@@ -25,4 +25,5 @@ def buildLog = new File ( basedir, "build.log").text
 
 assert ! buildLog.contains('[INFO] Deferring deploy for org.apache.maven.its.mdeploy-224:parent:1.0 at end')
 assert buildLog.contains('[INFO] Deferring deploy for org.apache.maven.its.mdeploy-224:module1:1.0 at end')
-assert buildLog.contains('[INFO] Deferring deploy for org.apache.maven.its.mdeploy-224:module2:1.0 at end')
+// Last module does not emit this misleading message, as it IS "the end", not deferring anymore
+// assert buildLog.contains('[INFO] Deferring deploy for org.apache.maven.its.mdeploy-224:module2:1.0 at end')

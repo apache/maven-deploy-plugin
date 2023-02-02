@@ -27,5 +27,6 @@ File buildLog = new File( basedir, 'build.log' )
 assert buildLog.exists()
 assert buildLog.text.contains( "[INFO] Deferring deploy for org.apache.maven.its.deploy.dae.pass:dae:1.0 at end" )
 assert buildLog.text.contains( "[INFO] Deferring deploy for org.apache.maven.its.deploy.dae.pass:module1:1.0 at end" )
-assert buildLog.text.contains( "[INFO] Deferring deploy for org.apache.maven.its.deploy.dae.pass:module3:1.0 at end" )
+// Last module does not emit this misleading message, as it IS "the end", not deferring anymore
+//assert buildLog.text.contains( "[INFO] Deferring deploy for org.apache.maven.its.deploy.dae.pass:module3:1.0 at end" )
 
