@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+import groovy.xml.*;
 
 assert new File( basedir, "target/repo/org/apache/maven/plugins/deploy/its/mdeploy178/1.0/mdeploy178-1.0.jar" ).exists()
 File deployedPom = new File( basedir, "target/repo/org/apache/maven/plugins/deploy/its/mdeploy178/1.0/mdeploy178-1.0.pom" )

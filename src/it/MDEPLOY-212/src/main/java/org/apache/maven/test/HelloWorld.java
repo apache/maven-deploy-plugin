@@ -1,5 +1,3 @@
-package org.apache.maven.test;
-
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -9,7 +7,7 @@ package org.apache.maven.test;
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *  http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -18,20 +16,18 @@ package org.apache.maven.test;
  * specific language governing permissions and limitations
  * under the License.
  */
+package org.apache.maven.test;
 
 /**
  * Hello World class
  */
-public class HelloWorld
-{
+public class HelloWorld {
 
     /**
      * Main method
      * @param args Arguments
      */
-    public static void main( String[] args )
-    {
-        System.out.println( "Hello world" );
+    public static void main(String[] args) {
+        System.out.println("Hello world");
     }
-
 }

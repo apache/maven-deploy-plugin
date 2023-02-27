@@ -26,10 +26,13 @@ under the License.
           <groupId>org.apache.maven.test</groupId>
           <artifactId>maven-deploy-file-test</artifactId>
           <version>1.0</version>
-          <file>${basedir}/src/test/resources/unit/deploy-file-artifact-not-jar/target/deploy-test-file.zip</file>
+          <packaging>jar</packaging>
+          <file>${basedir}/src/test/resources/unit/deploy-file/deploy-test-file-1.0-SNAPSHOT.jar</file>
           <repositoryId>deploy-test</repositoryId>
-          <url>file://${basedir}/target/remote-repo/deploy-file-artifact-not-jar</url>
+          <url>file://${basedir}/target/remote-repo/deploy-file-test</url>
+          <description>POM was created from deploy:deploy-file</description>
           <generatePom>true</generatePom>
+          <skip>snapshots</skip>
         </configuration>
       </plugin>
     </plugins>
