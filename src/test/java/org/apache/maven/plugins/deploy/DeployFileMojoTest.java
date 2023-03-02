@@ -110,7 +110,7 @@ public class DeployFileMojoTest {
             assertTrue(p2.toString().endsWith(".pom"));
 
             assertNotNull(request.getRepository());
-            assertEquals(url, request.getRepository().getUrl());
+            assertEquals(url.replace(File.separator, "/"), request.getRepository().getUrl());
 
             // check the generated pom
             File pom = p2.toFile();
@@ -157,7 +157,7 @@ public class DeployFileMojoTest {
         assertTrue(p2.toString().endsWith(".pom"));
         // remote repository
         assertNotNull(request.getRepository());
-        assertEquals(url, request.getRepository().getUrl());
+        assertEquals(url.replace(File.separator, "/"), request.getRepository().getUrl());
     }
 
     @Test
@@ -188,7 +188,7 @@ public class DeployFileMojoTest {
 
         assertNotNull(request.getRepository());
         assertEquals(
-                "file://" + getBasedir() + "/target/remote-repo/deploy-file",
+                "file://" + getBasedir().replace(File.separator, "/") + "/target/remote-repo/deploy-file",
                 request.getRepository().getUrl());
     }
 

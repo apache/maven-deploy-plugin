@@ -114,7 +114,7 @@ public class DeployMojoTest {
                         new ArtifactStub("org.apache.maven.test", "maven-deploy-test", "", "1.0-SNAPSHOT", "jar"),
                         new ArtifactStub("org.apache.maven.test", "maven-deploy-test", "", "1.0-SNAPSHOT", "pom"))),
                 artifacts);
-        assertEquals(getBasedir(), request.getRepository().getUrl());
+        assertEquals(getBasedir().replace(File.separator, "/"), request.getRepository().getUrl());
     }
 
     @Test
@@ -156,7 +156,7 @@ public class DeployMojoTest {
                 Collections.singleton(
                         new ArtifactStub("org.apache.maven.test", "maven-deploy-test", "", "1.0-SNAPSHOT", "pom")),
                 artifacts);
-        assertEquals(getBasedir(), request.getRepository().getUrl());
+        assertEquals(getBasedir().replace(File.separator, "/"), request.getRepository().getUrl());
     }
 
     @Test
@@ -194,7 +194,7 @@ public class DeployMojoTest {
                         new ArtifactStub(
                                 "org.apache.maven.test", "attached-artifact-test", "", "1.0-SNAPSHOT", "jar"))),
                 artifacts);
-        assertEquals(getBasedir(), request.getRepository().getUrl());
+        assertEquals(getBasedir().replace(File.separator, "/"), request.getRepository().getUrl());
     }
 
     @Test
