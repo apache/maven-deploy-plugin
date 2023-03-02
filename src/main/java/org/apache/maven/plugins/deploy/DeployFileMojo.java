@@ -247,8 +247,8 @@ public class DeployFileMojo extends AbstractDeployMojo {
 
         initProperties();
 
-        RemoteRepository deploymentRepository = session.createRemoteRepository(repositoryId,
-            url.replace(File.separator, "/"));
+        RemoteRepository deploymentRepository =
+                session.createRemoteRepository(repositoryId, url.replace(File.separator, "/"));
 
         if (deploymentRepository.getProtocol().isEmpty()) {
             throw new MojoException("No transfer protocol found.");
