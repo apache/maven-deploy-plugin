@@ -110,7 +110,8 @@ public class DeployFileMojoTest {
             assertTrue(p2.toString().endsWith(".pom"));
 
             assertNotNull(request.getRepository());
-            assertEquals(url.replace(File.separator, "/"), request.getRepository().getUrl());
+            assertEquals(
+                    url.replace(File.separator, "/"), request.getRepository().getUrl());
 
             // check the generated pom
             File pom = p2.toFile();
