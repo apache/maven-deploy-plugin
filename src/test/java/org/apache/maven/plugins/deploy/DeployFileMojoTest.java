@@ -56,7 +56,7 @@ import static org.mockito.Mockito.doAnswer;
  */
 @MojoTest
 public class DeployFileMojoTest {
-    private static final String LOCAL_REPO = getBasedir() + "/target/local-repo";
+    private static final String LOCAL_REPO = getBasedir() + File.separator + "target" + File.separator + "local-repo";
 
     @Inject
     @SuppressWarnings("unused")

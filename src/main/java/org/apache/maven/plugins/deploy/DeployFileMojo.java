@@ -351,7 +351,7 @@ public class DeployFileMojo extends AbstractDeployMojo {
                 if (nci == -1) {
                     nci = classifiers.length();
                 }
-                Path file = Paths.get(files.substring(fi, nfi));
+                Path file = Paths.get(files.substring(fi, nfi).replace("/", File.separator));
                 if (!Files.isRegularFile(file)) {
                     // try relative to the project basedir just in case
                     file = Paths.get(files.substring(fi, nfi));
