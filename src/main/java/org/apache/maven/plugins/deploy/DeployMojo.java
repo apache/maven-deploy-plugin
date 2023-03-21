@@ -298,16 +298,15 @@ public class DeployMojo extends AbstractDeployMojo {
                 request.addArtifact(RepositoryUtils.toArtifact(mavenMainArtifact));
             } else if (!project.getAttachedArtifacts().isEmpty()) {
                 if (allowIncompleteProjects) {
-                    getLog().warn( "" );
-                    getLog().warn( "The packaging plugin for this project did not assign" );
-                    getLog().warn( "a main file to the project but it has attachments. Change packaging to 'pom'." );
-                    getLog().warn( "" );
-                    getLog().warn( "Incomplete projects like this will fail in future Maven versions!" );
-                    getLog().warn( "" );
-                } else
-                {
-                    throw new MojoExecutionException( "The packaging plugin for this project did not assign "
-                            + "a main file to the project but it has attachments. Change packaging to 'pom'." );
+                    getLog().warn("");
+                    getLog().warn("The packaging plugin for this project did not assign");
+                    getLog().warn("a main file to the project but it has attachments. Change packaging to 'pom'.");
+                    getLog().warn("");
+                    getLog().warn("Incomplete projects like this will fail in future Maven versions!");
+                    getLog().warn("");
+                } else {
+                    throw new MojoExecutionException("The packaging plugin for this project did not assign "
+                            + "a main file to the project but it has attachments. Change packaging to 'pom'.");
                 }
             } else {
                 throw new MojoExecutionException(
