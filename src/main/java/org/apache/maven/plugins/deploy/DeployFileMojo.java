@@ -269,7 +269,7 @@ public class DeployFileMojo extends AbstractDeployMojo {
             ArtifactType artifactType =
                     session.getRepositorySession().getArtifactTypeRegistry().get(packaging);
             if (artifactType != null
-                    && StringUtils.isEmpty(classifier)
+                    && (classifier == null || classifier.isEmpty())
                     && !StringUtils.isEmpty(artifactType.getClassifier())) {
                 classifier = artifactType.getClassifier();
             }
