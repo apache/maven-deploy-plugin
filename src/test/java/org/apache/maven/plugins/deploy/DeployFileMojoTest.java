@@ -276,6 +276,45 @@ public class DeployFileMojoTest extends AbstractMojoTestCase {
         assertTrue(file.exists());
     }
 
+    public void testDeployFileIfPackagingIsSet() throws Exception {
+        File testPom = new File(getBasedir(), "target/test-classes/unit/deploy-file-packaging/plugin-config.xml");
+
+        mojo = (DeployFileMojo) lookupMojo("deploy-file", testPom);
+
+        MockitoAnnotations.initMocks(this);
+
+        assertNotNull(mojo);
+
+        ProjectBuildingRequest buildingRequest = mock(ProjectBuildingRequest.class);
+        when(buildingRequest.getRepositoryMerging()).thenReturn(ProjectBuildingRequest.RepositoryMerging.POM_DOMINANT);
+        when(session.getProjectBuildingRequest()).thenReturn(buildingRequest);
+        DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
+        repositorySession.setLocalRepositoryManager(new SimpleLocalRepositoryManagerFactory()
+                .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
+        when(buildingRequest.getRepositorySession()).thenReturn(repositorySession);
+        when(session.getRepositorySession()).thenReturn(repositorySession);
+
+        String packaging = (String) getVariableValueFromObject(mojo, "packaging");
+
+        String groupId = (String) getVariableValueFromObject(mojo, "groupId");
+
+        String artifactId = (String) getVariableValueFromObject(mojo, "artifactId");
+
+        String version = (String) getVariableValueFromObject(mojo, "version");
+
+        assertEquals("differentpackaging", packaging);
+
+        mojo.execute();
+
+        File deployedArtifact = new File(
+                remoteRepo,
+                "deploy-file-packaging/" + groupId.replace('.', '/') + "/"
+                        + artifactId + "/" + version + "/" + artifactId + "-"
+                        + version + ".differentpackaging");
+
+        assertTrue(deployedArtifact.exists());
+    }
+
     private void addFileToList(File file, List<String> fileList) {
         if (!file.isDirectory()) {
             fileList.add(file.getName());

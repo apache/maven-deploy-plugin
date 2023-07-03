@@ -265,6 +265,7 @@ public class DeployFileMojo extends AbstractDeployMojo {
         deployRequest.setRepository(remoteRepository);
 
         boolean isFilePom = classifier == null && "pom".equals(packaging);
+        String extension = packaging;
         if (!isFilePom) {
             ArtifactType artifactType =
                     session.getRepositorySession().getArtifactTypeRegistry().get(packaging);
@@ -272,11 +273,10 @@ public class DeployFileMojo extends AbstractDeployMojo {
                     && (classifier == null || classifier.isEmpty())
                     && !StringUtils.isEmpty(artifactType.getClassifier())) {
                 classifier = artifactType.getClassifier();
+                extension = artifactType.getExtension();
             }
         }
-        Artifact mainArtifact = new DefaultArtifact(
-                        groupId, artifactId, classifier, isFilePom ? "pom" : getExtension(file), version)
-                .setFile(file);
+        Artifact mainArtifact = new DefaultArtifact(groupId, artifactId, classifier, extension, version).setFile(file);
         deployRequest.addArtifact(mainArtifact);
 
         File artifactLocalFile = getLocalRepositoryFile(session.getRepositorySession(), mainArtifact);
