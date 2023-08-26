@@ -426,7 +426,7 @@ public class DeployFileMojo extends AbstractDeployMojo {
      *
      * @param pomFile The path of the POM file to parse, must not be <code>null</code>.
      * @return The model from the POM file, never <code>null</code>.
-     * @throws MojoExecutionException If the file doesn't exist of cannot be read.
+     * @throws MojoExecutionException If the file doesn't exist or cannot be read.
      */
     Model readModel(File pomFile) throws MojoExecutionException {
         Reader reader = null;
