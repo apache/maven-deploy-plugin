@@ -18,15 +18,22 @@
  */
 package org.apache.maven.plugins.deploy;
 
+import java.util.Objects;
+import java.util.Optional;
+
+import org.apache.maven.RepositoryUtils;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.project.MavenProject;
 import org.apache.maven.rtinfo.RuntimeInformation;
 import org.eclipse.aether.RepositorySystem;
+import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.deployment.DeployRequest;
+import org.eclipse.aether.deployment.DeployResult;
 import org.eclipse.aether.deployment.DeploymentException;
 import org.eclipse.aether.repository.RemoteRepository;
 import org.eclipse.aether.util.version.GenericVersionScheme;
@@ -136,7 +143,8 @@ public abstract class AbstractDeployMojo extends AbstractMojo {
                     getLog().info("Retrying deployment attempt " + (count + 1) + " of " + retryFailedDeploymentCounter);
                 }
 
-                repositorySystem.deploy(session.getRepositorySession(), deployRequest);
+                DeployResult deployResult = repositorySystem.deploy(session.getRepositorySession(), deployRequest);
+                mergeResolvedArtifacts(deployResult);
                 exception = null;
                 break;
             } catch (DeploymentException e) {
@@ -152,5 +160,40 @@ public abstract class AbstractDeployMojo extends AbstractMojo {
         if (exception != null) {
             throw new MojoExecutionException(exception.getMessage(), exception);
         }
+    }
+
+    protected void mergeResolvedArtifacts(DeployResult deployResult) {
+        for (Artifact resolvedArtifact : deployResult.getArtifacts()) {
+            Optional<MavenProject> projectMaybe = session.getAllProjects().stream()
+                    .filter(p -> Objects.equals(resolvedArtifact.getGroupId(), p.getGroupId())
+                            && Objects.equals(resolvedArtifact.getArtifactId(), p.getArtifactId()))
+                    .findFirst();
+
+            if (projectMaybe.isPresent()) {
+                MavenProject project = projectMaybe.get();
+
+                if (isMatch(resolvedArtifact, project.getArtifact())) {
+                    project.setArtifact(RepositoryUtils.toArtifact(resolvedArtifact));
+                } else {
+                    for (int i = 0; i < project.getAttachedArtifacts().size(); i++) {
+                        if (isMatch(
+                                resolvedArtifact, project.getAttachedArtifacts().get(i))) {
+                            project.getAttachedArtifacts().set(i, RepositoryUtils.toArtifact(resolvedArtifact));
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private static boolean isMatch(Artifact a, org.apache.maven.artifact.Artifact modelArtifact) {
+        return Objects.equals(modelArtifact.getGroupId(), a.getGroupId())
+                && Objects.equals(modelArtifact.getArtifactId(), a.getArtifactId())
+                && Objects.equals(
+                        modelArtifact.getType(),
+                        Optional.ofNullable(a.getProperties().get("type")).orElse(null))
+                && Objects.equals(
+                        Optional.ofNullable(modelArtifact.getClassifier()).orElse(""), a.getClassifier());
     }
 }
