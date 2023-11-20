@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.maven.execution.MavenSession;
@@ -36,10 +37,12 @@ import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.ProjectBuildingRequest;
 import org.codehaus.plexus.util.FileUtils;
 import org.eclipse.aether.DefaultRepositorySystemSession;
+import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.internal.impl.DefaultLocalPathComposer;
 import org.eclipse.aether.internal.impl.SimpleLocalRepositoryManagerFactory;
 import org.eclipse.aether.repository.LocalRepository;
 import org.eclipse.aether.repository.RemoteRepository;
+import org.junit.Ignore;
 import org.mockito.InjectMocks;
 import org.mockito.MockitoAnnotations;
 
@@ -470,10 +473,46 @@ public class DeployMojoTest extends AbstractMojoTestCase {
 
         try {
             mojo.execute();
-
             fail("Did not throw mojo execution exception");
         } catch (MojoExecutionException e) {
-            // expected
+            // expected, message should include artifactId
+            assertEquals(
+                    "The packaging plugin for project maven-deploy-test did not assign a file to the build artifact",
+                    e.getMessage());
+        }
+    }
+
+    public void testDeployIfProjectFileIsNull() throws Exception {
+        File testPom = new File(getBasedir(), "target/test-classes/unit/basic-deploy-test/plugin-config.xml");
+
+        DeployMojo mojo = (DeployMojo) lookupMojo("deploy", testPom);
+
+        MockitoAnnotations.initMocks(this);
+
+        ProjectBuildingRequest buildingRequest = mock(ProjectBuildingRequest.class);
+        when(session.getProjectBuildingRequest()).thenReturn(buildingRequest);
+
+        setVariableValueToObject(mojo, "session", session);
+
+        assertNotNull(mojo);
+
+        MavenProject project = (MavenProject) getVariableValueFromObject(mojo, "project");
+        project.setGroupId("org.apache.maven.test");
+        project.setArtifactId("maven-deploy-test");
+        project.setVersion("1.0-SNAPSHOT");
+
+        project.setFile(null);
+        assertNull(project.getFile());
+
+        setVariableValueToObject(mojo, "pluginContext", new ConcurrentHashMap<>());
+        setVariableValueToObject(mojo, "reactorProjects", Collections.singletonList(project));
+
+        try {
+            mojo.execute();
+            fail("Did not throw mojo execution exception");
+        } catch (MojoExecutionException e) {
+            // expected, message should include artifactId
+            assertEquals("The POM for project maven-deploy-test could not be attached", e.getMessage());
         }
     }
 
@@ -566,6 +605,106 @@ public class DeployMojoTest extends AbstractMojoTestCase {
         assertEquals(expectedFiles.size(), fileList.size());
 
         assertEquals(0, getSizeOfExpectedFiles(fileList, expectedFiles));
+    }
+
+    public void testNonPomDeployWithAttachedArtifactsOnly() throws Exception {
+        File testPom = new File(
+                getBasedir(), "target/test-classes/unit/basic-deploy-with-attached-artifacts/" + "plugin-config.xml");
+
+        mojo = (DeployMojo) lookupMojo("deploy", testPom);
+
+        MockitoAnnotations.initMocks(this);
+
+        assertNotNull(mojo);
+
+        ProjectBuildingRequest buildingRequest = mock(ProjectBuildingRequest.class);
+        when(session.getProjectBuildingRequest()).thenReturn(buildingRequest);
+
+        MavenProject project = (MavenProject) getVariableValueFromObject(mojo, "project");
+        project.setGroupId("org.apache.maven.test");
+        project.setArtifactId("maven-deploy-test");
+        project.setVersion("1.0-SNAPSHOT");
+
+        setVariableValueToObject(mojo, "pluginContext", new ConcurrentHashMap<>());
+        setVariableValueToObject(mojo, "reactorProjects", Collections.singletonList(project));
+
+        artifact = (DeployArtifactStub) project.getArtifact();
+        artifact.setFile(null);
+
+        try {
+            mojo.execute();
+            fail("Did not throw mojo execution exception");
+        } catch (MojoExecutionException e) {
+            // expected, message should include artifactId
+            assertEquals(
+                    "The packaging plugin for project maven-deploy-test did not assign a main file to the project "
+                            + "but it has attachments. Change packaging to 'pom'.",
+                    e.getMessage());
+        }
+    }
+
+    @Ignore("SCP is not part of Maven3 distribution. Aether handles transport extensions.")
+    public void _testBasicDeployWithScpAsProtocol() throws Exception {
+        String originalUserHome = System.getProperty("user.home");
+
+        // FIX THE DAMN user.home BEFORE YOU DELETE IT!!!
+        File altHome = new File(getBasedir(), "target/ssh-user-home");
+        altHome.mkdirs();
+
+        System.out.println("Testing user.home value for .ssh dir: " + altHome.getCanonicalPath());
+
+        Properties props = System.getProperties();
+        props.setProperty("user.home", altHome.getCanonicalPath());
+
+        System.setProperties(props);
+
+        File testPom = new File(getBasedir(), "target/test-classes/unit/basic-deploy-scp/plugin-config.xml");
+
+        mojo = (DeployMojo) lookupMojo("deploy", testPom);
+
+        assertNotNull(mojo);
+
+        RepositorySystem repositorySystem = mock(RepositorySystem.class);
+
+        setVariableValueToObject(mojo, "repositorySystem", repositorySystem);
+
+        File file = new File(
+                getBasedir(),
+                "target/test-classes/unit/basic-deploy-scp/target/" + "deploy-test-file-1.0-SNAPSHOT.jar");
+
+        assertTrue(file.exists());
+
+        MavenProject project = (MavenProject) getVariableValueFromObject(mojo, "project");
+
+        setVariableValueToObject(mojo, "pluginContext", new ConcurrentHashMap<>());
+        setVariableValueToObject(mojo, "reactorProjects", Collections.singletonList(project));
+
+        artifact = (DeployArtifactStub) project.getArtifact();
+
+        artifact.setFile(file);
+
+        String altUserHome = System.getProperty("user.home");
+
+        if (altUserHome.equals(originalUserHome)) {
+            // this is *very* bad!
+            throw new IllegalStateException(
+                    "Setting 'user.home' system property to alternate value did NOT work. Aborting test.");
+        }
+
+        File sshFile = new File(altUserHome, ".ssh");
+
+        System.out.println("Testing .ssh dir: " + sshFile.getCanonicalPath());
+
+        // delete first the .ssh folder if existing before executing the mojo
+        if (sshFile.exists()) {
+            FileUtils.deleteDirectory(sshFile);
+        }
+
+        mojo.execute();
+
+        assertTrue(sshFile.exists());
+
+        FileUtils.deleteDirectory(sshFile);
     }
 
     public void testLegacyAltDeploymentRepositoryWithDefaultLayout() throws Exception {
