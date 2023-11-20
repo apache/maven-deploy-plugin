@@ -393,10 +393,46 @@ public class DeployMojoTest extends AbstractMojoTestCase {
 
         try {
             mojo.execute();
-
             fail("Did not throw mojo execution exception");
         } catch (MojoExecutionException e) {
-            // expected
+            // expected, message should include artifactId
+            assertEquals(
+                    "The packaging plugin for project maven-deploy-test did not assign a file to the build artifact",
+                    e.getMessage());
+        }
+    }
+
+    public void testDeployIfProjectFileIsNull() throws Exception {
+        File testPom = new File(getBasedir(), "target/test-classes/unit/basic-deploy-test/plugin-config.xml");
+
+        DeployMojo mojo = (DeployMojo) lookupMojo("deploy", testPom);
+
+        MockitoAnnotations.initMocks(this);
+
+        ProjectBuildingRequest buildingRequest = mock(ProjectBuildingRequest.class);
+        when(session.getProjectBuildingRequest()).thenReturn(buildingRequest);
+
+        setVariableValueToObject(mojo, "session", session);
+
+        assertNotNull(mojo);
+
+        MavenProject project = (MavenProject) getVariableValueFromObject(mojo, "project");
+        project.setGroupId("org.apache.maven.test");
+        project.setArtifactId("maven-deploy-test");
+        project.setVersion("1.0-SNAPSHOT");
+
+        project.setFile(null);
+        assertNull(project.getFile());
+
+        setVariableValueToObject(mojo, "pluginContext", new ConcurrentHashMap<>());
+        setVariableValueToObject(mojo, "reactorProjects", Collections.singletonList(project));
+
+        try {
+            mojo.execute();
+            fail("Did not throw mojo execution exception");
+        } catch (MojoExecutionException e) {
+            // expected, message should include artifactId
+            assertEquals("The POM for project maven-deploy-test could not be attached", e.getMessage());
         }
     }
 
@@ -488,6 +524,42 @@ public class DeployMojoTest extends AbstractMojoTestCase {
         assertEquals(expectedFiles.size(), fileList.size());
 
         assertEquals(0, getSizeOfExpectedFiles(fileList, expectedFiles));
+    }
+
+    public void testNonPomDeployWithAttachedArtifactsOnly() throws Exception {
+        File testPom = new File(
+                getBasedir(), "target/test-classes/unit/basic-deploy-with-attached-artifacts/" + "plugin-config.xml");
+
+        mojo = (DeployMojo) lookupMojo("deploy", testPom);
+
+        MockitoAnnotations.initMocks(this);
+
+        assertNotNull(mojo);
+
+        ProjectBuildingRequest buildingRequest = mock(ProjectBuildingRequest.class);
+        when(session.getProjectBuildingRequest()).thenReturn(buildingRequest);
+
+        MavenProject project = (MavenProject) getVariableValueFromObject(mojo, "project");
+        project.setGroupId("org.apache.maven.test");
+        project.setArtifactId("maven-deploy-test");
+        project.setVersion("1.0-SNAPSHOT");
+
+        setVariableValueToObject(mojo, "pluginContext", new ConcurrentHashMap<>());
+        setVariableValueToObject(mojo, "reactorProjects", Collections.singletonList(project));
+
+        artifact = (DeployArtifactStub) project.getArtifact();
+        artifact.setFile(null);
+
+        try {
+            mojo.execute();
+            fail("Did not throw mojo execution exception");
+        } catch (MojoExecutionException e) {
+            // expected, message should include artifactId
+            assertEquals(
+                    "The packaging plugin for project maven-deploy-test did not assign a main file to the project "
+                            + "but it has attachments. Change packaging to 'pom'.",
+                    e.getMessage());
+        }
     }
 
     @Ignore("SCP is not part of Maven3 distribution. Aether handles transport extensions.")
