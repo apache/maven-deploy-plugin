@@ -23,7 +23,7 @@ under the License.
   <parent>
     <groupId>org.apache.maven.plugins</groupId>
     <artifactId>maven-plugins</artifactId>
-    <version>39</version>
+    <version>41</version>
     <relativePath />
   </parent>
 
@@ -69,7 +69,7 @@ under the License.
 
   <properties>
     <javaVersion>8</javaVersion>
-    <mavenVersion>4.0.0-alpha-4</mavenVersion>
+    <mavenVersion>4.0.0-alpha-8</mavenVersion>
     <!-- Keep in sync with resolver used in maven above -->
     <slf4jVersion>1.7.5</slf4jVersion>
     <!-- Keep in sync with resolver used in maven above -->
@@ -79,16 +79,18 @@ under the License.
 
     <!-- plugins version used in IT tests -->
     <mavenAntrunPluginVersion>3.1.0</mavenAntrunPluginVersion>
-    <mavenCompilerPluginVersion>3.10.1</mavenCompilerPluginVersion>
+    <mavenCompilerPluginVersion>3.11.0</mavenCompilerPluginVersion>
     <mavenEnforcerPluginVersion>3.1.0</mavenEnforcerPluginVersion>
     <mavenInstallPluginVersion>3.1.0</mavenInstallPluginVersion>
     <mavenJarPluginVersion>3.3.0</mavenJarPluginVersion>
     <mavenJavadocPluginVersion>3.4.1</mavenJavadocPluginVersion>
-    <mavenPluginToolsVersion>3.8.1</mavenPluginToolsVersion>
+    <mavenPluginToolsVersion>3.9.0</mavenPluginToolsVersion>
     <mavenResourcesPluginVersion>3.3.0</mavenResourcesPluginVersion>
     <mavenSourcePluginVersion>3.2.1</mavenSourcePluginVersion>
     <mavenSurefirePluginVersion>${surefire.version}</mavenSurefirePluginVersion>
     <mavenWarPluginVersion>3.3.2</mavenWarPluginVersion>
+
+    <version.plexus-xml>4.0.1</version.plexus-xml>
 
     <project.build.outputTimestamp>2023-03-21T14:38:01Z</project.build.outputTimestamp>
   </properties>
@@ -100,17 +102,12 @@ under the License.
       <version>${mavenVersion}</version>
       <scope>provided</scope>
     </dependency>
-    <dependency>
-      <groupId>org.apache.maven</groupId>
-      <artifactId>plexus-utils</artifactId>
-      <version>${mavenVersion}</version>
-    </dependency>
 
     <!-- Test -->
     <dependency>
       <groupId>org.apache.maven.plugin-testing</groupId>
       <artifactId>maven-plugin-testing-harness</artifactId>
-      <version>4.0.0-alpha-1</version>
+      <version>4.0.0-alpha-2</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -195,7 +192,7 @@ under the License.
             <plugin>
               <groupId>org.apache.maven.plugins</groupId>
               <artifactId>maven-invoker-plugin</artifactId>
-              <version>3.5.0</version>
+              <version>3.6.0</version>
               <configuration>
                 <debug>true</debug>
                 <showErrors>true</showErrors>
