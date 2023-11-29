@@ -20,11 +20,11 @@ package org.apache.maven.plugins.deploy;
 
 import java.io.File;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
+import java.util.Collection;
 import java.util.List;
-import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.google.inject.Inject;
 import com.google.inject.Provides;
@@ -32,19 +32,27 @@ import com.google.inject.Singleton;
 import org.apache.maven.api.Artifact;
 import org.apache.maven.api.Project;
 import org.apache.maven.api.RemoteRepository;
-import org.apache.maven.api.Session;
+import org.apache.maven.api.model.Repository;
 import org.apache.maven.api.plugin.MojoException;
 import org.apache.maven.api.plugin.testing.InjectMojo;
+import org.apache.maven.api.plugin.testing.MojoExtension;
 import org.apache.maven.api.plugin.testing.MojoTest;
 import org.apache.maven.api.plugin.testing.stubs.ArtifactStub;
-import org.apache.maven.api.plugin.testing.stubs.ProjectStub;
 import org.apache.maven.api.plugin.testing.stubs.SessionStub;
 import org.apache.maven.api.services.ArtifactDeployer;
 import org.apache.maven.api.services.ArtifactDeployerRequest;
 import org.apache.maven.api.services.ArtifactManager;
-import org.apache.maven.api.services.ProjectBuilder;
 import org.apache.maven.api.services.ProjectManager;
+import org.apache.maven.api.services.RepositoryFactory;
+import org.apache.maven.artifact.DefaultArtifact;
 import org.apache.maven.internal.impl.DefaultLog;
+import org.apache.maven.internal.impl.DefaultProject;
+import org.apache.maven.internal.impl.InternalSession;
+import org.apache.maven.model.DeploymentRepository;
+import org.apache.maven.model.DistributionManagement;
+import org.apache.maven.plugin.testing.stubs.DefaultArtifactHandlerStub;
+import org.apache.maven.plugin.testing.stubs.MavenProjectStub;
+import org.codehaus.plexus.testing.PlexusExtension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -59,8 +67,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 /**
  * @author <a href="mailto:aramirez@apache.org">Allan Ramirez</a>
@@ -73,7 +83,7 @@ public class DeployMojoTest {
 
     @Inject
     @SuppressWarnings("unused")
-    private Session session;
+    private InternalSession session;
 
     @Inject
     @SuppressWarnings("unused")
@@ -88,43 +98,42 @@ public class DeployMojoTest {
     private ArtifactDeployer artifactDeployer;
 
     @Test
-    @InjectMojo(goal = "deploy", pom = "classpath:/unit/basic-deploy/plugin-config.xml")
+    @InjectMojo(goal = "deploy")
     public void testDeployTestEnvironment(DeployMojo mojo) {
         assertNotNull(mojo);
     }
 
     @Test
-    @InjectMojo(goal = "deploy", pom = "classpath:/unit/basic-deploy/plugin-config.xml")
+    @InjectMojo(goal = "deploy")
     public void testBasicDeploy(DeployMojo mojo) throws Exception {
         assertNotNull(mojo);
-
-        File file = new File(getBasedir(), "target/test-classes/unit/basic-deploy/deploy-test-file-1.0-SNAPSHOT.jar");
-        assertTrue(file.exists());
         Project project = (Project) getVariableValueFromObject(mojo, "project");
-        String packaging = project.getPackaging();
-        assertEquals("jar", packaging);
-        artifactManager.setPath(project.getArtifact(), file.toPath());
+        ((DefaultProject) project)
+                .getProject()
+                .getArtifact()
+                .setFile(Paths.get(getBasedir(), "target/test-classes/unit/maven-deploy-test-1.0-SNAPSHOT.jar")
+                        .toFile());
 
         ArtifactDeployerRequest request = execute(mojo);
 
         assertNotNull(request);
-        Set<Artifact> artifacts = new HashSet<>(request.getArtifacts());
+        Collection<Artifact> artifacts = request.getArtifacts();
         assertEquals(
-                new HashSet<>(Arrays.asList(
-                        new ArtifactStub("org.apache.maven.test", "maven-deploy-test", "", "1.0-SNAPSHOT", "jar"),
-                        new ArtifactStub("org.apache.maven.test", "maven-deploy-test", "", "1.0-SNAPSHOT", "pom"))),
-                artifacts);
+                Arrays.asList(
+                        "org.apache.maven.test:maven-deploy-test:pom:1.0-SNAPSHOT",
+                        "org.apache.maven.test:maven-deploy-test:jar:1.0-SNAPSHOT"),
+                artifacts.stream().map(Artifact::key).collect(Collectors.toList()));
         assertEquals(
                 getBasedir().replace(File.separator, "/"),
                 request.getRepository().getUrl());
     }
 
     @Test
-    @InjectMojo(goal = "deploy", pom = "classpath:/unit/basic-deploy/plugin-config.xml")
+    @InjectMojo(goal = "deploy")
     public void testSkippingDeploy(DeployMojo mojo) throws Exception {
         assertNotNull(mojo);
 
-        File file = new File(getBasedir(), "target/test-classes/unit/basic-deploy/deploy-test-file-1.0-SNAPSHOT.jar");
+        File file = new File(getBasedir(), "target/test-classes/unit/maven-deploy-test-1.0-SNAPSHOT.jar");
         assertTrue(file.exists());
         Project project = (Project) getVariableValueFromObject(mojo, "project");
         String packaging = project.getPackaging();
@@ -138,33 +147,7 @@ public class DeployMojoTest {
     }
 
     @Test
-    @InjectMojo(goal = "deploy", pom = "classpath:/unit/basic-deploy/plugin-config.xml")
-    public void testBasicDeployWithPackagingAsPom(DeployMojo mojo) throws Exception {
-        assertNotNull(mojo);
-
-        File pomFile =
-                new File(getBasedir(), "target/test-classes/unit/basic-deploy/deploy-test-file-1.0-SNAPSHOT.pom");
-        assertTrue(pomFile.exists());
-        ProjectStub project = (ProjectStub) getVariableValueFromObject(mojo, "project");
-        project.setPackaging("pom");
-        ((ArtifactStub) project.getArtifact()).setExtension("pom");
-        artifactManager.setPath(project.getArtifact(), pomFile.toPath());
-
-        ArtifactDeployerRequest request = execute(mojo);
-
-        assertNotNull(request);
-        Set<Artifact> artifacts = new HashSet<>(request.getArtifacts());
-        assertEquals(
-                Collections.singleton(
-                        new ArtifactStub("org.apache.maven.test", "maven-deploy-test", "", "1.0-SNAPSHOT", "pom")),
-                artifacts);
-        assertEquals(
-                getBasedir().replace(File.separator, "/"),
-                request.getRepository().getUrl());
-    }
-
-    @Test
-    @InjectMojo(goal = "deploy", pom = "classpath:/unit/basic-deploy/plugin-config.xml")
+    @InjectMojo(goal = "deploy")
     public void testDeployIfArtifactFileIsNull(DeployMojo mojo) throws Exception {
         assertNotNull(mojo);
 
@@ -175,29 +158,30 @@ public class DeployMojoTest {
     }
 
     @Test
-    @InjectMojo(goal = "deploy", pom = "classpath:/unit/basic-deploy/plugin-config.xml")
+    @InjectMojo(goal = "deploy")
     public void testDeployWithAttachedArtifacts(DeployMojo mojo) throws Exception {
         assertNotNull(mojo);
         Project project = (Project) getVariableValueFromObject(mojo, "project");
-        File file = new File(getBasedir(), "target/test-classes/unit/basic-deploy/deploy-test-file-1.0-SNAPSHOT.jar");
-        artifactManager.setPath(project.getArtifact(), file.toPath());
         projectManager.attachArtifact(
                 project,
                 new ArtifactStub("org.apache.maven.test", "attached-artifact-test", "", "1.0-SNAPSHOT", "jar"),
-                Paths.get(
-                        getBasedir(), "target/test-classes/unit/basic-deploy/attached-artifact-test-1.0-SNAPSHOT.jar"));
+                Paths.get(getBasedir(), "target/test-classes/unit/attached-artifact-test-1.0-SNAPSHOT.jar"));
+        ((DefaultProject) project)
+                .getProject()
+                .getArtifact()
+                .setFile(Paths.get(getBasedir(), "target/test-classes/unit/maven-deploy-test-1.0-SNAPSHOT.jar")
+                        .toFile());
 
         ArtifactDeployerRequest request = execute(mojo);
 
         assertNotNull(request);
-        Set<Artifact> artifacts = new HashSet<>(request.getArtifacts());
+        Collection<Artifact> artifacts = request.getArtifacts();
         assertEquals(
-                new HashSet<>(Arrays.asList(
-                        new ArtifactStub("org.apache.maven.test", "maven-deploy-test", "", "1.0-SNAPSHOT", "jar"),
-                        new ArtifactStub("org.apache.maven.test", "maven-deploy-test", "", "1.0-SNAPSHOT", "pom"),
-                        new ArtifactStub(
-                                "org.apache.maven.test", "attached-artifact-test", "", "1.0-SNAPSHOT", "jar"))),
-                artifacts);
+                Arrays.asList(
+                        "org.apache.maven.test:maven-deploy-test:pom:1.0-SNAPSHOT",
+                        "org.apache.maven.test:maven-deploy-test:jar:1.0-SNAPSHOT",
+                        "org.apache.maven.test:attached-artifact-test:jar:1.0-SNAPSHOT"),
+                artifacts.stream().map(Artifact::key).collect(Collectors.toList()));
         assertEquals(
                 getBasedir().replace(File.separator, "/"),
                 request.getRepository().getUrl());
@@ -313,31 +297,42 @@ public class DeployMojoTest {
     @Provides
     @Singleton
     @SuppressWarnings("unused")
-    private Session getMockSession() {
-        return SessionStub.getMockSession(LOCAL_REPO);
+    private InternalSession createSession() {
+        InternalSession session = SessionStub.getMockSession(LOCAL_REPO);
+        when(session.getArtifact(any()))
+                .thenAnswer(iom -> new org.apache.maven.internal.impl.DefaultArtifact(
+                        session, iom.getArgument(0, org.eclipse.aether.artifact.Artifact.class)));
+        when(session.createRemoteRepository(any())).thenAnswer(iom -> session.getService(RepositoryFactory.class)
+                .createRemote(iom.getArgument(0, Repository.class)));
+        return session;
     }
 
     @Provides
+    @Singleton
     @SuppressWarnings("unused")
-    private ArtifactDeployer getMockArtifactDeployer(Session session) {
-        return session.getService(ArtifactDeployer.class);
-    }
-
-    @Provides
-    @SuppressWarnings("unused")
-    private ArtifactManager getMockArtifactManager(Session session) {
-        return session.getService(ArtifactManager.class);
-    }
-
-    @Provides
-    @SuppressWarnings("unused")
-    private ProjectManager getMockProjectManager(Session session) {
-        return session.getService(ProjectManager.class);
-    }
-
-    @Provides
-    @SuppressWarnings("unused")
-    private ProjectBuilder getMockProjectBuilder(Session session) {
-        return session.getService(ProjectBuilder.class);
+    private Project createProject() {
+        MavenProjectStub project = new MavenProjectStub();
+        project.setFile(new File(PlexusExtension.getBasedir(), "src/test/resources/unit/pom.xml"));
+        project.setGroupId("org.apache.maven.test");
+        project.setArtifactId("maven-deploy-test");
+        project.setVersion("1.0-SNAPSHOT");
+        project.setPackaging("jar");
+        DistributionManagement dm = new DistributionManagement();
+        DeploymentRepository dr = new DeploymentRepository();
+        dr.setId("remote-repo");
+        dr.setUrl(MojoExtension.getBasedir());
+        dm.setRepository(dr);
+        project.getModel().setDistributionManagement(dm);
+        DefaultArtifact artifact = new DefaultArtifact(
+                "org.apache.maven.test",
+                "maven-deploy-test",
+                "1.0-SNAPSHOT",
+                null,
+                "jar",
+                null,
+                new DefaultArtifactHandlerStub("jar"));
+        project.setArtifact(artifact);
+        project.setAttachedArtifacts(new ArrayList<>());
+        return new DefaultProject(session, project);
     }
 }

@@ -25,6 +25,7 @@ import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import jakarta.inject.Inject;
 import org.apache.maven.api.Artifact;
 import org.apache.maven.api.MojoExecution;
 import org.apache.maven.api.Project;
@@ -33,7 +34,6 @@ import org.apache.maven.api.model.DistributionManagement;
 import org.apache.maven.api.model.Plugin;
 import org.apache.maven.api.model.PluginExecution;
 import org.apache.maven.api.plugin.MojoException;
-import org.apache.maven.api.plugin.annotations.Component;
 import org.apache.maven.api.plugin.annotations.LifecyclePhase;
 import org.apache.maven.api.plugin.annotations.Mojo;
 import org.apache.maven.api.plugin.annotations.Parameter;
@@ -41,7 +41,6 @@ import org.apache.maven.api.services.ArtifactDeployer;
 import org.apache.maven.api.services.ArtifactDeployerRequest;
 import org.apache.maven.api.services.ArtifactManager;
 import org.apache.maven.api.services.ProjectManager;
-import org.apache.maven.api.services.RepositoryFactory;
 
 /**
  * Deploys an artifact to remote repository.
@@ -55,10 +54,10 @@ public class DeployMojo extends AbstractDeployMojo {
 
     private static final Pattern ALT_REPO_SYNTAX_PATTERN = Pattern.compile("(.+?)::(.+)");
 
-    @Component
+    @Inject
     private Project project;
 
-    @Component
+    @Inject
     private MojoExecution mojoExecution;
 
     /**
@@ -138,11 +137,22 @@ public class DeployMojo extends AbstractDeployMojo {
     @Parameter(defaultValue = "false", property = "allowIncompleteProjects")
     private boolean allowIncompleteProjects;
 
+    @Inject
+    private ArtifactDeployer artifactDeployer;
+
+    @Inject
+    private ArtifactManager artifactManager;
+
+    @Inject
+    private ProjectManager projectManager;
+
     private enum State {
         SKIPPED,
         DEPLOYED,
         TO_BE_DEPLOYED
     }
+
+    public DeployMojo() {}
 
     private void putState(State state) {
         session.getPluginContext(project).put(State.class.getName(), state);
@@ -194,7 +204,7 @@ public class DeployMojo extends AbstractDeployMojo {
     }
 
     private boolean hasDeployExecution(Project p) {
-        String key = mojoExecution.getPlugin().getKey();
+        String key = mojoExecution.getPlugin().getModel().getKey();
         Plugin plugin = p.getBuild().getPluginsAsMap().get(key);
         if (plugin != null) {
             for (PluginExecution execution : plugin.getExecutions()) {
@@ -238,8 +248,7 @@ public class DeployMojo extends AbstractDeployMojo {
 
     private void deploy(ArtifactDeployerRequest request) {
         try {
-            ArtifactDeployer artifactInstaller = session.getService(ArtifactDeployer.class);
-            artifactInstaller.deploy(request);
+            artifactDeployer.deploy(request);
         } catch (MojoException e) {
             throw e;
         } catch (Exception e) {
@@ -248,8 +257,6 @@ public class DeployMojo extends AbstractDeployMojo {
     }
 
     private ArtifactDeployerRequest createDeployerRequest() {
-        ArtifactManager artifactManager = session.getService(ArtifactManager.class);
-        ProjectManager projectManager = session.getService(ProjectManager.class);
         Predicate<Artifact> isValidPath =
                 a -> artifactManager.getPath(a).filter(Files::isRegularFile).isPresent();
 
@@ -369,11 +376,11 @@ public class DeployMojo extends AbstractDeployMojo {
                         && dm.getSnapshotRepository() != null
                         && isNotEmpty(dm.getSnapshotRepository().getId())
                         && isNotEmpty(dm.getSnapshotRepository().getUrl())) {
-                    repo = getSession().getService(RepositoryFactory.class).createRemote(dm.getSnapshotRepository());
+                    repo = session.createRemoteRepository(dm.getSnapshotRepository());
                 } else if (dm.getRepository() != null
                         && isNotEmpty(dm.getRepository().getId())
                         && isNotEmpty(dm.getRepository().getUrl())) {
-                    repo = getSession().getService(RepositoryFactory.class).createRemote(dm.getRepository());
+                    repo = session.createRemoteRepository(dm.getRepository());
                 }
             }
         }

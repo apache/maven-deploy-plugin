@@ -33,6 +33,7 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.regex.Pattern;
 
+import jakarta.inject.Inject;
 import org.apache.maven.api.Artifact;
 import org.apache.maven.api.RemoteRepository;
 import org.apache.maven.api.model.Model;
@@ -52,7 +53,7 @@ import org.apache.maven.api.services.xml.XmlReaderException;
  *
  * @author <a href="mailto:aramirez@apache.org">Allan Ramirez</a>
  */
-@Mojo(name = "deploy-file", requiresProject = false)
+@Mojo(name = "deploy-file", projectRequired = false)
 @SuppressWarnings("unused")
 public class DeployFileMojo extends AbstractDeployMojo {
     private static final String TAR = "tar.";
@@ -180,6 +181,15 @@ public class DeployFileMojo extends AbstractDeployMojo {
     @Parameter(property = "maven.deploy.file.skip", defaultValue = "false")
     private String skip = Boolean.FALSE.toString();
 
+    @Inject
+    private ArtifactManager artifactManager;
+
+    @Inject
+    private ArtifactDeployer artifactDeployer;
+
+    @Inject
+    private ModelXmlFactory modelXmlFactory;
+
     void initProperties() throws MojoException {
         Path deployedPom;
         if (pomFile != null) {
@@ -284,7 +294,6 @@ public class DeployFileMojo extends AbstractDeployMojo {
             throw new MojoException("Cannot deploy artifact from the local repository: " + file);
         }
 
-        ArtifactManager artifactManager = session.getService(ArtifactManager.class);
         artifactManager.setPath(artifact, file);
         deployables.add(artifact);
 
@@ -393,7 +402,7 @@ public class DeployFileMojo extends AbstractDeployMojo {
                     .retryFailedDeploymentCount(Math.max(1, Math.min(10, getRetryFailedDeploymentCount())))
                     .build();
 
-            session.getService(ArtifactDeployer.class).deploy(deployRequest);
+            artifactDeployer.deploy(deployRequest);
         } catch (ArtifactDeployerException e) {
             throw new MojoException(e.getMessage(), e);
         } finally {
@@ -452,7 +461,7 @@ public class DeployFileMojo extends AbstractDeployMojo {
      */
     Model readModel(Path pomFile) throws MojoException {
         try (InputStream is = Files.newInputStream(pomFile)) {
-            return session.getService(ModelXmlFactory.class).read(is);
+            return modelXmlFactory.read(is);
         } catch (FileNotFoundException e) {
             throw new MojoException("POM not found " + pomFile, e);
         } catch (IOException e) {
@@ -473,7 +482,7 @@ public class DeployFileMojo extends AbstractDeployMojo {
         try {
             Path pomFile = File.createTempFile("mvndeploy", ".pom").toPath();
             try (Writer writer = Files.newBufferedWriter(pomFile)) {
-                session.getService(ModelXmlFactory.class).write(model, writer);
+                modelXmlFactory.write(model, writer);
             }
             return pomFile;
         } catch (IOException e) {

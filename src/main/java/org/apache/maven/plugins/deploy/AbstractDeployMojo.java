@@ -18,15 +18,14 @@
  */
 package org.apache.maven.plugins.deploy;
 
+import jakarta.inject.Inject;
 import org.apache.maven.api.RemoteRepository;
 import org.apache.maven.api.Session;
 import org.apache.maven.api.Version;
 import org.apache.maven.api.plugin.Log;
 import org.apache.maven.api.plugin.Mojo;
 import org.apache.maven.api.plugin.MojoException;
-import org.apache.maven.api.plugin.annotations.Component;
 import org.apache.maven.api.plugin.annotations.Parameter;
-import org.apache.maven.api.services.VersionParser;
 
 /**
  * Abstract class for Deploy mojo's.
@@ -36,10 +35,10 @@ public abstract class AbstractDeployMojo implements Mojo {
 
     private static final String FIXED_MAVEN_VERSION = "3.9.0";
 
-    @Component
+    @Inject
     protected Log logger;
 
-    @Component
+    @Inject
     protected Session session;
 
     /**
@@ -74,9 +73,8 @@ public abstract class AbstractDeployMojo implements Mojo {
      */
     protected void warnIfAffectedPackagingAndMaven(final String packaging) {
         if (AFFECTED_MAVEN_PACKAGING.equals(packaging)) {
-            VersionParser parser = session.getService(VersionParser.class);
-            Version fixedMavenVersion = parser.parseVersion(FIXED_MAVEN_VERSION);
-            Version currentMavenVersion = parser.parseVersion(session.getMavenVersion());
+            Version fixedMavenVersion = session.parseVersion(FIXED_MAVEN_VERSION);
+            Version currentMavenVersion = session.parseVersion(session.getMavenVersion());
             if (fixedMavenVersion.compareTo(currentMavenVersion) > 0) {
                 getLog().warn("");
                 getLog().warn("You are about to deploy a maven-plugin using Maven " + currentMavenVersion + ".");

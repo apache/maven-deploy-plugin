@@ -21,6 +21,7 @@ package org.apache.maven.plugins.deploy;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
@@ -33,14 +34,15 @@ import org.apache.maven.api.Artifact;
 import org.apache.maven.api.Session;
 import org.apache.maven.api.model.Model;
 import org.apache.maven.api.plugin.testing.InjectMojo;
+import org.apache.maven.api.plugin.testing.MojoExtension;
+import org.apache.maven.api.plugin.testing.MojoParameter;
 import org.apache.maven.api.plugin.testing.MojoTest;
 import org.apache.maven.api.plugin.testing.stubs.ArtifactStub;
 import org.apache.maven.api.plugin.testing.stubs.SessionStub;
 import org.apache.maven.api.services.ArtifactDeployer;
 import org.apache.maven.api.services.ArtifactDeployerRequest;
 import org.apache.maven.api.services.ArtifactManager;
-import org.apache.maven.api.services.ProjectBuilder;
-import org.apache.maven.api.services.ProjectManager;
+import org.apache.maven.internal.impl.InternalSession;
 import org.junit.jupiter.api.Test;
 
 import static org.apache.maven.api.plugin.testing.MojoExtension.getVariableValueFromObject;
@@ -50,6 +52,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.when;
 
 /**
  * @author <a href="mailto:aramirez@apache.org">Allan Ramirez</a>
@@ -71,13 +74,25 @@ public class DeployFileMojoTest {
     private ArtifactManager artifactManager;
 
     @Test
-    @InjectMojo(goal = "deploy-file", pom = "classpath:/unit/deploy-file/plugin-config-test.xml")
+    @InjectMojo(goal = "deploy-file")
     public void testDeployTestEnvironment(DeployFileMojo mojo) {
         assertNotNull(mojo);
     }
 
     @Test
-    @InjectMojo(goal = "deploy-file", pom = "classpath:/unit/deploy-file/plugin-config-test.xml")
+    @InjectMojo(goal = "deploy-file")
+    @MojoParameter(name = "groupId", value = "org.apache.maven.test")
+    @MojoParameter(name = "artifactId", value = "maven-deploy-file-test")
+    @MojoParameter(name = "version", value = "1.0")
+    @MojoParameter(name = "packaging", value = "jar")
+    @MojoParameter(
+            name = "file",
+            value = "${session.topDirectory}/src/test/resources/unit/maven-deploy-test-1.0-SNAPSHOT.jar")
+    @MojoParameter(name = "repositoryId", value = "deploy-test")
+    @MojoParameter(name = "url", value = "file://${session.topDirectory}/target/remote-repo/deploy-file")
+    @MojoParameter(name = "description", value = "POM was created from deploy:deploy-file")
+    @MojoParameter(name = "generatePom", value = "true")
+    @MojoParameter(name = "skip", value = "snapshots")
     public void testBasicDeployFile(DeployFileMojo mojo) throws Exception {
         assertNotNull(mojo);
 
@@ -93,9 +108,9 @@ public class DeployFileMojoTest {
         assertEquals("maven-deploy-file-test", artifactId);
         assertEquals("1.0", version);
         assertEquals("jar", packaging);
-        assertTrue(Files.exists(file));
+        assertTrue(Files.exists(file), file.toString());
         assertEquals("deploy-test", repositoryId);
-        assertEquals("file://" + getBasedir() + "/target/remote-repo/deploy-file-test", url);
+        assertEquals("file://" + getBasedir() + "/target/remote-repo/deploy-file", url);
 
         execute(mojo, request -> {
             assertNotNull(request);
@@ -128,7 +143,18 @@ public class DeployFileMojoTest {
     }
 
     @Test
-    @InjectMojo(goal = "deploy-file", pom = "classpath:/unit/deploy-file/plugin-config-classifier.xml")
+    @InjectMojo(goal = "deploy-file")
+    @MojoParameter(name = "groupId", value = "org.apache.maven.test")
+    @MojoParameter(name = "artifactId", value = "maven-deploy-file-test")
+    @MojoParameter(name = "version", value = "1.0")
+    @MojoParameter(name = "packaging", value = "jar")
+    @MojoParameter(
+            name = "file",
+            value = "${session.topDirectory}/src/test/resources/unit/maven-deploy-test-1.0-SNAPSHOT.jar")
+    @MojoParameter(name = "repositoryId", value = "deploy-test")
+    @MojoParameter(name = "url", value = "file://${session.topDirectory}/target/remote-repo/deploy-file")
+    @MojoParameter(name = "classifier", value = "bin")
+    @MojoParameter(name = "generatePom", value = "true")
     public void testDeployIfClassifierIsSet(DeployFileMojo mojo) throws Exception {
         assertNotNull(mojo);
 
@@ -149,7 +175,7 @@ public class DeployFileMojoTest {
         assertEquals(new ArtifactStub(groupId, artifactId, "bin", version, "jar"), a1);
         Path p1 = artifactManager.getPath(a1).orElse(null);
         assertNotNull(p1);
-        assertTrue(p1.toString().endsWith("deploy-test-file-1.0-SNAPSHOT.jar"));
+        assertTrue(p1.toString().endsWith("maven-deploy-test-1.0-SNAPSHOT.jar"));
         // second artifact
         Artifact a2 = artifacts.get(1);
         assertEquals(new ArtifactStub(groupId, artifactId, "", version, "pom"), a2);
@@ -162,7 +188,14 @@ public class DeployFileMojoTest {
     }
 
     @Test
-    @InjectMojo(goal = "deploy-file", pom = "classpath:/unit/deploy-file/plugin-config-artifact-not-jar.xml")
+    @InjectMojo(goal = "deploy-file")
+    @MojoParameter(name = "groupId", value = "org.apache.maven.test")
+    @MojoParameter(name = "artifactId", value = "maven-deploy-file-test")
+    @MojoParameter(name = "version", value = "1.0")
+    @MojoParameter(name = "file", value = "${session.topDirectory}/src/test/resources/unit/maven-deploy-test.zip")
+    @MojoParameter(name = "repositoryId", value = "deploy-test")
+    @MojoParameter(name = "url", value = "file://${session.topDirectory}/target/remote-repo/deploy-file")
+    @MojoParameter(name = "generatePom", value = "true")
     public void testDeployIfArtifactIsNotJar(DeployFileMojo mojo) throws Exception {
         assertNotNull(mojo);
 
@@ -183,7 +216,7 @@ public class DeployFileMojoTest {
         Path p1 = artifactManager.getPath(a1).orElse(null);
         Path p2 = artifactManager.getPath(a2).orElse(null);
         assertNotNull(p1);
-        assertTrue(p1.toString().endsWith("deploy-test-file.zip"));
+        assertTrue(p1.toString().endsWith("maven-deploy-test.zip"));
         assertNotNull(p2);
         assertTrue(p2.toString().endsWith(".pom"));
 
@@ -213,31 +246,9 @@ public class DeployFileMojoTest {
     @Provides
     @Singleton
     @SuppressWarnings("unused")
-    private Session getMockSession() {
-        return SessionStub.getMockSession(LOCAL_REPO);
-    }
-
-    @Provides
-    @SuppressWarnings("unused")
-    private ArtifactDeployer getMockArtifactDeployer(Session session) {
-        return session.getService(ArtifactDeployer.class);
-    }
-
-    @Provides
-    @SuppressWarnings("unused")
-    private ArtifactManager getMockArtifactManager(Session session) {
-        return session.getService(ArtifactManager.class);
-    }
-
-    @Provides
-    @SuppressWarnings("unused")
-    private ProjectManager getMockProjectManager(Session session) {
-        return session.getService(ProjectManager.class);
-    }
-
-    @Provides
-    @SuppressWarnings("unused")
-    private ProjectBuilder getMockProjectBuilder(Session session) {
-        return session.getService(ProjectBuilder.class);
+    private InternalSession createSession() {
+        InternalSession session = SessionStub.getMockSession(LOCAL_REPO);
+        when(session.getTopDirectory()).thenReturn(Paths.get(MojoExtension.getBasedir()));
+        return session;
     }
 }
