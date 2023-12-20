@@ -74,7 +74,7 @@ public abstract class AbstractDeployMojo implements Mojo {
     protected void warnIfAffectedPackagingAndMaven(final String packaging) {
         if (AFFECTED_MAVEN_PACKAGING.equals(packaging)) {
             Version fixedMavenVersion = session.parseVersion(FIXED_MAVEN_VERSION);
-            Version currentMavenVersion = session.parseVersion(session.getMavenVersion());
+            Version currentMavenVersion = session.getMavenVersion();
             if (fixedMavenVersion.compareTo(currentMavenVersion) > 0) {
                 getLog().warn("");
                 getLog().warn("You are about to deploy a maven-plugin using Maven " + currentMavenVersion + ".");
