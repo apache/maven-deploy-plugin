@@ -24,7 +24,7 @@ under the License.
         <artifactId>maven-deploy-plugin</artifactId>
         <configuration>
           <project implementation="org.apache.maven.plugins.deploy.stubs.MavenProjectStub">
-            <file>${basedir}/src/test/resources/unit/basic-deploy-pom/plugin-config.xml</file>
+            <file>${basedir}/src/test/resources/unit/basic-deploy-bom/plugin-config.xml</file>
             <packaging>bom</packaging>
             <artifact implementation="org.apache.maven.plugins.deploy.stubs.DeployBomArtifactStub" />
             <attachedArtifacts />
