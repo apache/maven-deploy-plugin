@@ -364,6 +364,82 @@ public class DeployMojoTest extends AbstractMojoTestCase {
         assertEquals(0, getSizeOfExpectedFiles(fileList, expectedFiles));
     }
 
+    public void testBasicDeployWithPackagingAsBom() throws Exception {
+        File testPom = new File(getBasedir(), "target/test-classes/unit/basic-deploy-bom/plugin-config.xml");
+
+        mojo = (DeployMojo) lookupMojo("deploy", testPom);
+
+        MockitoAnnotations.initMocks(this);
+
+        assertNotNull(mojo);
+
+        ProjectBuildingRequest buildingRequest = mock(ProjectBuildingRequest.class);
+        when(session.getProjectBuildingRequest()).thenReturn(buildingRequest);
+        DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
+        repositorySession.setLocalRepositoryManager(
+                new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
+                        .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
+        when(buildingRequest.getRepositorySession()).thenReturn(repositorySession);
+        when(session.getRepositorySession()).thenReturn(repositorySession);
+
+        File pomFile = new File(
+                getBasedir(),
+                "target/test-classes/unit/basic-deploy-bom/target/" + "deploy-test-file-1.0-SNAPSHOT.pom");
+
+        assertTrue(pomFile.exists());
+
+        MavenProject project = (MavenProject) getVariableValueFromObject(mojo, "project");
+        project.setGroupId("org.apache.maven.test");
+        project.setArtifactId("maven-deploy-test");
+        project.setVersion("1.0-SNAPSHOT");
+
+        setVariableValueToObject(mojo, "pluginContext", new ConcurrentHashMap<>());
+        setVariableValueToObject(mojo, "reactorProjects", Collections.singletonList(project));
+
+        artifact = (DeployArtifactStub) project.getArtifact();
+
+        artifact.setArtifactHandlerExtension(project.getPackaging());
+
+        artifact.setFile(pomFile);
+
+        ArtifactRepositoryStub repo = getRepoStub(mojo);
+
+        repo.setAppendToUrl("basic-deploy-bom");
+
+        mojo.execute();
+
+        List<String> expectedFiles = new ArrayList<>();
+        List<String> fileList = new ArrayList<>();
+
+        expectedFiles.add("org");
+        expectedFiles.add("apache");
+        expectedFiles.add("maven");
+        expectedFiles.add("test");
+        expectedFiles.add("maven-deploy-test");
+        expectedFiles.add("1.0-SNAPSHOT");
+        expectedFiles.add("maven-metadata.xml");
+        expectedFiles.add("maven-metadata.xml.md5");
+        expectedFiles.add("maven-metadata.xml.sha1");
+        expectedFiles.add("maven-deploy-test-1.0-SNAPSHOT.pom");
+        expectedFiles.add("maven-deploy-test-1.0-SNAPSHOT.pom.md5");
+        expectedFiles.add("maven-deploy-test-1.0-SNAPSHOT.pom.sha1");
+        // as we are in SNAPSHOT the file is here twice
+        expectedFiles.add("maven-metadata.xml");
+        expectedFiles.add("maven-metadata.xml.md5");
+        expectedFiles.add("maven-metadata.xml.sha1");
+        remoteRepo = new File(remoteRepo, "basic-deploy-bom");
+
+        File[] files = remoteRepo.listFiles();
+
+        for (File file : Objects.requireNonNull(files)) {
+            addFileToList(file, fileList);
+        }
+
+        assertEquals(expectedFiles.size(), fileList.size());
+
+        assertEquals(0, getSizeOfExpectedFiles(fileList, expectedFiles));
+    }
+
     public void testDeployIfArtifactFileIsNull() throws Exception {
         File testPom = new File(getBasedir(), "target/test-classes/unit/basic-deploy-test/plugin-config.xml");
 

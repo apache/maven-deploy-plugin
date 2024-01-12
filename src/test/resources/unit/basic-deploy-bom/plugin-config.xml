@@ -25,8 +25,8 @@ under the License.
         <configuration>
           <project implementation="org.apache.maven.plugins.deploy.stubs.MavenProjectStub">
             <file>${basedir}/src/test/resources/unit/basic-deploy-pom/plugin-config.xml</file>
-            <packaging>pom</packaging>
-            <artifact implementation="org.apache.maven.plugins.deploy.stubs.DeployPomArtifactStub" />
+            <packaging>bom</packaging>
+            <artifact implementation="org.apache.maven.plugins.deploy.stubs.DeployBomArtifactStub" />
             <attachedArtifacts />
             <deploymentRepository implementation="org.apache.maven.plugins.deploy.stubs.ArtifactRepositoryStub">
               <basedir>${basedir}</basedir>
