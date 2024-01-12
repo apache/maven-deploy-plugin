@@ -28,6 +28,7 @@ import org.apache.maven.model.Model;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 import org.apache.maven.project.ProjectBuildingRequest;
 import org.eclipse.aether.DefaultRepositorySystemSession;
+import org.eclipse.aether.internal.impl.DefaultLocalPathComposer;
 import org.eclipse.aether.internal.impl.SimpleLocalRepositoryManagerFactory;
 import org.eclipse.aether.repository.LocalRepository;
 import org.mockito.InjectMocks;
@@ -86,8 +87,9 @@ public class DeployFileMojoTest extends AbstractMojoTestCase {
         when(buildingRequest.getRepositoryMerging()).thenReturn(ProjectBuildingRequest.RepositoryMerging.POM_DOMINANT);
         when(session.getProjectBuildingRequest()).thenReturn(buildingRequest);
         DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
-        repositorySession.setLocalRepositoryManager(new SimpleLocalRepositoryManagerFactory()
-                .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
+        repositorySession.setLocalRepositoryManager(
+                new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
+                        .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
         when(buildingRequest.getRepositorySession()).thenReturn(repositorySession);
         when(session.getRepositorySession()).thenReturn(repositorySession);
 
@@ -194,8 +196,9 @@ public class DeployFileMojoTest extends AbstractMojoTestCase {
         when(buildingRequest.getRepositoryMerging()).thenReturn(ProjectBuildingRequest.RepositoryMerging.POM_DOMINANT);
         when(session.getProjectBuildingRequest()).thenReturn(buildingRequest);
         DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
-        repositorySession.setLocalRepositoryManager(new SimpleLocalRepositoryManagerFactory()
-                .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
+        repositorySession.setLocalRepositoryManager(
+                new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
+                        .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
         when(buildingRequest.getRepositorySession()).thenReturn(repositorySession);
         when(session.getRepositorySession()).thenReturn(repositorySession);
 
@@ -248,8 +251,9 @@ public class DeployFileMojoTest extends AbstractMojoTestCase {
         when(buildingRequest.getRepositoryMerging()).thenReturn(ProjectBuildingRequest.RepositoryMerging.POM_DOMINANT);
         when(session.getProjectBuildingRequest()).thenReturn(buildingRequest);
         DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
-        repositorySession.setLocalRepositoryManager(new SimpleLocalRepositoryManagerFactory()
-                .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
+        repositorySession.setLocalRepositoryManager(
+                new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
+                        .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
         when(buildingRequest.getRepositorySession()).thenReturn(repositorySession);
         when(session.getRepositorySession()).thenReturn(repositorySession);
 

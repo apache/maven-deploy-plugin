@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.maven.execution.MavenSession;
@@ -37,11 +36,10 @@ import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.ProjectBuildingRequest;
 import org.codehaus.plexus.util.FileUtils;
 import org.eclipse.aether.DefaultRepositorySystemSession;
-import org.eclipse.aether.RepositorySystem;
+import org.eclipse.aether.internal.impl.DefaultLocalPathComposer;
 import org.eclipse.aether.internal.impl.SimpleLocalRepositoryManagerFactory;
 import org.eclipse.aether.repository.LocalRepository;
 import org.eclipse.aether.repository.RemoteRepository;
-import org.junit.Ignore;
 import org.mockito.InjectMocks;
 import org.mockito.MockitoAnnotations;
 
@@ -75,10 +73,11 @@ public class DeployMojoTest extends AbstractMojoTestCase {
 
         session = mock(MavenSession.class);
         when(session.getPluginContext(any(PluginDescriptor.class), any(MavenProject.class)))
-                .thenReturn(new ConcurrentHashMap<String, Object>());
+                .thenReturn(new ConcurrentHashMap<>());
         DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
-        repositorySession.setLocalRepositoryManager(new SimpleLocalRepositoryManagerFactory()
-                .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
+        repositorySession.setLocalRepositoryManager(
+                new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
+                        .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
         when(session.getRepositorySession()).thenReturn(repositorySession);
 
         remoteRepo = new File(REMOTE_REPO);
@@ -124,8 +123,9 @@ public class DeployMojoTest extends AbstractMojoTestCase {
         ProjectBuildingRequest buildingRequest = mock(ProjectBuildingRequest.class);
         when(session.getProjectBuildingRequest()).thenReturn(buildingRequest);
         DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
-        repositorySession.setLocalRepositoryManager(new SimpleLocalRepositoryManagerFactory()
-                .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
+        repositorySession.setLocalRepositoryManager(
+                new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
+                        .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
         when(buildingRequest.getRepositorySession()).thenReturn(repositorySession);
         when(session.getRepositorySession()).thenReturn(repositorySession);
 
@@ -300,8 +300,9 @@ public class DeployMojoTest extends AbstractMojoTestCase {
         ProjectBuildingRequest buildingRequest = mock(ProjectBuildingRequest.class);
         when(session.getProjectBuildingRequest()).thenReturn(buildingRequest);
         DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
-        repositorySession.setLocalRepositoryManager(new SimpleLocalRepositoryManagerFactory()
-                .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
+        repositorySession.setLocalRepositoryManager(
+                new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
+                        .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
         when(buildingRequest.getRepositorySession()).thenReturn(repositorySession);
         when(session.getRepositorySession()).thenReturn(repositorySession);
 
@@ -351,6 +352,82 @@ public class DeployMojoTest extends AbstractMojoTestCase {
         expectedFiles.add("maven-metadata.xml.md5");
         expectedFiles.add("maven-metadata.xml.sha1");
         remoteRepo = new File(remoteRepo, "basic-deploy-pom");
+
+        File[] files = remoteRepo.listFiles();
+
+        for (File file : Objects.requireNonNull(files)) {
+            addFileToList(file, fileList);
+        }
+
+        assertEquals(expectedFiles.size(), fileList.size());
+
+        assertEquals(0, getSizeOfExpectedFiles(fileList, expectedFiles));
+    }
+
+    public void testBasicDeployWithPackagingAsBom() throws Exception {
+        File testPom = new File(getBasedir(), "target/test-classes/unit/basic-deploy-bom/plugin-config.xml");
+
+        mojo = (DeployMojo) lookupMojo("deploy", testPom);
+
+        MockitoAnnotations.initMocks(this);
+
+        assertNotNull(mojo);
+
+        ProjectBuildingRequest buildingRequest = mock(ProjectBuildingRequest.class);
+        when(session.getProjectBuildingRequest()).thenReturn(buildingRequest);
+        DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
+        repositorySession.setLocalRepositoryManager(
+                new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
+                        .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
+        when(buildingRequest.getRepositorySession()).thenReturn(repositorySession);
+        when(session.getRepositorySession()).thenReturn(repositorySession);
+
+        File pomFile = new File(
+                getBasedir(),
+                "target/test-classes/unit/basic-deploy-bom/target/" + "deploy-test-file-1.0-SNAPSHOT.pom");
+
+        assertTrue(pomFile.exists());
+
+        MavenProject project = (MavenProject) getVariableValueFromObject(mojo, "project");
+        project.setGroupId("org.apache.maven.test");
+        project.setArtifactId("maven-deploy-test");
+        project.setVersion("1.0-SNAPSHOT");
+
+        setVariableValueToObject(mojo, "pluginContext", new ConcurrentHashMap<>());
+        setVariableValueToObject(mojo, "reactorProjects", Collections.singletonList(project));
+
+        artifact = (DeployArtifactStub) project.getArtifact();
+
+        artifact.setArtifactHandlerExtension(project.getPackaging());
+
+        artifact.setFile(pomFile);
+
+        ArtifactRepositoryStub repo = getRepoStub(mojo);
+
+        repo.setAppendToUrl("basic-deploy-bom");
+
+        mojo.execute();
+
+        List<String> expectedFiles = new ArrayList<>();
+        List<String> fileList = new ArrayList<>();
+
+        expectedFiles.add("org");
+        expectedFiles.add("apache");
+        expectedFiles.add("maven");
+        expectedFiles.add("test");
+        expectedFiles.add("maven-deploy-test");
+        expectedFiles.add("1.0-SNAPSHOT");
+        expectedFiles.add("maven-metadata.xml");
+        expectedFiles.add("maven-metadata.xml.md5");
+        expectedFiles.add("maven-metadata.xml.sha1");
+        expectedFiles.add("maven-deploy-test-1.0-SNAPSHOT.pom");
+        expectedFiles.add("maven-deploy-test-1.0-SNAPSHOT.pom.md5");
+        expectedFiles.add("maven-deploy-test-1.0-SNAPSHOT.pom.sha1");
+        // as we are in SNAPSHOT the file is here twice
+        expectedFiles.add("maven-metadata.xml");
+        expectedFiles.add("maven-metadata.xml.md5");
+        expectedFiles.add("maven-metadata.xml.sha1");
+        remoteRepo = new File(remoteRepo, "basic-deploy-bom");
 
         File[] files = remoteRepo.listFiles();
 
@@ -413,8 +490,9 @@ public class DeployMojoTest extends AbstractMojoTestCase {
         ProjectBuildingRequest buildingRequest = mock(ProjectBuildingRequest.class);
         when(session.getProjectBuildingRequest()).thenReturn(buildingRequest);
         DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
-        repositorySession.setLocalRepositoryManager(new SimpleLocalRepositoryManagerFactory()
-                .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
+        repositorySession.setLocalRepositoryManager(
+                new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
+                        .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
         when(buildingRequest.getRepositorySession()).thenReturn(repositorySession);
         when(session.getRepositorySession()).thenReturn(repositorySession);
 
@@ -488,70 +566,6 @@ public class DeployMojoTest extends AbstractMojoTestCase {
         assertEquals(expectedFiles.size(), fileList.size());
 
         assertEquals(0, getSizeOfExpectedFiles(fileList, expectedFiles));
-    }
-
-    @Ignore("SCP is not part of Maven3 distribution. Aether handles transport extensions.")
-    public void _testBasicDeployWithScpAsProtocol() throws Exception {
-        String originalUserHome = System.getProperty("user.home");
-
-        // FIX THE DAMN user.home BEFORE YOU DELETE IT!!!
-        File altHome = new File(getBasedir(), "target/ssh-user-home");
-        altHome.mkdirs();
-
-        System.out.println("Testing user.home value for .ssh dir: " + altHome.getCanonicalPath());
-
-        Properties props = System.getProperties();
-        props.setProperty("user.home", altHome.getCanonicalPath());
-
-        System.setProperties(props);
-
-        File testPom = new File(getBasedir(), "target/test-classes/unit/basic-deploy-scp/plugin-config.xml");
-
-        mojo = (DeployMojo) lookupMojo("deploy", testPom);
-
-        assertNotNull(mojo);
-
-        RepositorySystem repositorySystem = mock(RepositorySystem.class);
-
-        setVariableValueToObject(mojo, "repositorySystem", repositorySystem);
-
-        File file = new File(
-                getBasedir(),
-                "target/test-classes/unit/basic-deploy-scp/target/" + "deploy-test-file-1.0-SNAPSHOT.jar");
-
-        assertTrue(file.exists());
-
-        MavenProject project = (MavenProject) getVariableValueFromObject(mojo, "project");
-
-        setVariableValueToObject(mojo, "pluginContext", new ConcurrentHashMap<>());
-        setVariableValueToObject(mojo, "reactorProjects", Collections.singletonList(project));
-
-        artifact = (DeployArtifactStub) project.getArtifact();
-
-        artifact.setFile(file);
-
-        String altUserHome = System.getProperty("user.home");
-
-        if (altUserHome.equals(originalUserHome)) {
-            // this is *very* bad!
-            throw new IllegalStateException(
-                    "Setting 'user.home' system property to alternate value did NOT work. Aborting test.");
-        }
-
-        File sshFile = new File(altUserHome, ".ssh");
-
-        System.out.println("Testing .ssh dir: " + sshFile.getCanonicalPath());
-
-        // delete first the .ssh folder if existing before executing the mojo
-        if (sshFile.exists()) {
-            FileUtils.deleteDirectory(sshFile);
-        }
-
-        mojo.execute();
-
-        assertTrue(sshFile.exists());
-
-        FileUtils.deleteDirectory(sshFile);
     }
 
     public void testLegacyAltDeploymentRepositoryWithDefaultLayout() throws Exception {

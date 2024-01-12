@@ -25,5 +25,5 @@ File buildLog = new File( basedir, 'build.log' )
 assert buildLog.exists()
 assert buildLog.text.contains( "[DEBUG] Using META-INF/maven/org.apache.maven.plugins.deploy.its/mdeploy178/pom.xml as pomFile" )
 
-def pomProject = new XmlSlurper().parse( deployedPom )
-assert "https://issues.apache.org/jira/browse/MDEPLOY-178".equals( pomProject.url.text() )
+def pomProject = new groovy.xml.XmlParser().parse( deployedPom )
+assert "https://issues.apache.org/jira/browse/MDEPLOY-178".equals( pomProject.get("url").text() )

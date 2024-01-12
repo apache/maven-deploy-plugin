@@ -38,8 +38,10 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.artifact.ProjectArtifact;
+import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.deployment.DeployRequest;
 import org.eclipse.aether.repository.RemoteRepository;
+import org.eclipse.aether.util.artifact.ArtifactIdUtils;
 
 /**
  * Deploys an artifact to remote repository.
@@ -285,17 +287,35 @@ public class DeployMojo extends AbstractDeployMojo {
     }
 
     private void processProject(final MavenProject project, DeployRequest request) throws MojoExecutionException {
+        // always exists, as project exists
+        Artifact pomArtifact = RepositoryUtils.toArtifact(new ProjectArtifact(project));
+        // always exists, but at "init" is w/o file (packaging plugin assigns file to this when packaged)
+        Artifact projectArtifact = RepositoryUtils.toArtifact(project.getArtifact());
 
-        if (isFile(project.getFile())) {
-            request.addArtifact(RepositoryUtils.toArtifact(new ProjectArtifact(project)));
+        // pom project: pomArtifact and projectArtifact are SAME
+        // jar project: pomArtifact and projectArtifact are DIFFERENT
+        // incomplete project: is not pom project and projectArtifact has no file
+
+        // we must compare coordinates ONLY (as projectArtifact may not have file, and Artifact.equals factors it in)
+        // BUT if projectArtifact has file set, use that one
+        if (ArtifactIdUtils.equalsId(pomArtifact, projectArtifact)) {
+            if (isFile(projectArtifact.getFile())) {
+                pomArtifact = projectArtifact;
+            }
+            projectArtifact = null;
+        }
+
+        if (isFile(pomArtifact.getFile())) {
+            request.addArtifact(pomArtifact);
         } else {
             throw new MojoExecutionException("The project POM could not be attached");
         }
 
-        if (!"pom".equals(project.getPackaging())) {
-            org.apache.maven.artifact.Artifact mavenMainArtifact = project.getArtifact();
-            if (isFile(mavenMainArtifact.getFile())) {
-                request.addArtifact(RepositoryUtils.toArtifact(mavenMainArtifact));
+        // is not packaged, is "incomplete"
+        boolean isIncomplete = projectArtifact != null && !isFile(projectArtifact.getFile());
+        if (projectArtifact != null) {
+            if (!isIncomplete) {
+                request.addArtifact(projectArtifact);
             } else if (!project.getAttachedArtifacts().isEmpty()) {
                 if (allowIncompleteProjects) {
                     getLog().warn("");

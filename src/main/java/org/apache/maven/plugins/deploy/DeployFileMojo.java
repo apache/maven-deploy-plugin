@@ -43,9 +43,9 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.codehaus.plexus.util.FileUtils;
 import org.codehaus.plexus.util.IOUtil;
-import org.codehaus.plexus.util.ReaderFactory;
 import org.codehaus.plexus.util.StringUtils;
-import org.codehaus.plexus.util.WriterFactory;
+import org.codehaus.plexus.util.xml.ReaderFactory;
+import org.codehaus.plexus.util.xml.WriterFactory;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import org.eclipse.aether.RepositorySystemSession;
 import org.eclipse.aether.artifact.Artifact;
@@ -429,21 +429,14 @@ public class DeployFileMojo extends AbstractDeployMojo {
      * @throws MojoExecutionException If the file doesn't exist or cannot be read.
      */
     Model readModel(File pomFile) throws MojoExecutionException {
-        Reader reader = null;
-        try {
-            reader = ReaderFactory.newXmlReader(pomFile);
-            final Model model = new MavenXpp3Reader().read(reader);
-            reader.close();
-            reader = null;
-            return model;
+        try (Reader reader = ReaderFactory.newXmlReader(pomFile)) {
+            return new MavenXpp3Reader().read(reader);
         } catch (FileNotFoundException e) {
             throw new MojoExecutionException("POM not found " + pomFile, e);
         } catch (IOException e) {
             throw new MojoExecutionException("Error reading POM " + pomFile, e);
         } catch (XmlPullParserException e) {
             throw new MojoExecutionException("Error parsing POM " + pomFile, e);
-        } finally {
-            IOUtil.close(reader);
         }
     }
 
@@ -456,23 +449,17 @@ public class DeployFileMojo extends AbstractDeployMojo {
     private File generatePomFile() throws MojoExecutionException {
         Model model = generateModel();
 
-        Writer fw = null;
         try {
             File tempFile = File.createTempFile("mvndeploy", ".pom");
             tempFile.deleteOnExit();
 
-            fw = WriterFactory.newXmlWriter(tempFile);
-
-            new MavenXpp3Writer().write(fw, model);
-
-            fw.close();
-            fw = null;
+            try (Writer fw = WriterFactory.newXmlWriter(tempFile)) {
+                new MavenXpp3Writer().write(fw, model);
+            }
 
             return tempFile;
         } catch (IOException e) {
             throw new MojoExecutionException("Error writing temporary pom file: " + e.getMessage(), e);
-        } finally {
-            IOUtil.close(fw);
         }
     }
 
