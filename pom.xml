@@ -23,7 +23,7 @@ under the License.
   <parent>
     <groupId>org.apache.maven.plugins</groupId>
     <artifactId>maven-plugins</artifactId>
-    <version>39</version>
+    <version>41</version>
     <relativePath />
   </parent>
 
@@ -43,7 +43,7 @@ under the License.
   </contributors>
 
   <prerequisites>
-    <maven>${mavenVersion}</maven>
+    <maven>3.6.3</maven>
   </prerequisites>
 
   <scm>
@@ -69,23 +69,23 @@ under the License.
 
   <properties>
     <javaVersion>8</javaVersion>
-    <mavenVersion>3.2.5</mavenVersion>
+    <mavenVersion>3.9.6</mavenVersion>
     <!-- Keep in sync with resolver used in maven above -->
-    <slf4jVersion>1.7.5</slf4jVersion>
+    <slf4jVersion>1.7.36</slf4jVersion>
     <!-- Keep in sync with resolver used in maven above -->
-    <resolverVersion>1.0.0.v20140518</resolverVersion>
+    <resolverVersion>1.9.18</resolverVersion>
 
     <!-- plugins version used in IT tests -->
     <mavenAntrunPluginVersion>3.1.0</mavenAntrunPluginVersion>
-    <mavenCompilerPluginVersion>3.10.1</mavenCompilerPluginVersion>
-    <mavenEnforcerPluginVersion>3.1.0</mavenEnforcerPluginVersion>
-    <mavenInstallPluginVersion>3.1.0</mavenInstallPluginVersion>
+    <mavenCompilerPluginVersion>3.12.1</mavenCompilerPluginVersion>
+    <mavenEnforcerPluginVersion>3.4.1</mavenEnforcerPluginVersion>
+    <mavenInstallPluginVersion>3.1.1</mavenInstallPluginVersion>
     <mavenJarPluginVersion>3.3.0</mavenJarPluginVersion>
     <mavenJavadocPluginVersion>3.4.1</mavenJavadocPluginVersion>
     <mavenPluginToolsVersion>${maven.plugin.tools.version}</mavenPluginToolsVersion>
     <mavenResourcesPluginVersion>3.3.0</mavenResourcesPluginVersion>
     <mavenSourcePluginVersion>3.2.1</mavenSourcePluginVersion>
-    <mavenSurefirePluginVersion>${surefire.version}</mavenSurefirePluginVersion>
+    <mavenSurefirePluginVersion>3.2.5</mavenSurefirePluginVersion>
     <mavenWarPluginVersion>3.3.2</mavenWarPluginVersion>
 
     <project.build.outputTimestamp>2023-03-21T14:38:01Z</project.build.outputTimestamp>
@@ -128,14 +128,18 @@ under the License.
       <artifactId>plexus-utils</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.eclipse.aether</groupId>
-      <artifactId>aether-api</artifactId>
+      <groupId>org.codehaus.plexus</groupId>
+      <artifactId>plexus-xml</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.maven.resolver</groupId>
+      <artifactId>maven-resolver-api</artifactId>
       <version>${resolverVersion}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>org.eclipse.aether</groupId>
-      <artifactId>aether-util</artifactId>
+      <groupId>org.apache.maven.resolver</groupId>
+      <artifactId>maven-resolver-util</artifactId>
       <version>${resolverVersion}</version>
       <!-- To work in Maven versions older than 3.9.0 -->
       <scope>compile</scope>
@@ -164,25 +168,25 @@ under the License.
     </dependency>
     <dependency>
       <groupId>org.apache.maven</groupId>
-      <artifactId>maven-aether-provider</artifactId>
+      <artifactId>maven-resolver-provider</artifactId>
       <version>${mavenVersion}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.eclipse.aether</groupId>
-      <artifactId>aether-connector-basic</artifactId>
+      <groupId>org.apache.maven.resolver</groupId>
+      <artifactId>maven-resolver-connector-basic</artifactId>
       <version>${resolverVersion}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.eclipse.aether</groupId>
-      <artifactId>aether-transport-file</artifactId>
+      <groupId>org.apache.maven.resolver</groupId>
+      <artifactId>maven-resolver-transport-file</artifactId>
       <version>${resolverVersion}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.eclipse.aether</groupId>
-      <artifactId>aether-transport-http</artifactId>
+      <groupId>org.apache.maven.resolver</groupId>
+      <artifactId>maven-resolver-transport-http</artifactId>
       <version>${resolverVersion}</version>
       <scope>test</scope>
     </dependency>
@@ -204,8 +208,20 @@ under the License.
       <version>${slf4jVersion}</version>
       <scope>test</scope>
     </dependency>
-
   </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <proc>none</proc>
+          <showDeprecation>true</showDeprecation>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 
   <profiles>
     <profile>
