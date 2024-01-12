@@ -113,7 +113,7 @@ public class DeployMojo extends AbstractDeployMojo {
 
     /**
      * Set this to 'true' to bypass artifact deploy
-     * Since since 3.0.0-M2 it's not anymore a real boolean as it can have more than 2 values:
+     * Since 3.0.0-M2 it's not anymore a real boolean as it can have more than 2 values:
      * <ul>
      *     <li><code>true</code>: will skip as usual</li>
      *     <li><code>releases</code>: will skip if current version of the project is a release</li>
@@ -371,8 +371,7 @@ public class DeployMojo extends AbstractDeployMojo {
         if (repo == null) {
             DistributionManagement dm = project.getModel().getDistributionManagement();
             if (dm != null) {
-                boolean snapshot = isSnapshot;
-                if (snapshot
+                if (isSnapshot
                         && dm.getSnapshotRepository() != null
                         && isNotEmpty(dm.getSnapshotRepository().getId())
                         && isNotEmpty(dm.getSnapshotRepository().getUrl())) {
