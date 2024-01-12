@@ -76,17 +76,17 @@ under the License.
     <resolverVersion>1.9.18</resolverVersion>
 
     <!-- plugins version used in IT tests -->
-    <mavenAntrunPluginVersion>3.1.0</mavenAntrunPluginVersion>
-    <mavenCompilerPluginVersion>3.12.1</mavenCompilerPluginVersion>
-    <mavenEnforcerPluginVersion>3.4.1</mavenEnforcerPluginVersion>
-    <mavenInstallPluginVersion>3.1.1</mavenInstallPluginVersion>
-    <mavenJarPluginVersion>3.3.0</mavenJarPluginVersion>
-    <mavenJavadocPluginVersion>3.4.1</mavenJavadocPluginVersion>
-    <mavenPluginToolsVersion>${maven.plugin.tools.version}</mavenPluginToolsVersion>
-    <mavenResourcesPluginVersion>3.3.0</mavenResourcesPluginVersion>
-    <mavenSourcePluginVersion>3.2.1</mavenSourcePluginVersion>
-    <mavenSurefirePluginVersion>3.2.5</mavenSurefirePluginVersion>
-    <mavenWarPluginVersion>3.3.2</mavenWarPluginVersion>
+    <mavenAntrunPluginVersion>${version.maven-antrun-plugin}</mavenAntrunPluginVersion>
+    <mavenCompilerPluginVersion>${version.maven-compiler-plugin}</mavenCompilerPluginVersion>
+    <mavenEnforcerPluginVersion>${version.maven-enforcer-plugin}</mavenEnforcerPluginVersion>
+    <mavenInstallPluginVersion>${version.maven-install-plugin}</mavenInstallPluginVersion>
+    <mavenJarPluginVersion>${version.maven-jar-plugin}</mavenJarPluginVersion>
+    <mavenJavadocPluginVersion>${version.maven-javadoc-plugin}</mavenJavadocPluginVersion>
+    <mavenPluginToolsVersion>${version.maven-plugin-tools}</mavenPluginToolsVersion>
+    <mavenResourcesPluginVersion>${version.maven-resources-plugin}</mavenResourcesPluginVersion>
+    <mavenSourcePluginVersion>${version.maven-source-plugin}</mavenSourcePluginVersion>
+    <mavenSurefirePluginVersion>${version.maven-surefire}</mavenSurefirePluginVersion>
+    <mavenWarPluginVersion>${version.maven-war-plugin}</mavenWarPluginVersion>
 
     <project.build.outputTimestamp>2023-03-21T14:38:01Z</project.build.outputTimestamp>
   </properties>
