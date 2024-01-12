@@ -297,12 +297,13 @@ public class DeployMojo extends AbstractDeployMojo {
         // incomplete project: is not pom project and projectArtifact has no file
 
         // we must compare coordinates ONLY (as projectArtifact may not have file, and Artifact.equals factors it in)
-        boolean pomArtifactIsMainArtifact = ArtifactIdUtils.equalsId(pomArtifact, projectArtifact);
-        if (pomArtifactIsMainArtifact) {
+        // BUT if projectArtifact has file set, use that one
+        if (ArtifactIdUtils.equalsId(pomArtifact, projectArtifact)) {
+            if (isFile(projectArtifact.getFile())) {
+                pomArtifact = projectArtifact;
+            }
             projectArtifact = null;
         }
-        // is not packaged, is "incomplete"
-        boolean isIncomplete = projectArtifact != null && !isFile(projectArtifact.getFile());
 
         if (isFile(pomArtifact.getFile())) {
             request.addArtifact(pomArtifact);
@@ -310,6 +311,8 @@ public class DeployMojo extends AbstractDeployMojo {
             throw new MojoExecutionException("The project POM could not be attached");
         }
 
+        // is not packaged, is "incomplete"
+        boolean isIncomplete = projectArtifact != null && !isFile(projectArtifact.getFile());
         if (projectArtifact != null) {
             if (!isIncomplete) {
                 request.addArtifact(projectArtifact);
