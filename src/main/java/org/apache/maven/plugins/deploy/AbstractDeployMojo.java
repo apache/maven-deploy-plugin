@@ -99,6 +99,7 @@ public abstract class AbstractDeployMojo extends AbstractMojo {
      * Creates resolver {@link RemoteRepository} equipped with needed whistles and bells.
      */
     protected RemoteRepository getRemoteRepository(final String repositoryId, final String url) {
+        // TODO: RepositorySystem#newDeploymentRepository does this very same thing!
         RemoteRepository result = new RemoteRepository.Builder(repositoryId, "default", url).build();
 
         if (result.getAuthentication() == null || result.getProxy() == null) {

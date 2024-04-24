@@ -23,7 +23,7 @@ under the License.
   <parent>
     <groupId>org.apache.maven.plugins</groupId>
     <artifactId>maven-plugins</artifactId>
-    <version>41</version>
+    <version>42</version>
     <relativePath />
   </parent>
 
@@ -43,7 +43,7 @@ under the License.
   </contributors>
 
   <prerequisites>
-    <maven>3.2.5</maven>
+    <maven>3.6.3</maven>
   </prerequisites>
 
   <scm>
