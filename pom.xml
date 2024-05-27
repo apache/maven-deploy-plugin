@@ -69,7 +69,7 @@ under the License.
 
   <properties>
     <javaVersion>8</javaVersion>
-    <mavenVersion>3.9.6</mavenVersion>
+    <mavenVersion>3.9.7</mavenVersion>
     <!-- Keep in sync with resolver used in maven above -->
     <slf4jVersion>1.7.36</slf4jVersion>
     <!-- Keep in sync with resolver used in maven above -->
