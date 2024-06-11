@@ -17,6 +17,19 @@
  * under the License.
  */
 
-def buildLog = new File ( basedir, "build.log")
+def expectedDeploys = [
+        'org/apache/maven/its/mdeploy-170/configperproject/1.0/configperproject-1.0.pom',
+        'org/apache/maven/plugins/deploy/it/org.eclipse.equinox.common/1.0/org.eclipse.equinox.common-1.0-sources.jar',
+        'org/apache/maven/plugins/deploy/it/org.eclipse.equinox.common/1.0/org.eclipse.equinox.common-1.0.jar',
+        'org/apache/maven/plugins/deploy/it/org.eclipse.equinox.common/1.0/org.eclipse.equinox.common-1.0.pom',
+        'org/apache/maven/plugins/deploy/it/org.eclipse.osgi/1.0/org.eclipse.osgi-1.0-sources.jar',
+        'org/apache/maven/plugins/deploy/it/org.eclipse.osgi/1.0/org.eclipse.osgi-1.0.jar',
+        'org/apache/maven/plugins/deploy/it/org.eclipse.osgi/1.0/org.eclipse.osgi-1.0.pom'
+]
 
-assert buildLog.text =~ /Uploading.*file:target\/repo\/org\/apache\/maven\/plugins\/deploy\/it\/org\.eclipse\.osgi\/1\.0\/org\.eclipse\.osgi-1\.0-sources\.jar/
+def repoDir = new File ( basedir, 'target/repo')
+
+def missingDeploys = expectedDeploys.findAll { ! new File(repoDir, it).isFile() }
+
+assert missingDeploys.size() == 0
+
