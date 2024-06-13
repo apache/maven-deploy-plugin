@@ -34,7 +34,6 @@ import org.apache.maven.plugin.testing.stubs.MavenProjectStub;
 import org.apache.maven.plugins.deploy.stubs.ArtifactRepositoryStub;
 import org.apache.maven.plugins.deploy.stubs.DeployArtifactStub;
 import org.apache.maven.project.MavenProject;
-import org.apache.maven.project.ProjectBuildingRequest;
 import org.codehaus.plexus.util.FileUtils;
 import org.eclipse.aether.DefaultRepositorySystemSession;
 import org.eclipse.aether.RepositorySystem;
@@ -65,6 +64,8 @@ public class DeployMojoTest extends AbstractMojoTestCase {
     DeployArtifactStub artifact;
 
     final MavenProjectStub project = new MavenProjectStub();
+
+    private AutoCloseable openMocks;
 
     private MavenSession session;
 
@@ -104,12 +105,16 @@ public class DeployMojoTest extends AbstractMojoTestCase {
         if (remoteRepo.exists()) {
             // FileUtils.deleteDirectory( remoteRepo );
         }
+
+        if (openMocks != null) {
+            openMocks.close();
+        }
     }
 
     public void testDeployTestEnvironment() throws Exception {
         File testPom = new File(getBasedir(), "target/test-classes/unit/basic-deploy-test/plugin-config.xml");
 
-        DeployMojo mojo = (DeployMojo) lookupMojo("deploy", testPom);
+        mojo = (DeployMojo) lookupMojo("deploy", testPom);
 
         assertNotNull(mojo);
     }
@@ -119,17 +124,14 @@ public class DeployMojoTest extends AbstractMojoTestCase {
 
         mojo = (DeployMojo) lookupMojo("deploy", testPom);
 
-        MockitoAnnotations.initMocks(this);
+        openMocks = MockitoAnnotations.openMocks(this);
 
         assertNotNull(mojo);
 
-        ProjectBuildingRequest buildingRequest = mock(ProjectBuildingRequest.class);
-        when(session.getProjectBuildingRequest()).thenReturn(buildingRequest);
         DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
         repositorySession.setLocalRepositoryManager(
                 new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
                         .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
-        when(buildingRequest.getRepositorySession()).thenReturn(repositorySession);
         when(session.getRepositorySession()).thenReturn(repositorySession);
 
         File file = new File(
@@ -238,7 +240,7 @@ public class DeployMojoTest extends AbstractMojoTestCase {
     public void testSkippingDeploy() throws Exception {
         File testPom = new File(getBasedir(), "target/test-classes/unit/basic-deploy-test/plugin-config.xml");
 
-        DeployMojo mojo = (DeployMojo) lookupMojo("deploy", testPom);
+        mojo = (DeployMojo) lookupMojo("deploy", testPom);
 
         assertNotNull(mojo);
 
@@ -296,17 +298,14 @@ public class DeployMojoTest extends AbstractMojoTestCase {
 
         mojo = (DeployMojo) lookupMojo("deploy", testPom);
 
-        MockitoAnnotations.initMocks(this);
+        openMocks = MockitoAnnotations.openMocks(this);
 
         assertNotNull(mojo);
 
-        ProjectBuildingRequest buildingRequest = mock(ProjectBuildingRequest.class);
-        when(session.getProjectBuildingRequest()).thenReturn(buildingRequest);
         DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
         repositorySession.setLocalRepositoryManager(
                 new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
                         .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
-        when(buildingRequest.getRepositorySession()).thenReturn(repositorySession);
         when(session.getRepositorySession()).thenReturn(repositorySession);
 
         File pomFile = new File(
@@ -372,17 +371,14 @@ public class DeployMojoTest extends AbstractMojoTestCase {
 
         mojo = (DeployMojo) lookupMojo("deploy", testPom);
 
-        MockitoAnnotations.initMocks(this);
+        openMocks = MockitoAnnotations.openMocks(this);
 
         assertNotNull(mojo);
 
-        ProjectBuildingRequest buildingRequest = mock(ProjectBuildingRequest.class);
-        when(session.getProjectBuildingRequest()).thenReturn(buildingRequest);
         DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
         repositorySession.setLocalRepositoryManager(
                 new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
                         .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
-        when(buildingRequest.getRepositorySession()).thenReturn(repositorySession);
         when(session.getRepositorySession()).thenReturn(repositorySession);
 
         File pomFile = new File(
@@ -446,12 +442,9 @@ public class DeployMojoTest extends AbstractMojoTestCase {
     public void testDeployIfArtifactFileIsNull() throws Exception {
         File testPom = new File(getBasedir(), "target/test-classes/unit/basic-deploy-test/plugin-config.xml");
 
-        DeployMojo mojo = (DeployMojo) lookupMojo("deploy", testPom);
+        mojo = (DeployMojo) lookupMojo("deploy", testPom);
 
-        MockitoAnnotations.initMocks(this);
-
-        ProjectBuildingRequest buildingRequest = mock(ProjectBuildingRequest.class);
-        when(session.getProjectBuildingRequest()).thenReturn(buildingRequest);
+        openMocks = MockitoAnnotations.openMocks(this);
 
         setVariableValueToObject(mojo, "session", session);
 
@@ -485,12 +478,9 @@ public class DeployMojoTest extends AbstractMojoTestCase {
     public void testDeployIfProjectFileIsNull() throws Exception {
         File testPom = new File(getBasedir(), "target/test-classes/unit/basic-deploy-test/plugin-config.xml");
 
-        DeployMojo mojo = (DeployMojo) lookupMojo("deploy", testPom);
+        mojo = (DeployMojo) lookupMojo("deploy", testPom);
 
-        MockitoAnnotations.initMocks(this);
-
-        ProjectBuildingRequest buildingRequest = mock(ProjectBuildingRequest.class);
-        when(session.getProjectBuildingRequest()).thenReturn(buildingRequest);
+        openMocks = MockitoAnnotations.openMocks(this);
 
         setVariableValueToObject(mojo, "session", session);
 
@@ -522,17 +512,14 @@ public class DeployMojoTest extends AbstractMojoTestCase {
 
         mojo = (DeployMojo) lookupMojo("deploy", testPom);
 
-        MockitoAnnotations.initMocks(this);
+        openMocks = MockitoAnnotations.openMocks(this);
 
         assertNotNull(mojo);
 
-        ProjectBuildingRequest buildingRequest = mock(ProjectBuildingRequest.class);
-        when(session.getProjectBuildingRequest()).thenReturn(buildingRequest);
         DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
         repositorySession.setLocalRepositoryManager(
                 new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
                         .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
-        when(buildingRequest.getRepositorySession()).thenReturn(repositorySession);
         when(session.getRepositorySession()).thenReturn(repositorySession);
 
         MavenProject project = (MavenProject) getVariableValueFromObject(mojo, "project");
@@ -613,12 +600,9 @@ public class DeployMojoTest extends AbstractMojoTestCase {
 
         mojo = (DeployMojo) lookupMojo("deploy", testPom);
 
-        MockitoAnnotations.initMocks(this);
+        openMocks = MockitoAnnotations.openMocks(this);
 
         assertNotNull(mojo);
-
-        ProjectBuildingRequest buildingRequest = mock(ProjectBuildingRequest.class);
-        when(session.getProjectBuildingRequest()).thenReturn(buildingRequest);
 
         MavenProject project = (MavenProject) getVariableValueFromObject(mojo, "project");
         project.setGroupId("org.apache.maven.test");
@@ -708,7 +692,7 @@ public class DeployMojoTest extends AbstractMojoTestCase {
     }
 
     public void testLegacyAltDeploymentRepositoryWithDefaultLayout() throws Exception {
-        DeployMojo mojo = new DeployMojo();
+        mojo = new DeployMojo();
 
         setVariableValueToObject(mojo, "project", project);
         setVariableValueToObject(mojo, "session", session);
@@ -723,7 +707,7 @@ public class DeployMojoTest extends AbstractMojoTestCase {
     }
 
     public void testLegacyAltDeploymentRepositoryWithLegacyLayout() throws Exception {
-        DeployMojo mojo = new DeployMojo();
+        mojo = new DeployMojo();
 
         setVariableValueToObject(mojo, "project", project);
         setVariableValueToObject(mojo, "session", session);
@@ -742,7 +726,7 @@ public class DeployMojoTest extends AbstractMojoTestCase {
     }
 
     public void testInsaneAltDeploymentRepository() throws Exception {
-        DeployMojo mojo = new DeployMojo();
+        mojo = new DeployMojo();
 
         setVariableValueToObject(mojo, "project", project);
         setVariableValueToObject(mojo, "session", session);
@@ -763,7 +747,7 @@ public class DeployMojoTest extends AbstractMojoTestCase {
     }
 
     public void testDefaultScmSvnAltDeploymentRepository() throws Exception {
-        DeployMojo mojo = new DeployMojo();
+        mojo = new DeployMojo();
 
         setVariableValueToObject(mojo, "project", project);
         setVariableValueToObject(mojo, "session", session);
@@ -779,7 +763,7 @@ public class DeployMojoTest extends AbstractMojoTestCase {
     }
 
     public void testLegacyScmSvnAltDeploymentRepository() throws Exception {
-        DeployMojo mojo = new DeployMojo();
+        mojo = new DeployMojo();
 
         setVariableValueToObject(mojo, "project", project);
         setVariableValueToObject(
@@ -799,7 +783,7 @@ public class DeployMojoTest extends AbstractMojoTestCase {
     }
 
     public void testAltSnapshotDeploymentRepository() throws Exception {
-        DeployMojo mojo = new DeployMojo();
+        mojo = new DeployMojo();
 
         setVariableValueToObject(mojo, "project", project);
         setVariableValueToObject(mojo, "session", session);
@@ -814,7 +798,7 @@ public class DeployMojoTest extends AbstractMojoTestCase {
     }
 
     public void testAltReleaseDeploymentRepository() throws Exception {
-        DeployMojo mojo = new DeployMojo();
+        mojo = new DeployMojo();
 
         setVariableValueToObject(mojo, "project", project);
         setVariableValueToObject(mojo, "session", session);

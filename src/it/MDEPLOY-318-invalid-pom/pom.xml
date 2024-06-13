@@ -22,21 +22,52 @@ under the License.
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>org.apache.maven.its.deploy.tpjwop1</groupId>
+  <groupId>org.apache.maven.its.deploy.invalid-pom</groupId>
   <artifactId>test</artifactId>
   <version>1.0</version>
-  <packaging>jar</packaging>
+  <packaging>pom</packaging>
 
   <description>
-    Tests the manual deployment of a simple release JAR without a corresponding POM (cf. MDEPLOY-113).
+    Tests the deployment of a simple release POM.
   </description>
+
+  <properties>
+    <maven.test.skip>true</maven.test.skip>
+  </properties>
+
+  <distributionManagement>
+    <repository>
+      <id>it</id>
+      <url>file:///${basedir}/target/repo</url>
+    </repository>
+  </distributionManagement>
 
   <build>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>@mavenCompilerPluginVersion@</version>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-deploy-plugin</artifactId>
         <version>@project.version@</version>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-install-plugin</artifactId>
+        <version>@mavenInstallPluginVersion@</version>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <version>@mavenResourcesPluginVersion@</version>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>@mavenSurefirePluginVersion@</version>
       </plugin>
     </plugins>
   </build>

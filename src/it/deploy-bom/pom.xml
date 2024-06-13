@@ -22,17 +22,40 @@ under the License.
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>org.apache.maven.its.deploy.tpjwop1</groupId>
+  <groupId>org.apache.maven.its.deploy.bom</groupId>
   <artifactId>test</artifactId>
   <version>1.0</version>
-  <packaging>jar</packaging>
+  <packaging>bom</packaging>
 
   <description>
-    Tests the manual deployment of a simple release JAR without a corresponding POM (cf. MDEPLOY-113).
+    Tests the deployment of bom packaging.
   </description>
+
+  <distributionManagement>
+    <repository>
+      <id>it</id>
+      <url>file:///${basedir}/target/repo</url>
+    </repository>
+  </distributionManagement>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter-api</artifactId>
+        <version>5.10.2</version>
+        <scope>test</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <build>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-install-plugin</artifactId>
+        <version>@version.maven-install-plugin@</version>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-deploy-plugin</artifactId>

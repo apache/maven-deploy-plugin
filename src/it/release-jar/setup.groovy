@@ -17,10 +17,4 @@
  * under the License.
  */
 
-import java.io.*;
-import java.util.*;
-
-file = new File( basedir, "target/repo" );
-file.mkdirs();
-
-return true;
+assert new File(localRepositoryPath, 'org/apache/maven/its/deploy/rj').deleteDir()

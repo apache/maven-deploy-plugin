@@ -26,7 +26,6 @@ import java.util.Objects;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Model;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
-import org.apache.maven.project.ProjectBuildingRequest;
 import org.eclipse.aether.DefaultRepositorySystemSession;
 import org.eclipse.aether.internal.impl.DefaultLocalPathComposer;
 import org.eclipse.aether.internal.impl.SimpleLocalRepositoryManagerFactory;
@@ -35,7 +34,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
@@ -49,6 +47,8 @@ public class DeployFileMojoTest extends AbstractMojoTestCase {
     private List<String> fileList;
 
     private File remoteRepo;
+
+    private AutoCloseable openMocks;
 
     @Mock
     private MavenSession session;
@@ -66,6 +66,14 @@ public class DeployFileMojoTest extends AbstractMojoTestCase {
         }
     }
 
+    @Override
+    public void tearDown() throws Exception {
+        super.tearDown();
+        if (openMocks != null) {
+            openMocks.close();
+        }
+    }
+
     public void testDeployTestEnvironment() throws Exception {
         File testPom = new File(getBasedir(), "target/test-classes/unit/deploy-file-test/plugin-config.xml");
 
@@ -79,18 +87,14 @@ public class DeployFileMojoTest extends AbstractMojoTestCase {
 
         mojo = (DeployFileMojo) lookupMojo("deploy-file", testPom);
 
-        MockitoAnnotations.initMocks(this);
+        openMocks = MockitoAnnotations.openMocks(this);
 
         assertNotNull(mojo);
 
-        ProjectBuildingRequest buildingRequest = mock(ProjectBuildingRequest.class);
-        when(buildingRequest.getRepositoryMerging()).thenReturn(ProjectBuildingRequest.RepositoryMerging.POM_DOMINANT);
-        when(session.getProjectBuildingRequest()).thenReturn(buildingRequest);
         DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
         repositorySession.setLocalRepositoryManager(
                 new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
                         .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
-        when(buildingRequest.getRepositorySession()).thenReturn(repositorySession);
         when(session.getRepositorySession()).thenReturn(repositorySession);
 
         String groupId = (String) getVariableValueFromObject(mojo, "groupId");
@@ -188,18 +192,14 @@ public class DeployFileMojoTest extends AbstractMojoTestCase {
 
         mojo = (DeployFileMojo) lookupMojo("deploy-file", testPom);
 
-        MockitoAnnotations.initMocks(this);
+        openMocks = MockitoAnnotations.openMocks(this);
 
         assertNotNull(mojo);
 
-        ProjectBuildingRequest buildingRequest = mock(ProjectBuildingRequest.class);
-        when(buildingRequest.getRepositoryMerging()).thenReturn(ProjectBuildingRequest.RepositoryMerging.POM_DOMINANT);
-        when(session.getProjectBuildingRequest()).thenReturn(buildingRequest);
         DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
         repositorySession.setLocalRepositoryManager(
                 new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
                         .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
-        when(buildingRequest.getRepositorySession()).thenReturn(repositorySession);
         when(session.getRepositorySession()).thenReturn(repositorySession);
 
         String classifier = (String) getVariableValueFromObject(mojo, "classifier");
@@ -243,18 +243,14 @@ public class DeployFileMojoTest extends AbstractMojoTestCase {
 
         mojo = (DeployFileMojo) lookupMojo("deploy-file", testPom);
 
-        MockitoAnnotations.initMocks(this);
+        openMocks = MockitoAnnotations.openMocks(this);
 
         assertNotNull(mojo);
 
-        ProjectBuildingRequest buildingRequest = mock(ProjectBuildingRequest.class);
-        when(buildingRequest.getRepositoryMerging()).thenReturn(ProjectBuildingRequest.RepositoryMerging.POM_DOMINANT);
-        when(session.getProjectBuildingRequest()).thenReturn(buildingRequest);
         DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
         repositorySession.setLocalRepositoryManager(
                 new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
                         .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
-        when(buildingRequest.getRepositorySession()).thenReturn(repositorySession);
         when(session.getRepositorySession()).thenReturn(repositorySession);
 
         String groupId = (String) getVariableValueFromObject(mojo, "groupId");
