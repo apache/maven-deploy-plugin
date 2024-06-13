@@ -17,17 +17,15 @@
  * under the License.
  */
 
-import java.io.*;
-import java.util.*;
+def expectedDeploys = [
+        'org/apache/maven/its/deploy/bom/test/1.0/test-1.0-build.pom',
+        'org/apache/maven/its/deploy/bom/test/1.0/test-1.0.pom',
+        'org/apache/maven/its/deploy/bom/test/maven-metadata.xml',
+]
 
-import org.codehaus.plexus.util.*;
+def repoDir = new File ( basedir, 'target/repo')
 
-File file = new File( localRepositoryPath, "org/apache/maven/its/deploy/ndp" );
-System.out.println( "Deleting " + file );
-FileUtils.deleteDirectory( file );
+def missingDeploys = expectedDeploys.findAll { ! new File(repoDir, it).isFile() }
 
-file = new File( basedir, "target/repo" );
-System.out.println( "Deleting " + file );
-FileUtils.deleteDirectory( file );
+assert missingDeploys.size() == 0
 
-return true;

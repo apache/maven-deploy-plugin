@@ -17,17 +17,6 @@
  * under the License.
  */
 
-import java.io.*;
-import java.util.*;
 
-import org.codehaus.plexus.util.*;
+assert new File(localRepositoryPath, 'org/apache/maven/its/deploy/bom').deleteDir()
 
-File file = new File( localRepositoryPath, "org/apache/maven/its/deploy/adrwdm" );
-System.out.println( "Deleting " + file );
-FileUtils.deleteDirectory( file );
-
-file = new File( basedir, "target/repo" );
-System.out.println( "Deleting " + file );
-FileUtils.deleteDirectory( file );
-
-return true;
