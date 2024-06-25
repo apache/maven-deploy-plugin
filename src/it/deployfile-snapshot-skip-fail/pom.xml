@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
 <!--
 Licensed to the Apache Software Foundation (ASF) under one
 or more contributor license agreements.  See the NOTICE file
@@ -18,31 +17,27 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
+  <groupId>org.apache.maven.plugins.deploy.its</groupId>
+  <artifactId>deployfile-snapshot-skip-fail</artifactId>
+  <version>1.0</version>
 
-    <groupId>org.apache.maven.plugins.deploy.its</groupId>
-    <artifactId>deployfile-snapshot-skip-fail</artifactId>
-    <version>1.0</version>
+  <description>Test to verify that skip stops artifact deployment</description>
 
-    <description>
-        Test to verify that skip stops artifact deployment
-    </description>
-
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-deploy-plugin</artifactId>
-                <version>@project.version@</version>
-                <configuration>
-                    <version>1.0-SNAPSHOT</version>
-                    <skip>releases</skip>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-deploy-plugin</artifactId>
+        <version>@project.version@</version>
+        <configuration>
+          <version>1.0-SNAPSHOT</version>
+          <skip>releases</skip>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 
 </project>
