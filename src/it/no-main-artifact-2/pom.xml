@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
 <!--
 Licensed to the Apache Software Foundation (ASF) under one
 or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 -->
-
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
@@ -27,14 +25,8 @@ under the License.
   <version>1.0</version>
   <packaging>jar</packaging>
 
-  <description>
-    Tests the installation of a non-POM project that has no main artifact file but only attached artifacts (see
-    MDEPLOY-78). This variant of the test checks the build when target/classes is existent.
-  </description>
-
-  <properties>
-    <maven.test.skip>true</maven.test.skip>
-  </properties>
+  <description>Tests the installation of a non-POM project that has no main artifact file but only attached artifacts (see
+    MDEPLOY-78). This variant of the test checks the build when target/classes is existent.</description>
 
   <distributionManagement>
     <repository>
@@ -42,6 +34,10 @@ under the License.
       <url>file:///${basedir}/target/repo</url>
     </repository>
   </distributionManagement>
+
+  <properties>
+    <maven.test.skip>true</maven.test.skip>
+  </properties>
 
   <build>
     <plugins>
@@ -54,16 +50,16 @@ under the License.
             <!--
             NOTE: The Compiler Plugin sets this as the main artifact file, should be existent for this test.
             -->
-            <mkdir dir="target/classes"/>
+            <mkdir dir="target/classes" />
           </target>
         </configuration>
         <executions>
           <execution>
             <id>make-output-dir</id>
-            <phase>verify</phase>
             <goals>
               <goal>run</goal>
             </goals>
+            <phase>verify</phase>
           </execution>
         </executions>
       </plugin>

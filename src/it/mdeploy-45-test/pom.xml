@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
 <!--
 Licensed to the Apache Software Foundation (ASF) under one
 or more contributor license agreements.  See the NOTICE file
@@ -18,23 +17,18 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 -->
-
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>org.apache.maven.its.deploy.45</groupId>
   <artifactId>test</artifactId>
   <version>0.1</version>
-  <!-- war to pom, see MDEPLOY-205 -->  
+  <!-- war to pom, see MDEPLOY-205 -->
   <packaging>pom</packaging>
 
   <name>MDEPLOY-45</name>
   <description>sample web project with classified artifact output</description>
   <url>https://issues.apache.org/jira/browse/MDEPLOY-45</url>
-
-  <properties>
-   <mdp45.artifact.classifier>mdp45</mdp45.artifact.classifier>
-  </properties>
 
   <distributionManagement>
     <repository>
@@ -48,6 +42,10 @@ under the License.
       <url>scp://foo.org/m2/snapshot</url>
     </snapshotRepository>
   </distributionManagement>
+
+  <properties>
+    <mdp45.artifact.classifier>mdp45</mdp45.artifact.classifier>
+  </properties>
 
   <build>
     <plugins>
@@ -67,17 +65,17 @@ under the License.
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-war-plugin</artifactId>
         <version>@mavenWarPluginVersion@</version>
+        <configuration>
+          <!-- this will cause an error  -->
+          <classifier>${mdp45.artifact.classifier}</classifier>
+        </configuration>
         <executions>
           <execution>
             <goals>
               <goal>war</goal>
             </goals>
-          </execution> 
+          </execution>
         </executions>
-        <configuration>
-          <!-- this will cause an error  -->
-          <classifier>${mdp45.artifact.classifier}</classifier>
-        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
