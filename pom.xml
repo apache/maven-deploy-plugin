@@ -71,7 +71,7 @@ under the License.
     <javaVersion>17</javaVersion>
     <mavenVersion>4.0.0-beta-3</mavenVersion>
 
-    <guiceVersion>6.0.0</guiceVersion>
+    <guiceVersion>7.0.0</guiceVersion>
     <mavenAntrunPluginVersion>${version.maven-antrun-plugin}</mavenAntrunPluginVersion>
     <mavenCompilerPluginVersion>${version.maven-compiler-plugin}</mavenCompilerPluginVersion>
     <mavenEnforcerPluginVersion>${version.maven-enforcer-plugin}</mavenEnforcerPluginVersion>
