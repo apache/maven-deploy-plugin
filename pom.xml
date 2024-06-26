@@ -83,12 +83,12 @@ under the License.
     <mavenSourcePluginVersion>${version.maven-source-plugin}</mavenSourcePluginVersion>
     <mavenSurefirePluginVersion>${version.maven-surefire}</mavenSurefirePluginVersion>
     <mavenWarPluginVersion>${version.maven-war-plugin}</mavenWarPluginVersion>
-    <mavenPluginTestingVersion>4.0.0-alpha-3-SNAPSHOT</mavenPluginTestingVersion>
+    <mavenPluginTestingVersion>4.0.0-beta-1</mavenPluginTestingVersion>
     <mavenResolverVersion>2.0.0-alpha-11</mavenResolverVersion>
     <mockitoVersion>5.12.0</mockitoVersion>
     <slf4jVersion>2.0.13</slf4jVersion>
     <version.plexus-xml>4.0.3</version.plexus-xml>
-    <version.maven-plugin-tools>4.0.0-SNAPSHOT</version.maven-plugin-tools>
+    <version.maven-plugin-tools>4.0.0-beta-1</version.maven-plugin-tools>
     <version.maven-invoker-plugin>3.7.0</version.maven-invoker-plugin>
 
     <project.build.outputTimestamp>2024-04-26T10:30:44Z</project.build.outputTimestamp>
