@@ -84,7 +84,7 @@ under the License.
     <mavenSurefirePluginVersion>${version.maven-surefire}</mavenSurefirePluginVersion>
     <mavenWarPluginVersion>${version.maven-war-plugin}</mavenWarPluginVersion>
     <mavenPluginTestingVersion>4.0.0-beta-1</mavenPluginTestingVersion>
-    <mavenResolverVersion>2.0.0-alpha-11</mavenResolverVersion>
+    <mavenResolverVersion>2.0.1</mavenResolverVersion>
     <mockitoVersion>5.12.0</mockitoVersion>
     <slf4jVersion>2.0.13</slf4jVersion>
     <version.plexus-xml>4.0.3</version.plexus-xml>
