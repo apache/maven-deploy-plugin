@@ -91,6 +91,15 @@ public class DeployFileMojo extends AbstractDeployMojo {
     private String packaging;
 
     /**
+     * Extension of the artifact to be deployed. If set, will override plugin own logic to detect extension. If not set,
+     * as Maven expected, packaging determines the artifact extension.
+     *
+     * @since 3.1.3
+     */
+    @Parameter(property = "extension")
+    private String extension;
+
+    /**
      * Description passed to a generated POM file (in case of generatePom=true)
      */
     @Parameter(property = "generatePom.description")
@@ -280,8 +289,9 @@ public class DeployFileMojo extends AbstractDeployMojo {
                 mainArtifactExtension = packaging;
             }
         }
-        Artifact mainArtifact =
-                new DefaultArtifact(groupId, artifactId, classifier, mainArtifactExtension, version).setFile(file);
+        Artifact mainArtifact = new DefaultArtifact(
+                        groupId, artifactId, classifier, extension != null ? extension : mainArtifactExtension, version)
+                .setFile(file);
         deployRequest.addArtifact(mainArtifact);
 
         File artifactLocalFile = getLocalRepositoryFile(session.getRepositorySession(), mainArtifact);
