@@ -276,6 +276,41 @@ public class DeployFileMojoTest extends AbstractMojoTestCase {
         assertTrue(file.exists());
     }
 
+    public void testDeployFileIfPackagingIsSet() throws Exception {
+        File testPom = new File(getBasedir(), "target/test-classes/unit/deploy-file-packaging/plugin-config.xml");
+        mojo = (DeployFileMojo) lookupMojo("deploy-file", testPom);
+
+        openMocks = MockitoAnnotations.openMocks(this);
+
+        assertNotNull(mojo);
+
+        DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
+        repositorySession.setLocalRepositoryManager(
+                new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
+                        .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
+        when(session.getRepositorySession()).thenReturn(repositorySession);
+
+        String packaging = (String) getVariableValueFromObject(mojo, "packaging");
+
+        String groupId = (String) getVariableValueFromObject(mojo, "groupId");
+
+        String artifactId = (String) getVariableValueFromObject(mojo, "artifactId");
+
+        String version = (String) getVariableValueFromObject(mojo, "version");
+
+        assertEquals("differentpackaging", packaging);
+
+        mojo.execute();
+
+        File deployedArtifact = new File(
+                remoteRepo,
+                "deploy-file-packaging/" + groupId.replace('.', '/') + "/"
+                        + artifactId + "/" + version + "/" + artifactId + "-"
+                        + version + "." + packaging);
+
+        assertTrue(deployedArtifact.exists());
+    }
+
     private void addFileToList(File file, List<String> fileList) {
         if (!file.isDirectory()) {
             fileList.add(file.getName());
