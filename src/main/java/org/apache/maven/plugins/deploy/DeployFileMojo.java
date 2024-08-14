@@ -229,6 +229,7 @@ public class DeployFileMojo extends AbstractDeployMojo {
         }
     }
 
+    @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         if (Boolean.parseBoolean(skip)
                 || ("releases".equals(skip) && !ArtifactUtils.isSnapshot(version))
@@ -264,19 +265,23 @@ public class DeployFileMojo extends AbstractDeployMojo {
         DeployRequest deployRequest = new DeployRequest();
         deployRequest.setRepository(remoteRepository);
 
-        boolean isFilePom = classifier == null && "pom".equals(packaging);
-        if (!isFilePom) {
+        String mainArtifactExtension;
+        if (classifier == null && "pom".equals(packaging)) {
+            mainArtifactExtension = "pom";
+        } else {
             ArtifactType artifactType =
                     session.getRepositorySession().getArtifactTypeRegistry().get(packaging);
-            if (artifactType != null
-                    && (classifier == null || classifier.isEmpty())
-                    && !StringUtils.isEmpty(artifactType.getClassifier())) {
-                classifier = artifactType.getClassifier();
+            if (artifactType != null) {
+                if (StringUtils.isEmpty(classifier) && !StringUtils.isEmpty(artifactType.getClassifier())) {
+                    classifier = artifactType.getClassifier();
+                }
+                mainArtifactExtension = artifactType.getExtension();
+            } else {
+                mainArtifactExtension = packaging;
             }
         }
-        Artifact mainArtifact = new DefaultArtifact(
-                        groupId, artifactId, classifier, isFilePom ? "pom" : getExtension(file), version)
-                .setFile(file);
+        Artifact mainArtifact =
+                new DefaultArtifact(groupId, artifactId, classifier, mainArtifactExtension, version).setFile(file);
         deployRequest.addArtifact(mainArtifact);
 
         File artifactLocalFile = getLocalRepositoryFile(session.getRepositorySession(), mainArtifact);
