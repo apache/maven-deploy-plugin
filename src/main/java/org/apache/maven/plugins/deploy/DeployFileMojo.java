@@ -55,6 +55,8 @@ import org.eclipse.aether.deployment.DeployRequest;
 import org.eclipse.aether.deployment.DeploymentException;
 import org.eclipse.aether.repository.RemoteRepository;
 import org.eclipse.aether.util.artifact.SubArtifact;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Installs the artifact in the remote repository.
@@ -63,6 +65,7 @@ import org.eclipse.aether.util.artifact.SubArtifact;
  */
 @Mojo(name = "deploy-file", requiresProject = false, threadSafe = true)
 public class DeployFileMojo extends AbstractDeployMojo {
+    private final Logger log = LoggerFactory.getLogger(getClass());
     /**
      * GroupId of the artifact to be deployed. Retrieved from POM file if specified.
      */
@@ -89,6 +92,15 @@ public class DeployFileMojo extends AbstractDeployMojo {
      */
     @Parameter(property = "packaging")
     private String packaging;
+
+    /**
+     * Extension of the artifact to be deployed. If set, will override plugin own logic to detect extension. If not set,
+     * as Maven expected, packaging determines the artifact extension.
+     *
+     * @since 3.1.3
+     */
+    @Parameter(property = "extension")
+    private String extension;
 
     /**
      * Description passed to a generated POM file (in case of generatePom=true)
@@ -196,7 +208,7 @@ public class DeployFileMojo extends AbstractDeployMojo {
                     JarEntry entry = jarEntries.nextElement();
 
                     if (pomEntry.matcher(entry.getName()).matches()) {
-                        getLog().debug("Using " + entry.getName() + " as pomFile");
+                        log.debug("Using {} as pomFile", entry.getName());
                         foundPom = true;
                         String base = file.getName();
                         if (base.indexOf('.') > 0) {
@@ -215,7 +227,7 @@ public class DeployFileMojo extends AbstractDeployMojo {
                 }
 
                 if (!foundPom) {
-                    getLog().info("pom.xml not found in " + file.getName());
+                    log.info("pom.xml not found in {}", file.getName());
                 }
             } catch (IOException e) {
                 // ignore, artifact not packaged by Maven
@@ -235,7 +247,7 @@ public class DeployFileMojo extends AbstractDeployMojo {
         if (Boolean.parseBoolean(skip)
                 || ("releases".equals(skip) && !ArtifactUtils.isSnapshot(version))
                 || ("snapshots".equals(skip) && ArtifactUtils.isSnapshot(version))) {
-            getLog().info("Skipping artifact deployment");
+            log.info("Skipping artifact deployment");
             return;
         }
 
@@ -266,18 +278,29 @@ public class DeployFileMojo extends AbstractDeployMojo {
         DeployRequest deployRequest = new DeployRequest();
         deployRequest.setRepository(remoteRepository);
 
-        boolean isFilePom = classifier == null && "pom".equals(packaging);
-        if (!isFilePom) {
+        String mainArtifactExtension;
+        if (classifier == null && "pom".equals(packaging)) {
+            mainArtifactExtension = "pom";
+        } else {
             ArtifactType artifactType =
                     session.getRepositorySession().getArtifactTypeRegistry().get(packaging);
-            if (artifactType != null
-                    && (classifier == null || classifier.isEmpty())
-                    && !StringUtils.isEmpty(artifactType.getClassifier())) {
-                classifier = artifactType.getClassifier();
+            if (artifactType != null) {
+                if (StringUtils.isEmpty(classifier) && !StringUtils.isEmpty(artifactType.getClassifier())) {
+                    classifier = artifactType.getClassifier();
+                }
+                mainArtifactExtension = artifactType.getExtension();
+            } else {
+                mainArtifactExtension = packaging;
             }
         }
+        if (extension != null && !Objects.equals(extension, mainArtifactExtension)) {
+            log.warn(
+                    "Main artifact extension should be '{}' but was overridden to '{}'",
+                    mainArtifactExtension,
+                    extension);
+        }
         Artifact mainArtifact = new DefaultArtifact(
-                        groupId, artifactId, classifier, isFilePom ? "pom" : getExtension(file), version)
+                        groupId, artifactId, classifier, extension != null ? extension : mainArtifactExtension, version)
                 .setFile(file);
         deployRequest.addArtifact(mainArtifact);
 
@@ -293,10 +316,10 @@ public class DeployFileMojo extends AbstractDeployMojo {
                 deployRequest.addArtifact(new SubArtifact(mainArtifact, "", "pom", pomFile));
             } else if (generatePom) {
                 temporaryPom = generatePomFile();
-                getLog().debug("Deploying generated POM");
+                log.debug("Deploying generated POM");
                 deployRequest.addArtifact(new SubArtifact(mainArtifact, "", "pom", temporaryPom));
             } else {
-                getLog().debug("Skipping deploying POM");
+                log.debug("Skipping deploying POM");
             }
         }
 
