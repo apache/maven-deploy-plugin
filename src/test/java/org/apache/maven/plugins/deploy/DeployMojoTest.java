@@ -718,9 +718,8 @@ public class DeployMojoTest extends AbstractMojoTestCase {
             mojo.getDeploymentRepository(project, null, null, "altDeploymentRepository::legacy::http://localhost");
             fail("Should throw: Invalid legacy syntax and layout for repository.");
         } catch (MojoExecutionException e) {
-            assertEquals(e.getMessage(), "Invalid legacy syntax and layout for repository.");
             assertEquals(
-                    e.getLongMessage(),
+                    e.getMessage(),
                     "Invalid legacy syntax and layout for alternative repository. Use \"altDeploymentRepository::http://localhost\" instead, and only default layout is supported.");
         }
     }
@@ -739,9 +738,8 @@ public class DeployMojoTest extends AbstractMojoTestCase {
                     project, null, null, "altDeploymentRepository::hey::wow::foo::http://localhost");
             fail("Should throw: Invalid legacy syntax and layout for repository.");
         } catch (MojoExecutionException e) {
-            assertEquals(e.getMessage(), "Invalid legacy syntax and layout for repository.");
             assertEquals(
-                    e.getLongMessage(),
+                    e.getMessage(),
                     "Invalid legacy syntax and layout for alternative repository. Use \"altDeploymentRepository::wow::foo::http://localhost\" instead, and only default layout is supported.");
         }
     }
@@ -775,9 +773,8 @@ public class DeployMojoTest extends AbstractMojoTestCase {
                     project, null, null, "altDeploymentRepository::legacy::scm:svn:http://localhost");
             fail("Should throw: Invalid legacy syntax and layout for repository.");
         } catch (MojoExecutionException e) {
-            assertEquals(e.getMessage(), "Invalid legacy syntax and layout for repository.");
             assertEquals(
-                    e.getLongMessage(),
+                    e.getMessage(),
                     "Invalid legacy syntax and layout for alternative repository. Use \"altDeploymentRepository::scm:svn:http://localhost\" instead, and only default layout is supported.");
         }
     }
