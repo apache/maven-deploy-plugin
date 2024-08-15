@@ -28,7 +28,7 @@ under the License.
   </parent>
 
   <artifactId>maven-deploy-plugin</artifactId>
-  <version>3.1.3</version>
+  <version>3.1.4-SNAPSHOT</version>
   <packaging>maven-plugin</packaging>
 
   <name>Apache Maven Deploy Plugin</name>
@@ -49,7 +49,7 @@ under the License.
   <scm>
     <connection>scm:git:https://gitbox.apache.org/repos/asf/maven-deploy-plugin.git</connection>
     <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/maven-deploy-plugin.git</developerConnection>
-    <tag>maven-deploy-plugin-3.1.3</tag>
+    <tag>HEAD</tag>
     <url>https://github.com/apache/maven-deploy-plugin/tree/${project.scm.tag}</url>
   </scm>
   <issueManagement>
@@ -88,7 +88,7 @@ under the License.
     <mavenSurefirePluginVersion>${version.maven-surefire}</mavenSurefirePluginVersion>
     <mavenWarPluginVersion>${version.maven-war-plugin}</mavenWarPluginVersion>
 
-    <project.build.outputTimestamp>2024-08-15T19:46:32Z</project.build.outputTimestamp>
+    <project.build.outputTimestamp>2024-08-15T19:46:50Z</project.build.outputTimestamp>
   </properties>
 
   <dependencies>
