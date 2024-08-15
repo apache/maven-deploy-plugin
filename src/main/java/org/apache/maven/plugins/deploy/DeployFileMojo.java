@@ -65,7 +65,7 @@ import org.slf4j.LoggerFactory;
  */
 @Mojo(name = "deploy-file", requiresProject = false, threadSafe = true)
 public class DeployFileMojo extends AbstractDeployMojo {
-    private final Logger log = LoggerFactory.getLogger(DeployFileMojo.class);
+    private final Logger log = LoggerFactory.getLogger(getClass());
     /**
      * GroupId of the artifact to be deployed. Retrieved from POM file if specified.
      */
@@ -208,7 +208,7 @@ public class DeployFileMojo extends AbstractDeployMojo {
                     JarEntry entry = jarEntries.nextElement();
 
                     if (pomEntry.matcher(entry.getName()).matches()) {
-                        log.debug("Using " + entry.getName() + " as pomFile");
+                        log.debug("Using {} as pomFile", entry.getName());
                         foundPom = true;
                         String base = file.getName();
                         if (base.indexOf('.') > 0) {
@@ -227,7 +227,7 @@ public class DeployFileMojo extends AbstractDeployMojo {
                 }
 
                 if (!foundPom) {
-                    log.info("pom.xml not found in " + file.getName());
+                    log.info("pom.xml not found in {}", file.getName());
                 }
             } catch (IOException e) {
                 // ignore, artifact not packaged by Maven
