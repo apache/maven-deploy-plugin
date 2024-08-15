@@ -711,17 +711,18 @@ public class DeployMojoTest extends AbstractMojoTestCase {
 
         setVariableValueToObject(mojo, "project", project);
         setVariableValueToObject(mojo, "session", session);
-        setVariableValueToObject(mojo, "altDeploymentRepository", "altDeploymentRepository::legacy::http://localhost");
+        String altDeploymentRepository = "altDeploymentRepository::legacy::http://localhost";
+        setVariableValueToObject(mojo, "altDeploymentRepository", altDeploymentRepository);
 
         project.setVersion("1.0-SNAPSHOT");
         try {
-            mojo.getDeploymentRepository(project, null, null, "altDeploymentRepository::legacy::http://localhost");
+            mojo.getDeploymentRepository(project, null, null, altDeploymentRepository);
             fail("Should throw: Invalid legacy syntax and layout for repository.");
         } catch (MojoExecutionException e) {
-            assertEquals(e.getMessage(), "Invalid legacy syntax and layout for repository.");
             assertEquals(
-                    e.getLongMessage(),
-                    "Invalid legacy syntax and layout for alternative repository. Use \"altDeploymentRepository::http://localhost\" instead, and only default layout is supported.");
+                    e.getMessage(),
+                    "Invalid legacy syntax and layout for alternative repository: \"" + altDeploymentRepository
+                            + "\". Use \"altDeploymentRepository::http://localhost\" instead, and only default layout is supported.");
         }
     }
 
@@ -730,19 +731,18 @@ public class DeployMojoTest extends AbstractMojoTestCase {
 
         setVariableValueToObject(mojo, "project", project);
         setVariableValueToObject(mojo, "session", session);
-        setVariableValueToObject(
-                mojo, "altDeploymentRepository", "altDeploymentRepository::hey::wow::foo::http://localhost");
+        String altDeploymentRepository = "altDeploymentRepository::hey::wow::foo::http://localhost";
+        setVariableValueToObject(mojo, "altDeploymentRepository", altDeploymentRepository);
 
         project.setVersion("1.0-SNAPSHOT");
         try {
-            mojo.getDeploymentRepository(
-                    project, null, null, "altDeploymentRepository::hey::wow::foo::http://localhost");
+            mojo.getDeploymentRepository(project, null, null, altDeploymentRepository);
             fail("Should throw: Invalid legacy syntax and layout for repository.");
         } catch (MojoExecutionException e) {
-            assertEquals(e.getMessage(), "Invalid legacy syntax and layout for repository.");
             assertEquals(
-                    e.getLongMessage(),
-                    "Invalid legacy syntax and layout for alternative repository. Use \"altDeploymentRepository::wow::foo::http://localhost\" instead, and only default layout is supported.");
+                    e.getMessage(),
+                    "Invalid legacy syntax and layout for alternative repository: \"" + altDeploymentRepository
+                            + "\". Use \"altDeploymentRepository::wow::foo::http://localhost\" instead, and only default layout is supported.");
         }
     }
 
@@ -766,19 +766,18 @@ public class DeployMojoTest extends AbstractMojoTestCase {
         mojo = new DeployMojo();
 
         setVariableValueToObject(mojo, "project", project);
-        setVariableValueToObject(
-                mojo, "altDeploymentRepository", "altDeploymentRepository::legacy::scm:svn:http://localhost");
+        String altDeploymentRepository = "altDeploymentRepository::legacy::scm:svn:http://localhost";
+        setVariableValueToObject(mojo, "altDeploymentRepository", altDeploymentRepository);
 
         project.setVersion("1.0-SNAPSHOT");
         try {
-            mojo.getDeploymentRepository(
-                    project, null, null, "altDeploymentRepository::legacy::scm:svn:http://localhost");
+            mojo.getDeploymentRepository(project, null, null, altDeploymentRepository);
             fail("Should throw: Invalid legacy syntax and layout for repository.");
         } catch (MojoExecutionException e) {
-            assertEquals(e.getMessage(), "Invalid legacy syntax and layout for repository.");
             assertEquals(
-                    e.getLongMessage(),
-                    "Invalid legacy syntax and layout for alternative repository. Use \"altDeploymentRepository::scm:svn:http://localhost\" instead, and only default layout is supported.");
+                    e.getMessage(),
+                    "Invalid legacy syntax and layout for alternative repository: \"" + altDeploymentRepository
+                            + "\". Use \"altDeploymentRepository::scm:svn:http://localhost\" instead, and only default layout is supported.");
         }
     }
 
