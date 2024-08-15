@@ -180,6 +180,7 @@ public class DeployMojo extends AbstractDeployMojo {
         return pluginContext.containsKey(DEPLOY_PROCESSED_MARKER);
     }
 
+    @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         State state;
         if (Boolean.parseBoolean(skip)

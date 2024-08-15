@@ -23,7 +23,7 @@ under the License.
   <parent>
     <groupId>org.apache.maven.plugins</groupId>
     <artifactId>maven-plugins</artifactId>
-    <version>42</version>
+    <version>43</version>
     <relativePath />
   </parent>
 
@@ -70,10 +70,10 @@ under the License.
   <properties>
     <javaVersion>8</javaVersion>
     <mavenVersion>3.9.6</mavenVersion>
-    <!-- Keep in sync with resolver used in maven above -->
+    <!-- Maven bound -->
+    <resolverVersion>1.9.18</resolverVersion>
+    <!-- Maven bound -->
     <slf4jVersion>1.7.36</slf4jVersion>
-    <!-- Keep in sync with resolver used in maven above -->
-    <resolverVersion>1.9.20</resolverVersion>
 
     <!-- plugins version used in IT tests -->
     <mavenAntrunPluginVersion>${version.maven-antrun-plugin}</mavenAntrunPluginVersion>
@@ -209,19 +209,6 @@ under the License.
       <scope>test</scope>
     </dependency>
   </dependencies>
-
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <configuration>
-          <proc>none</proc>
-          <showDeprecation>true</showDeprecation>
-        </configuration>
-      </plugin>
-    </plugins>
-  </build>
 
   <profiles>
     <profile>

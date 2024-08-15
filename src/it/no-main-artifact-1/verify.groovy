@@ -19,5 +19,5 @@
 
 def buildLog = new File ( basedir, "build.log")
 
-assert buildLog.text.contains( "The packaging plugin for this project did not assign "
+assert buildLog.text.contains( "The packaging plugin for project test did not assign "
                                    + "a main file to the project but it has attachments. Change packaging to 'pom'." )
