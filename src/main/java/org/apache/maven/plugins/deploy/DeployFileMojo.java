@@ -242,6 +242,7 @@ public class DeployFileMojo extends AbstractDeployMojo {
     }
 
     @Override
+    @SuppressWarnings("MethodLength")
     public void execute() throws MojoExecutionException, MojoFailureException {
         if (Boolean.parseBoolean(skip)
                 || ("releases".equals(skip) && !ArtifactUtils.isSnapshot(version))
