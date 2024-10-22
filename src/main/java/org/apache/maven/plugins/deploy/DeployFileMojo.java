@@ -289,9 +289,9 @@ public class DeployFileMojo extends AbstractDeployMojo {
         artifactManager.setPath(artifact, file);
         deployables.add(artifact);
 
+        ProducedArtifact pomArtifact = null;
         if (!isFilePom) {
-            ProducedArtifact pomArtifact =
-                    session.createProducedArtifact(groupId, artifactId, version, "", "pom", null);
+            pomArtifact = session.createProducedArtifact(groupId, artifactId, version, "", "pom", null);
             if (deployedPom != null) {
                 artifactManager.setPath(pomArtifact, deployedPom);
                 deployables.add(pomArtifact);
@@ -408,6 +408,9 @@ public class DeployFileMojo extends AbstractDeployMojo {
                     Files.deleteIfExists(deployedPom);
                 } catch (IOException e) {
                     // ignore
+                }
+                if (pomArtifact != null) {
+                    artifactManager.setPath(pomArtifact, null);
                 }
             }
         }

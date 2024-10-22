@@ -165,26 +165,27 @@ public class DeployFileMojoTest {
         String version = (String) getVariableValueFromObject(mojo, "version");
         String url = (String) getVariableValueFromObject(mojo, "url");
 
-        ArtifactDeployerRequest request = execute(mojo);
-
-        assertNotNull(request);
-        List<Artifact> artifacts = new ArrayList<>(request.getArtifacts());
-        assertEquals(2, artifacts.size());
-        // first artifact
-        Artifact a1 = artifacts.get(0);
-        assertEquals(new ArtifactStub(groupId, artifactId, "bin", version, "jar"), a1);
-        Path p1 = artifactManager.getPath(a1).orElse(null);
-        assertNotNull(p1);
-        assertTrue(p1.toString().endsWith("maven-deploy-test-1.0-SNAPSHOT.jar"));
-        // second artifact
-        Artifact a2 = artifacts.get(1);
-        assertEquals(new ArtifactStub(groupId, artifactId, "", version, "pom"), a2);
-        Path p2 = artifactManager.getPath(a2).orElse(null);
-        assertNotNull(p2);
-        assertTrue(p2.toString().endsWith(".pom"));
-        // remote repository
-        assertNotNull(request.getRepository());
-        assertEquals(url.replace(File.separator, "/"), request.getRepository().getUrl());
+        execute(mojo, request -> {
+            assertNotNull(request);
+            List<Artifact> artifacts = new ArrayList<>(request.getArtifacts());
+            assertEquals(2, artifacts.size());
+            // first artifact
+            Artifact a1 = artifacts.get(0);
+            assertEquals(new ArtifactStub(groupId, artifactId, "bin", version, "jar"), a1);
+            Path p1 = artifactManager.getPath(a1).orElse(null);
+            assertNotNull(p1);
+            assertTrue(p1.toString().endsWith("maven-deploy-test-1.0-SNAPSHOT.jar"));
+            // second artifact
+            Artifact a2 = artifacts.get(1);
+            assertEquals(new ArtifactStub(groupId, artifactId, "", version, "pom"), a2);
+            Path p2 = artifactManager.getPath(a2).orElse(null);
+            assertNotNull(p2);
+            assertTrue(p2.toString().endsWith(".pom"));
+            // remote repository
+            assertNotNull(request.getRepository());
+            assertEquals(
+                    url.replace(File.separator, "/"), request.getRepository().getUrl());
+        });
     }
 
     @Test
@@ -206,24 +207,24 @@ public class DeployFileMojoTest {
         assertEquals("maven-deploy-file-test", artifactId);
         assertEquals("1.0", version);
 
-        ArtifactDeployerRequest request = execute(mojo);
+        execute(mojo, request -> {
+            assertNotNull(request);
+            List<Artifact> artifacts = new ArrayList<>(request.getArtifacts());
+            assertEquals(2, artifacts.size());
+            Artifact a1 = artifacts.get(0);
+            Artifact a2 = artifacts.get(1);
+            Path p1 = artifactManager.getPath(a1).orElse(null);
+            Path p2 = artifactManager.getPath(a2).orElse(null);
+            assertNotNull(p1);
+            assertTrue(p1.toString().endsWith("maven-deploy-test.zip"));
+            assertNotNull(p2);
+            assertTrue(p2.toString().endsWith(".pom"));
 
-        assertNotNull(request);
-        List<Artifact> artifacts = new ArrayList<>(request.getArtifacts());
-        assertEquals(2, artifacts.size());
-        Artifact a1 = artifacts.get(0);
-        Artifact a2 = artifacts.get(1);
-        Path p1 = artifactManager.getPath(a1).orElse(null);
-        Path p2 = artifactManager.getPath(a2).orElse(null);
-        assertNotNull(p1);
-        assertTrue(p1.toString().endsWith("maven-deploy-test.zip"));
-        assertNotNull(p2);
-        assertTrue(p2.toString().endsWith(".pom"));
-
-        assertNotNull(request.getRepository());
-        assertEquals(
-                "file://" + getBasedir().replace(File.separator, "/") + "/target/remote-repo/deploy-file",
-                request.getRepository().getUrl());
+            assertNotNull(request.getRepository());
+            assertEquals(
+                    "file://" + getBasedir().replace(File.separator, "/") + "/target/remote-repo/deploy-file",
+                    request.getRepository().getUrl());
+        });
     }
 
     private ArtifactDeployerRequest execute(DeployFileMojo mojo) {
