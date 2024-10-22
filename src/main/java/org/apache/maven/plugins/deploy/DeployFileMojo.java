@@ -34,6 +34,7 @@ import java.util.jar.JarFile;
 import java.util.regex.Pattern;
 
 import org.apache.maven.api.Artifact;
+import org.apache.maven.api.ProducedArtifact;
 import org.apache.maven.api.RemoteRepository;
 import org.apache.maven.api.model.Model;
 import org.apache.maven.api.model.Parent;
@@ -277,7 +278,7 @@ public class DeployFileMojo extends AbstractDeployMojo {
         List<Artifact> deployables = new ArrayList<>();
 
         boolean isFilePom = classifier == null && "pom".equals(packaging);
-        Artifact artifact = session.createArtifact(
+        ProducedArtifact artifact = session.createProducedArtifact(
                 groupId, artifactId, version, classifier, isFilePom ? "pom" : getExtension(file), packaging);
 
         if (file.equals(getLocalRepositoryFile(artifact))) {
@@ -289,7 +290,8 @@ public class DeployFileMojo extends AbstractDeployMojo {
         deployables.add(artifact);
 
         if (!isFilePom) {
-            Artifact pomArtifact = session.createArtifact(groupId, artifactId, version, "", "pom", null);
+            ProducedArtifact pomArtifact =
+                    session.createProducedArtifact(groupId, artifactId, version, "", "pom", null);
             if (deployedPom != null) {
                 artifactManager.setPath(pomArtifact, deployedPom);
                 deployables.add(pomArtifact);
@@ -306,13 +308,15 @@ public class DeployFileMojo extends AbstractDeployMojo {
         }
 
         if (sources != null) {
-            Artifact sourcesArtifact = session.createArtifact(groupId, artifactId, version, "sources", "jar", null);
+            ProducedArtifact sourcesArtifact =
+                    session.createProducedArtifact(groupId, artifactId, version, "sources", "jar", null);
             artifactManager.setPath(sourcesArtifact, sources);
             deployables.add(sourcesArtifact);
         }
 
         if (javadoc != null) {
-            Artifact javadocArtifact = session.createArtifact(groupId, artifactId, version, "javadoc", "jar", null);
+            ProducedArtifact javadocArtifact =
+                    session.createProducedArtifact(groupId, artifactId, version, "javadoc", "jar", null);
             artifactManager.setPath(javadocArtifact, javadoc);
             deployables.add(javadocArtifact);
         }
@@ -360,7 +364,7 @@ public class DeployFileMojo extends AbstractDeployMojo {
                     String extension = getExtension(file);
                     String type = types.substring(ti, nti).trim();
 
-                    Artifact deployable = session.createArtifact(
+                    ProducedArtifact deployable = session.createProducedArtifact(
                             artifact.getGroupId(),
                             artifact.getArtifactId(),
                             artifact.getVersion().asString(),

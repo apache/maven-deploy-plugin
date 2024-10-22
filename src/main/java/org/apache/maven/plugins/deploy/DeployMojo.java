@@ -25,6 +25,7 @@ import java.util.regex.Pattern;
 
 import org.apache.maven.api.Artifact;
 import org.apache.maven.api.MojoExecution;
+import org.apache.maven.api.ProducedArtifact;
 import org.apache.maven.api.Project;
 import org.apache.maven.api.RemoteRepository;
 import org.apache.maven.api.di.Inject;
@@ -254,8 +255,8 @@ public class DeployMojo extends AbstractDeployMojo {
 
     private ArtifactDeployerRequest createDeployerRequest() {
         ProjectManager projectManager = getProjectManager();
-        Collection<Artifact> deployables = projectManager.getAllArtifacts(project);
-        Collection<Artifact> attachedArtifacts = projectManager.getAttachedArtifacts(project);
+        Collection<ProducedArtifact> deployables = projectManager.getAllArtifacts(project);
+        Collection<ProducedArtifact> attachedArtifacts = projectManager.getAttachedArtifacts(project);
 
         ArtifactManager artifactManager = getArtifactManager();
         if (artifactManager.getPath(project.getPomArtifact()).isEmpty()) {
@@ -292,7 +293,7 @@ public class DeployMojo extends AbstractDeployMojo {
         ArtifactDeployerRequest request = ArtifactDeployerRequest.builder()
                 .session(session)
                 .repository(getDeploymentRepository(session.isVersionSnapshot(project.getVersion())))
-                .artifacts(deployables)
+                .artifacts((Collection) deployables)
                 .retryFailedDeploymentCount(Math.max(1, Math.min(10, getRetryFailedDeploymentCount())))
                 .build();
 
