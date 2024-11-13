@@ -83,7 +83,7 @@ under the License.
     <mavenSourcePluginVersion>${version.maven-source-plugin}</mavenSourcePluginVersion>
     <mavenSurefirePluginVersion>${version.maven-surefire}</mavenSurefirePluginVersion>
     <mavenWarPluginVersion>${version.maven-war-plugin}</mavenWarPluginVersion>
-    <mavenPluginTestingVersion>4.0.0-beta-2-SNAPSHOT</mavenPluginTestingVersion>
+    <mavenPluginTestingVersion>4.0.0-beta-2</mavenPluginTestingVersion>
     <mavenResolverVersion>2.0.2</mavenResolverVersion>
     <mockitoVersion>5.12.0</mockitoVersion>
     <slf4jVersion>2.0.13</slf4jVersion>
