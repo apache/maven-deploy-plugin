@@ -37,7 +37,7 @@ import org.apache.maven.api.plugin.MojoException;
 import org.apache.maven.api.plugin.testing.InjectMojo;
 import org.apache.maven.api.plugin.testing.MojoParameter;
 import org.apache.maven.api.plugin.testing.MojoTest;
-import org.apache.maven.api.plugin.testing.stubs.ArtifactStub;
+import org.apache.maven.api.plugin.testing.stubs.ProducedArtifactStub;
 import org.apache.maven.api.plugin.testing.stubs.ProjectStub;
 import org.apache.maven.api.plugin.testing.stubs.SessionMock;
 import org.apache.maven.api.services.ArtifactDeployer;
@@ -158,7 +158,7 @@ public class DeployMojoTest {
         Project project = (Project) getVariableValueFromObject(mojo, "project");
         projectManager.attachArtifact(
                 project,
-                new ArtifactStub("org.apache.maven.test", "attached-artifact-test", "", "1.0-SNAPSHOT", "jar"),
+                new ProducedArtifactStub("org.apache.maven.test", "attached-artifact-test", "", "1.0-SNAPSHOT", "jar"),
                 Paths.get(getBasedir(), "target/test-classes/unit/attached-artifact-test-1.0-SNAPSHOT.jar"));
         artifactManager.setPath(
                 project.getMainArtifact().get(),
@@ -310,7 +310,8 @@ public class DeployMojoTest {
                                 .url(Paths.get(getBasedir()).toUri().toString())
                                 .build())
                         .build()));
-        ArtifactStub jar = new ArtifactStub("org.apache.maven.test", "maven-deploy-test", "", "1.0-SNAPSHOT", "jar");
+        ProducedArtifactStub jar =
+                new ProducedArtifactStub("org.apache.maven.test", "maven-deploy-test", "", "1.0-SNAPSHOT", "jar");
         project.setMainArtifact(jar);
         return project;
     }
