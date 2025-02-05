@@ -1,3 +1,5 @@
+
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -14,14 +16,6 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-   
-name: Release Drafter
-on:
-  push:
-    branches:
-      - master
-  workflow_dispatch:
 
-jobs:
-   update_release_draft:
-      uses: apache/maven-gh-actions-shared/.github/workflows/release-drafter.yml@v4
+_extends: maven-gh-actions-shared:.github/release-drafter.yml
+tag-template: maven-deploy-plugin-$RESOLVED_VERSION
