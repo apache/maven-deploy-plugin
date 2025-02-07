@@ -18,7 +18,6 @@
  */
 
 def expectedDeploys = [
-        'org/apache/maven/its/deploy/bom/test/1.0/test-1.0-build.pom',
         'org/apache/maven/its/deploy/bom/test/1.0/test-1.0.pom',
         'org/apache/maven/its/deploy/bom/test/maven-metadata.xml',
 ]
