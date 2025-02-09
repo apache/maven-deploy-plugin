@@ -232,6 +232,7 @@ public class DeployFileMojo extends AbstractDeployMojo {
         return null;
     }
 
+    @SuppressWarnings("checkstyle:MethodLength")
     public void execute() throws MojoException {
         if (Boolean.parseBoolean(skip)
                 || ("releases".equals(skip) && !session.isVersionSnapshot(version))
