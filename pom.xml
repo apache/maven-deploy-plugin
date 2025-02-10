@@ -73,7 +73,7 @@ under the License.
     <!-- Maven bound -->
     <resolverVersion>1.9.18</resolverVersion>
     <!-- Maven bound -->
-    <slf4jVersion>1.7.36</slf4jVersion>
+    <slf4jVersion>2.0.16</slf4jVersion>
 
     <!-- plugins version used in IT tests -->
     <mavenAntrunPluginVersion>${version.maven-antrun-plugin}</mavenAntrunPluginVersion>
