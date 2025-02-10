@@ -85,7 +85,7 @@ under the License.
     <mavenWarPluginVersion>${version.maven-war-plugin}</mavenWarPluginVersion>
     <mavenPluginTestingVersion>4.0.0-beta-2</mavenPluginTestingVersion>
     <mavenResolverVersion>2.0.2</mavenResolverVersion>
-    <mockitoVersion>5.12.0</mockitoVersion>
+    <mockitoVersion>5.15.2</mockitoVersion>
     <slf4jVersion>2.0.13</slf4jVersion>
     <version.plexus-xml>4.0.3</version.plexus-xml>
     <version.maven-plugin-tools>4.0.0-beta-1</version.maven-plugin-tools>
