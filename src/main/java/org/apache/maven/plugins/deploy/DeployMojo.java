@@ -212,7 +212,7 @@ public class DeployMojo extends AbstractDeployMojo {
     }
 
     private void deployAllAtOnce() {
-        Map<RemoteRepository, Map<Integer, List<Artifact>>> flattenedRequests = new LinkedHashMap<>();
+        Map<RemoteRepository, Map<Integer, List<ProducedArtifact>>> flattenedRequests = new LinkedHashMap<>();
         // flatten requests, grouping by remote repository and number of retries
         for (Project reactorProject : session.getProjects()) {
             State state = getState(reactorProject);
@@ -227,8 +227,9 @@ public class DeployMojo extends AbstractDeployMojo {
         }
         // Re-group all requests
         List<ArtifactDeployerRequest> requests = new ArrayList<>();
-        for (Map.Entry<RemoteRepository, Map<Integer, List<Artifact>>> entry1 : flattenedRequests.entrySet()) {
-            for (Map.Entry<Integer, List<Artifact>> entry2 : entry1.getValue().entrySet()) {
+        for (Map.Entry<RemoteRepository, Map<Integer, List<ProducedArtifact>>> entry1 : flattenedRequests.entrySet()) {
+            for (Map.Entry<Integer, List<ProducedArtifact>> entry2 :
+                    entry1.getValue().entrySet()) {
                 requests.add(ArtifactDeployerRequest.builder()
                         .session(session)
                         .repository(entry1.getKey())
