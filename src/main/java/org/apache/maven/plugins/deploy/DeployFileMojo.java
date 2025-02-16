@@ -276,7 +276,7 @@ public class DeployFileMojo extends AbstractDeployMojo {
         failIfOffline();
         warnIfAffectedPackagingAndMaven(packaging);
 
-        List<Artifact> deployables = new ArrayList<>();
+        List<ProducedArtifact> deployables = new ArrayList<>();
 
         boolean isFilePom = classifier == null && "pom".equals(packaging);
         ProducedArtifact artifact = session.createProducedArtifact(
