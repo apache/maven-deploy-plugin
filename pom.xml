@@ -91,6 +91,11 @@ under the License.
     <version.maven-plugin-tools>4.0.0-beta-1</version.maven-plugin-tools>
     <version.maven-invoker-plugin>3.7.0</version.maven-invoker-plugin>
 
+    <!-- TODO remove property maven4x.site.path with next parent -->
+    <maven4x.site.path>plugins-archives/${project.artifactId}-LATEST-4.x</maven4x.site.path>
+    <!-- 4.x publish -->
+    <maven.site.path>${maven4x.site.path}</maven.site.path>
+
     <project.build.outputTimestamp>2024-06-26T08:37:53Z</project.build.outputTimestamp>
   </properties>
 
