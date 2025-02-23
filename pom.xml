@@ -28,7 +28,7 @@ under the License.
   </parent>
 
   <artifactId>maven-deploy-plugin</artifactId>
-  <version>4.0.0-beta-2-SNAPSHOT</version>
+  <version>4.0.0-beta-2</version>
   <packaging>maven-plugin</packaging>
 
   <name>Apache Maven Deploy Plugin</name>
@@ -49,7 +49,7 @@ under the License.
   <scm>
     <connection>scm:git:https://gitbox.apache.org/repos/asf/maven-deploy-plugin.git</connection>
     <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/maven-deploy-plugin.git</developerConnection>
-    <tag>HEAD</tag>
+    <tag>maven-deploy-plugin-4.0.0-beta-2</tag>
     <url>https://github.com/apache/maven-deploy-plugin/tree/${project.scm.tag}</url>
   </scm>
   <issueManagement>
@@ -96,7 +96,7 @@ under the License.
     <!-- 4.x publish -->
     <maven.site.path>${maven4x.site.path}</maven.site.path>
 
-    <project.build.outputTimestamp>2024-06-26T08:37:53Z</project.build.outputTimestamp>
+    <project.build.outputTimestamp>2025-02-23T17:09:45Z</project.build.outputTimestamp>
   </properties>
 
   <dependencyManagement>
