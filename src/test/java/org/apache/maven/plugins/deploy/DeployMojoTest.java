@@ -199,10 +199,10 @@ public class DeployMojoTest {
                 MojoException.class,
                 () -> mojo.getDeploymentRepository(true),
                 "Should throw: Invalid legacy syntax and layout for repository.");
-        assertEquals( "Invalid legacy syntax and layout for repository.", e.getMessage() );
+        assertEquals("Invalid legacy syntax and layout for repository.", e.getMessage());
         assertEquals(
                 "Invalid legacy syntax and layout for alternative repository. Use \"altDeploymentRepository::http://localhost\" instead, and only default layout is supported.",
-                e.getLongMessage() );
+                e.getLongMessage());
     }
 
     @Test
@@ -215,10 +215,10 @@ public class DeployMojoTest {
                 MojoException.class,
                 () -> mojo.getDeploymentRepository(true),
                 "Should throw: Invalid legacy syntax and layout for repository.");
-        assertEquals( "Invalid legacy syntax and layout for repository.", e.getMessage() );
+        assertEquals("Invalid legacy syntax and layout for repository.", e.getMessage());
         assertEquals(
                 "Invalid legacy syntax and layout for alternative repository. Use \"altDeploymentRepository::wow::foo::http://localhost\" instead, and only default layout is supported.",
-                e.getLongMessage() );
+                e.getLongMessage());
     }
 
     @Test
@@ -242,10 +242,10 @@ public class DeployMojoTest {
                 MojoException.class,
                 () -> mojo.getDeploymentRepository(true),
                 "Should throw: Invalid legacy syntax and layout for repository.");
-        assertEquals( "Invalid legacy syntax and layout for repository.", e.getMessage() );
+        assertEquals("Invalid legacy syntax and layout for repository.", e.getMessage());
         assertEquals(
                 "Invalid legacy syntax and layout for alternative repository. Use \"altDeploymentRepository::scm:svn:http://localhost\" instead, and only default layout is supported.",
-                e.getLongMessage() );
+                e.getLongMessage());
     }
 
     @Test
