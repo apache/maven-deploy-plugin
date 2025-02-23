@@ -164,7 +164,6 @@ public class DeployFileMojoTest {
         assertEquals("bin", classifier);
         String version = (String) getVariableValueFromObject(mojo, "version");
         String url = (String) getVariableValueFromObject(mojo, "url");
-
         execute(mojo, request -> {
             assertNotNull(request);
             List<Artifact> artifacts = new ArrayList<>(request.getArtifacts());
