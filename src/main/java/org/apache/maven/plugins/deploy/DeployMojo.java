@@ -298,7 +298,7 @@ public class DeployMojo extends AbstractDeployMojo {
         ArtifactDeployerRequest request = ArtifactDeployerRequest.builder()
                 .session(session)
                 .repository(getDeploymentRepository(session.isVersionSnapshot(project.getVersion())))
-                .artifacts((Collection) deployables)
+                .artifacts(deployables)
                 .retryFailedDeploymentCount(Math.max(1, Math.min(10, getRetryFailedDeploymentCount())))
                 .build();
 
