@@ -58,7 +58,7 @@ public class DeployFileMojoUnitTest {
     static class MockDeployFileMojo extends DeployFileMojo {
         private Model model;
 
-        public MockDeployFileMojo(Model model) {
+        MockDeployFileMojo(Model model) {
             this.model = model;
         }
 

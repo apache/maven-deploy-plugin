@@ -57,9 +57,9 @@ public class DeployMojoTest extends AbstractMojoTestCase {
 
     private File localRepo;
 
-    private final String LOCAL_REPO = getBasedir() + "/target/local-repo";
+    private final String localRepoTarget = getBasedir() + "/target/local-repo";
 
-    private final String REMOTE_REPO = getBasedir() + "/target/remote-repo";
+    private final String remoteRepoTarget = getBasedir() + "/target/remote-repo";
 
     DeployArtifactStub artifact;
 
@@ -81,14 +81,14 @@ public class DeployMojoTest extends AbstractMojoTestCase {
         DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
         repositorySession.setLocalRepositoryManager(
                 new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
-                        .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
+                        .newInstance(repositorySession, new LocalRepository(localRepoTarget)));
         when(session.getRepositorySession()).thenReturn(repositorySession);
 
-        remoteRepo = new File(REMOTE_REPO);
+        remoteRepo = new File(remoteRepoTarget);
 
         remoteRepo.mkdirs();
 
-        localRepo = new File(LOCAL_REPO);
+        localRepo = new File(localRepoTarget);
 
         if (localRepo.exists()) {
             FileUtils.deleteDirectory(localRepo);
@@ -131,7 +131,7 @@ public class DeployMojoTest extends AbstractMojoTestCase {
         DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
         repositorySession.setLocalRepositoryManager(
                 new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
-                        .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
+                        .newInstance(repositorySession, new LocalRepository(localRepoTarget)));
         when(session.getRepositorySession()).thenReturn(repositorySession);
 
         File file = new File(
@@ -188,7 +188,7 @@ public class DeployMojoTest extends AbstractMojoTestCase {
         expectedFiles.add("resolver-status.properties");
         expectedFiles.add("resolver-status.properties");
 
-        File localRepo = new File(LOCAL_REPO, "");
+        File localRepo = new File(localRepoTarget, "");
 
         File[] files = localRepo.listFiles();
 
@@ -280,7 +280,7 @@ public class DeployMojoTest extends AbstractMojoTestCase {
 
         mojo.execute();
 
-        File localRepo = new File(LOCAL_REPO, "");
+        File localRepo = new File(localRepoTarget, "");
 
         File[] files = localRepo.listFiles();
 
@@ -305,7 +305,7 @@ public class DeployMojoTest extends AbstractMojoTestCase {
         DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
         repositorySession.setLocalRepositoryManager(
                 new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
-                        .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
+                        .newInstance(repositorySession, new LocalRepository(localRepoTarget)));
         when(session.getRepositorySession()).thenReturn(repositorySession);
 
         File pomFile = new File(
@@ -378,7 +378,7 @@ public class DeployMojoTest extends AbstractMojoTestCase {
         DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
         repositorySession.setLocalRepositoryManager(
                 new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
-                        .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
+                        .newInstance(repositorySession, new LocalRepository(localRepoTarget)));
         when(session.getRepositorySession()).thenReturn(repositorySession);
 
         File pomFile = new File(
@@ -519,7 +519,7 @@ public class DeployMojoTest extends AbstractMojoTestCase {
         DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
         repositorySession.setLocalRepositoryManager(
                 new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
-                        .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
+                        .newInstance(repositorySession, new LocalRepository(localRepoTarget)));
         when(session.getRepositorySession()).thenReturn(repositorySession);
 
         MavenProject project = (MavenProject) getVariableValueFromObject(mojo, "project");
@@ -628,7 +628,7 @@ public class DeployMojoTest extends AbstractMojoTestCase {
     }
 
     @Ignore("SCP is not part of Maven3 distribution. Aether handles transport extensions.")
-    public void _testBasicDeployWithScpAsProtocol() throws Exception {
+    public void testBasicDeployWithScpAsProtocol() throws Exception {
         String originalUserHome = System.getProperty("user.home");
 
         // FIX THE DAMN user.home BEFORE YOU DELETE IT!!!
