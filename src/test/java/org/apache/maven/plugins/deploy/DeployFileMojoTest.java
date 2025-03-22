@@ -40,7 +40,7 @@ import static org.mockito.Mockito.when;
  * @author <a href="mailto:aramirez@apache.org">Allan Ramirez</a>
  */
 public class DeployFileMojoTest extends AbstractMojoTestCase {
-    private final String LOCAL_REPO = getBasedir() + "/target/local-repo";
+    private final String localRepoTarget = getBasedir() + "/target/local-repo";
 
     private List<String> expectedFiles;
 
@@ -94,7 +94,7 @@ public class DeployFileMojoTest extends AbstractMojoTestCase {
         DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
         repositorySession.setLocalRepositoryManager(
                 new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
-                        .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
+                        .newInstance(repositorySession, new LocalRepository(localRepoTarget)));
         when(session.getRepositorySession()).thenReturn(repositorySession);
 
         String groupId = (String) getVariableValueFromObject(mojo, "groupId");
@@ -199,7 +199,7 @@ public class DeployFileMojoTest extends AbstractMojoTestCase {
         DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
         repositorySession.setLocalRepositoryManager(
                 new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
-                        .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
+                        .newInstance(repositorySession, new LocalRepository(localRepoTarget)));
         when(session.getRepositorySession()).thenReturn(repositorySession);
 
         String classifier = (String) getVariableValueFromObject(mojo, "classifier");
@@ -250,7 +250,7 @@ public class DeployFileMojoTest extends AbstractMojoTestCase {
         DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
         repositorySession.setLocalRepositoryManager(
                 new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
-                        .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
+                        .newInstance(repositorySession, new LocalRepository(localRepoTarget)));
         when(session.getRepositorySession()).thenReturn(repositorySession);
 
         String groupId = (String) getVariableValueFromObject(mojo, "groupId");
@@ -287,7 +287,7 @@ public class DeployFileMojoTest extends AbstractMojoTestCase {
         DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
         repositorySession.setLocalRepositoryManager(
                 new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
-                        .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
+                        .newInstance(repositorySession, new LocalRepository(localRepoTarget)));
         when(session.getRepositorySession()).thenReturn(repositorySession);
 
         String packaging = (String) getVariableValueFromObject(mojo, "packaging");
