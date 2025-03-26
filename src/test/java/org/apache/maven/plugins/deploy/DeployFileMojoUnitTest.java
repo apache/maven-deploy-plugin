@@ -38,22 +38,19 @@ public class DeployFileMojoUnitTest {
 
     @BeforeEach
     public void setUp() {
-        Model pomModel = Model.newBuilder()
-                .packaging(null)
-                .parent(
-                        parent = Parent.newBuilder()
-                                .groupId("parentGroup")
-                                .artifactId("parentArtifact")
-                                .version("parentVersion")
-                                .build())
+        parent = Parent.newBuilder()
+                .groupId("parentGroup")
+                .artifactId("parentArtifact")
+                .version("parentVersion")
                 .build();
+        Model pomModel = Model.newBuilder().packaging(null).parent(parent).build();
         mojo = new MockDeployFileMojo(pomModel);
     }
 
     static class MockDeployFileMojo extends DeployFileMojo {
         private Model model;
 
-        public MockDeployFileMojo(Model model) {
+        MockDeployFileMojo(Model model) {
             this.model = model;
         }
 
