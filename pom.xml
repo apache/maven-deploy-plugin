@@ -69,7 +69,7 @@ under the License.
 
   <properties>
     <javaVersion>17</javaVersion>
-    <mavenVersion>4.0.0-rc-2</mavenVersion>
+    <mavenVersion>4.0.0-rc-3</mavenVersion>
 
     <guiceVersion>6.0.0</guiceVersion>
     <mavenAntrunPluginVersion>${version.maven-antrun-plugin}</mavenAntrunPluginVersion>
@@ -83,7 +83,7 @@ under the License.
     <mavenSourcePluginVersion>${version.maven-source-plugin}</mavenSourcePluginVersion>
     <mavenSurefirePluginVersion>${version.maven-surefire}</mavenSurefirePluginVersion>
     <mavenWarPluginVersion>${version.maven-war-plugin}</mavenWarPluginVersion>
-    <mavenPluginTestingVersion>4.0.0-beta-3</mavenPluginTestingVersion>
+    <mavenPluginTestingVersion>4.0.0-beta-4</mavenPluginTestingVersion>
     <mavenResolverVersion>2.0.7</mavenResolverVersion>
     <mockitoVersion>5.16.1</mockitoVersion>
     <slf4jVersion>2.0.17</slf4jVersion>

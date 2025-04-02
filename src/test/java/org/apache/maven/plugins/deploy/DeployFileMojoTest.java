@@ -42,7 +42,7 @@ import org.apache.maven.api.plugin.testing.stubs.SessionMock;
 import org.apache.maven.api.services.ArtifactDeployer;
 import org.apache.maven.api.services.ArtifactDeployerRequest;
 import org.apache.maven.api.services.ArtifactManager;
-import org.apache.maven.internal.impl.InternalSession;
+import org.apache.maven.impl.InternalSession;
 import org.junit.jupiter.api.Test;
 
 import static org.apache.maven.api.plugin.testing.MojoExtension.getBasedir;

@@ -46,7 +46,7 @@ import org.apache.maven.api.services.ArtifactDeployerRequest;
 import org.apache.maven.api.services.ArtifactManager;
 import org.apache.maven.api.services.ProjectManager;
 import org.apache.maven.api.services.RepositoryFactory;
-import org.apache.maven.internal.impl.InternalSession;
+import org.apache.maven.impl.InternalSession;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -286,7 +286,7 @@ public class DeployMojoTest {
     private InternalSession createSession() {
         InternalSession session = SessionMock.getMockSession(LOCAL_REPO);
         when(session.getArtifact(any()))
-                .thenAnswer(iom -> new org.apache.maven.internal.impl.DefaultArtifact(
+                .thenAnswer(iom -> new org.apache.maven.impl.DefaultArtifact(
                         session, iom.getArgument(0, org.eclipse.aether.artifact.Artifact.class)));
         when(session.createRemoteRepository(any())).thenAnswer(iom -> session.getService(RepositoryFactory.class)
                 .createRemote(iom.getArgument(0, Repository.class)));
