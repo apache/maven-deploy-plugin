@@ -40,7 +40,7 @@ import static org.mockito.Mockito.when;
  * @author <a href="mailto:aramirez@apache.org">Allan Ramirez</a>
  */
 public class DeployFileMojoTest extends AbstractMojoTestCase {
-    private final String LOCAL_REPO = getBasedir() + "/target/local-repo";
+    private static final String LOCAL_REPO = getBasedir() + "/target/local-repo";
 
     private List<String> expectedFiles;
 

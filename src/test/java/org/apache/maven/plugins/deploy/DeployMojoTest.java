@@ -57,9 +57,9 @@ public class DeployMojoTest extends AbstractMojoTestCase {
 
     private File localRepo;
 
-    private final String LOCAL_REPO = getBasedir() + "/target/local-repo";
+    private static final String LOCAL_REPO = getBasedir() + "/target/local-repo";
 
-    private final String REMOTE_REPO = getBasedir() + "/target/remote-repo";
+    private static final String REMOTE_REPO = getBasedir() + "/target/remote-repo";
 
     DeployArtifactStub artifact;
 
@@ -628,7 +628,7 @@ public class DeployMojoTest extends AbstractMojoTestCase {
     }
 
     @Ignore("SCP is not part of Maven3 distribution. Aether handles transport extensions.")
-    public void _testBasicDeployWithScpAsProtocol() throws Exception {
+    public void basicDeployWithScpAsProtocol() throws Exception {
         String originalUserHome = System.getProperty("user.home");
 
         // FIX THE DAMN user.home BEFORE YOU DELETE IT!!!
