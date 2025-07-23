@@ -18,6 +18,7 @@
  */
 package org.apache.maven.plugins.deploy;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -40,7 +41,7 @@ public class CentralPortalClient {
     public CentralPortalClient(String username, String password, String publishUrl) {
         this.username = username;
         this.password = password;
-        this.publishUrl = (publishUrl != null && !publishUrl.isBlank()) ? publishUrl : CENTRAL_PORTAL_URL;
+        this.publishUrl = (publishUrl != null && !publishUrl.trim().isEmpty()) ? publishUrl : CENTRAL_PORTAL_URL;
     }
 
     public String upload(File bundle) throws IOException {
@@ -54,13 +55,16 @@ public class CentralPortalClient {
 
         try (OutputStream out = conn.getOutputStream();
                 PrintWriter writer = new PrintWriter(new OutputStreamWriter(out))) {
+
             writer.append("--").append(boundary).append("\r\n");
             writer.append("Content-Disposition: form-data; name=\"bundle\"; filename=\"")
                     .append(bundle.getName())
                     .append("\"\r\n");
             writer.append("Content-Type: application/zip\r\n\r\n").flush();
+
             Files.copy(bundle.toPath(), out);
             out.flush();
+
             writer.append("\r\n--").append(boundary).append("--\r\n").flush();
         }
 
@@ -70,7 +74,7 @@ public class CentralPortalClient {
         }
 
         try (InputStream in = conn.getInputStream()) {
-            return new String(in.readAllBytes());
+            return readFully(in);
         }
     }
 
@@ -86,11 +90,21 @@ public class CentralPortalClient {
         }
 
         try (InputStream in = conn.getInputStream()) {
-            return new String(in.readAllBytes());
+            return readFully(in);
         }
     }
 
     private String authHeader() {
         return "Bearer " + Base64.getEncoder().encodeToString((username + ":" + password).getBytes());
+    }
+
+    private String readFully(InputStream in) throws IOException {
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        byte[] chunk = new byte[8192];
+        int bytesRead;
+        while ((bytesRead = in.read(chunk)) != -1) {
+            buffer.write(chunk, 0, bytesRead);
+        }
+        return buffer.toString("UTF-8");
     }
 }

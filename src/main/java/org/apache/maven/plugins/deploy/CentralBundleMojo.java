@@ -19,32 +19,37 @@
 package org.apache.maven.plugins.deploy;
 
 import java.io.File;
+import java.util.List;
 
-import org.apache.maven.api.Project;
-import org.apache.maven.api.plugin.MojoException;
-import org.apache.maven.api.plugin.annotations.Mojo;
-import org.apache.maven.api.plugin.annotations.Parameter;
+import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugins.annotations.LifecyclePhase;
+import org.apache.maven.plugins.annotations.Mojo;
+import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.project.MavenProject;
 
 /**
  * mvn deploy:bundle
  */
-@Mojo(name = "bundle", defaultPhase = "package")
+@Mojo(name = "bundle", defaultPhase = LifecyclePhase.DEPLOY)
 public class CentralBundleMojo extends AbstractDeployMojo {
 
     @Parameter(defaultValue = "${project}", readonly = true)
-    private Project project;
+    private MavenProject project;
+
+    @Parameter(defaultValue = "${reactorProjects}", required = true, readonly = true)
+    private List<MavenProject> reactorProjects;
 
     @Override
-    public void execute() throws MojoException {
+    public void execute() throws MojoExecutionException {
         File targetDir = new File(project.getBuild().getDirectory());
         File bundleFile = new File(targetDir, project.getArtifactId() + "-" + project.getVersion() + "-bundle.zip");
 
         try {
-            BundleService bundleService = new BundleService(project, session, getLog());
-            bundleService.createZipBundle(bundleFile);
+            BundleService bundleService = new BundleService(project, getLog());
+            bundleService.createZipBundle(bundleFile, reactorProjects);
             getLog().info("Bundle created successfully: " + bundleFile);
         } catch (Exception e) {
-            throw new MojoException("Failed to create bundle", e);
+            throw new MojoExecutionException("Failed to create bundle", e);
         }
     }
 }
