@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import org.apache.maven.MavenExecutionException;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
 
@@ -47,32 +48,75 @@ public class BundleService {
 
     static final List<String> CHECKSUM_ALGOS = Arrays.asList("MD5", "SHA-1", "SHA-256");
 
-    public void createZipBundle(File bundleFile, List<MavenProject> projects)
-            throws IOException, NoSuchAlgorithmException {
+    /**
+     * This requires the "install" phase has been executed and gpg signing has been configured.
+     * e.g. mvn install deploy:bundle
+     *
+     * @param bundleFile the zip file to create
+     * @throws IOException if creating the zip file failed
+     * @throws NoSuchAlgorithmException if md5, sha-1 or sha-256 algorithms are not available in
+     * the environment.
+     */
+    public void createZipBundle(File bundleFile) throws IOException, NoSuchAlgorithmException, MavenExecutionException {
+        bundleFile.getParentFile().mkdirs();
+        bundleFile.createNewFile();
+        String groupId = project.getGroupId();
+        String artifactId = project.getArtifactId();
+        String version = project.getVersion();
+        String groupPath = groupId.replace('.', '/');
+        String mavenPathPrefix = String.join("/", groupPath, artifactId, version) + "/";
         try (ZipOutputStream zipOut = new ZipOutputStream(Files.newOutputStream(bundleFile.toPath()))) {
-            for (MavenProject subproject : projects) {
-                File artifactDir = new File(subproject.getBuild().getDirectory());
-                File[] files = artifactDir.listFiles(
-                        (dir, name) -> name.endsWith(".jar") || name.endsWith(".pom") || name.endsWith(".asc"));
 
-                if (files != null) {
-                    for (File file : files) {
-                        zipOut.putNextEntry(new ZipEntry(subproject.getArtifactId() + "/" + file.getName()));
-                        Files.copy(file.toPath(), zipOut);
-                        zipOut.closeEntry();
+            File artifactDir = new File(project.getBuild().getDirectory());
+            File[] files = artifactDir.listFiles(
+                    (dir, name) -> name.endsWith(".jar") || name.endsWith(".pom") || name.endsWith(".asc"));
 
-                        for (String algo : CHECKSUM_ALGOS) {
-                            File checksumFile = generateChecksum(file, algo);
-                            zipOut.putNextEntry(
-                                    new ZipEntry(subproject.getArtifactId() + "/" + checksumFile.getName()));
-                            Files.copy(checksumFile.toPath(), zipOut);
-                            zipOut.closeEntry();
-                        }
+            int ascCount = 0;
+            if (files != null) {
+                for (File file : files) {
+                    zipOut.putNextEntry(new ZipEntry(mavenPathPrefix + file.getName()));
+                    Files.copy(file.toPath(), zipOut);
+                    zipOut.closeEntry();
+                    if (file.getName().endsWith(".asc")) {
+                        ascCount++;
+                        continue; // No checksums for asc files
+                    }
+                    generateChecksumsAndAddToZip(file, mavenPathPrefix, zipOut);
+                }
+            }
+            // This is a bit crude, but there should be sign files for pom, jar, sourceJar, javadocJar
+            // unless the project is an aggregator
+            int expectedArtifactCount = 4;
+            if (project.getPackaging().equals("pom")) {
+                expectedArtifactCount = 1;
+            }
+            if (ascCount != expectedArtifactCount) {
+                log.warn("Expected " + expectedArtifactCount + " asc file(s) but found " + ascCount);
+                if (ascCount == 0) {
+                    log.error("The artifacts were not signed!");
+                } else {
+                    if (expectedArtifactCount == 1) {
+                        log.error("There should only be one asc file for the pom");
+                    } else {
+                        log.error("There should be 4 signed artifacts (pom, jar, sourceJar, javadocJar)");
                     }
                 }
+                log.error("This bundle will not be deployable!");
+                throw new MavenExecutionException(
+                        "Missing sign files (asc files) detected, bundle is NOT valid", project.getFile());
             }
         }
         log.info("Created bundle at: " + bundleFile.getAbsolutePath());
+    }
+
+    private void generateChecksumsAndAddToZip(File sourceFile, String prefix, ZipOutputStream zipOut)
+            throws NoSuchAlgorithmException, IOException {
+        for (String algo : CHECKSUM_ALGOS) {
+            File checksumFile = generateChecksum(sourceFile, algo);
+            zipOut.putNextEntry(new ZipEntry(prefix + checksumFile.getName()));
+            Files.copy(checksumFile.toPath(), zipOut);
+            zipOut.closeEntry();
+        }
     }
 
     public File generateChecksum(File file, String algo) throws NoSuchAlgorithmException, IOException {

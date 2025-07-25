@@ -20,7 +20,6 @@ package org.apache.maven.plugins.deploy;
 
 import java.io.File;
 import java.util.Arrays;
-import java.util.List;
 
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
@@ -48,9 +47,6 @@ public class CentralReleaseMojo extends AbstractDeployMojo {
     @Parameter(property = "central.url", defaultValue = CENTRAL_PORTAL_URL)
     private String centralUrl;
 
-    @Parameter(defaultValue = "${reactorProjects}", required = true, readonly = true)
-    private List<MavenProject> reactorProjects;
-
     @Override
     public void execute() throws MojoExecutionException {
         File targetDir = new File(project.getBuild().getDirectory());
@@ -58,7 +54,7 @@ public class CentralReleaseMojo extends AbstractDeployMojo {
 
         try {
             BundleService bundleService = new BundleService(project, getLog());
-            bundleService.createZipBundle(bundleFile, reactorProjects);
+            bundleService.createZipBundle(bundleFile);
 
             CentralPortalClient client = new CentralPortalClient(username, password, centralUrl);
 
