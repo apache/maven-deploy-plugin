@@ -27,7 +27,8 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 
 /**
- * mvn deploy:bundle
+ * Can be reached with
+ * <code>mvn verify deploy:bundle</code>
  */
 @Mojo(name = "bundle", defaultPhase = LifecyclePhase.DEPLOY)
 public class CentralBundleMojo extends AbstractDeployMojo {

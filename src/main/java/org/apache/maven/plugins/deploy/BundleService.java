@@ -27,12 +27,14 @@ import java.nio.file.Files;
 import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import org.apache.maven.MavenExecutionException;
+import org.apache.maven.artifact.Artifact;
+import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
 
@@ -49,7 +51,7 @@ public class BundleService {
     static final List<String> CHECKSUM_ALGOS = Arrays.asList("MD5", "SHA-1", "SHA-256");
 
     /**
-     * This requires the "install" phase has been executed and gpg signing has been configured.
+     * This method requires that the "verify" phase has been executed and gpg signing has been configured.
      * e.g. mvn install deploy:bundle
      *
      * @param bundleFile the zip file to create
@@ -57,7 +59,7 @@ public class BundleService {
      * @throws NoSuchAlgorithmException if md5, sha-1 or sha-256 algorithms are not available in
      * the environment.
      */
-    public void createZipBundle(File bundleFile) throws IOException, NoSuchAlgorithmException, MavenExecutionException {
+    public void createZipBundle(File bundleFile) throws IOException, NoSuchAlgorithmException, MojoExecutionException {
         bundleFile.getParentFile().mkdirs();
         bundleFile.createNewFile();
         String groupId = project.getGroupId();
@@ -65,45 +67,46 @@ public class BundleService {
         String version = project.getVersion();
         String groupPath = groupId.replace('.', '/');
         String mavenPathPrefix = String.join("/", groupPath, artifactId, version) + "/";
+
+        List<File> artifactFiles = new ArrayList<>();
+        File artifactFile = project.getArtifact().getFile();
+        // Will be null for e.g., an aggregator project
+        if (artifactFile != null && artifactFile.exists()) {
+            artifactFiles.add(artifactFile);
+        }
+
+        // pom is not in getAttachedArtifacts so add it explicitly
+        File pomFile = new File(project.getBuild().getDirectory(), String.join("-", artifactId, version) + ".pom");
+        if (pomFile.exists()) {
+            artifactFiles.add(pomFile);
+        } else {
+            log.error("POM file " + pomFile + " does not exist (verify phase not reached)!");
+            // throw new MojoExecutionException("POM file " + pomFile + " does not exist!");
+        }
+        for (Artifact artifact : project.getAttachedArtifacts()) {
+            File file = artifact.getFile();
+            if (file.exists()) {
+                artifactFiles.add(artifact.getFile());
+            } else {
+                log.error("Artifact " + artifact.getId() + " does not exist!");
+            }
+        }
+
         try (ZipOutputStream zipOut = new ZipOutputStream(Files.newOutputStream(bundleFile.toPath()))) {
 
-            File artifactDir = new File(project.getBuild().getDirectory());
-            File[] files = artifactDir.listFiles(
-                    (dir, name) -> name.endsWith(".jar") || name.endsWith(".pom") || name.endsWith(".asc"));
-
-            int ascCount = 0;
-            if (files != null) {
-                for (File file : files) {
-                    zipOut.putNextEntry(new ZipEntry(mavenPathPrefix + file.getName()));
-                    Files.copy(file.toPath(), zipOut);
-                    zipOut.closeEntry();
-                    if (file.getName().endsWith(".asc")) {
-                        ascCount++;
-                        continue; // No checksums for asc files
-                    }
-                    generateChecksumsAndAddToZip(file, mavenPathPrefix, zipOut);
+            for (File file : artifactFiles) {
+                zipOut.putNextEntry(new ZipEntry(mavenPathPrefix + file.getName()));
+                Files.copy(file.toPath(), zipOut);
+                zipOut.closeEntry();
+                if (file.getName().endsWith(".asc")) {
+                    continue; // asc files has no checksums
                 }
-            }
-            // This is a bit crude, but there should be sign files for pom, jar, sourceJar, javadocJar
-            // unless the project is an aggregator
-            int expectedArtifactCount = 4;
-            if (project.getPackaging().equals("pom")) {
-                expectedArtifactCount = 1;
-            }
-            if (ascCount != expectedArtifactCount) {
-                log.warn("Expected " + expectedArtifactCount + " asc file(s) but found " + ascCount);
-                if (ascCount == 0) {
-                    log.error("The artifacts were not signed!");
-                } else {
-                    if (expectedArtifactCount == 1) {
-                        log.error("There should only be one asc file for the pom");
-                    } else {
-                        log.error("There should be 4 signed artifacts (pom, jar, sourceJar, javadocJar)");
-                    }
+                File signFile = new File(file.getAbsolutePath() + ".asc");
+                if (!signFile.exists()) {
+                    throw new MojoExecutionException(
+                            "The artifact " + file + " was not signed! " + signFile + " does not exists");
                 }
-                log.error("This bundle will not be deployable!");
-                throw new MavenExecutionException(
-                        "Missing sign files (asc files) detected, bundle is NOT valid", project.getFile());
+                generateChecksumsAndAddToZip(file, mavenPathPrefix, zipOut);
             }
         }
         log.info("Created bundle at: " + bundleFile.getAbsolutePath());
@@ -122,10 +125,12 @@ public class BundleService {
     public File generateChecksum(File file, String algo) throws NoSuchAlgorithmException, IOException {
         String extension = algo.toLowerCase().replace("-", "");
         File checksumFile = new File(file.getAbsolutePath() + "." + extension);
+        // It might have been generated externally. In that case, use that.
         if (checksumFile.exists()) {
             return checksumFile;
         }
 
+        // Create the checksum file
         MessageDigest digest = MessageDigest.getInstance(algo);
         try (InputStream is = Files.newInputStream(file.toPath());
                 OutputStream nullOut = new OutputStream() {

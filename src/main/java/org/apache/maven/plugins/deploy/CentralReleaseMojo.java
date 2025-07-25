@@ -19,6 +19,7 @@
 package org.apache.maven.plugins.deploy;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 
 import org.apache.maven.plugin.MojoExecutionException;
@@ -30,7 +31,8 @@ import org.apache.maven.project.MavenProject;
 import static org.apache.maven.plugins.deploy.CentralPortalClient.CENTRAL_PORTAL_URL;
 
 /**
- * mvn deploy:release
+ * Can be reached with
+ * <code>mvn verify deploy:release</code>
  */
 @Mojo(name = "release", defaultPhase = LifecyclePhase.DEPLOY)
 public class CentralReleaseMojo extends AbstractDeployMojo {
@@ -47,6 +49,9 @@ public class CentralReleaseMojo extends AbstractDeployMojo {
     @Parameter(property = "central.url", defaultValue = CENTRAL_PORTAL_URL)
     private String centralUrl;
 
+    @Parameter(defaultValue = "true", property = "autoDeploy")
+    private boolean autoDeploy;
+
     @Override
     public void execute() throws MojoExecutionException {
         File targetDir = new File(project.getBuild().getDirectory());
@@ -58,18 +63,24 @@ public class CentralReleaseMojo extends AbstractDeployMojo {
 
             CentralPortalClient client = new CentralPortalClient(username, password, centralUrl);
 
-            String deploymentId = client.upload(bundleFile);
-            if (deploymentId == null) {
-                throw new MojoExecutionException("Failed to upload bundle");
+            String deploymentId;
+            try {
+                deploymentId = client.upload(bundleFile, autoDeploy);
+                if (deploymentId == null) {
+                    throw new MojoExecutionException("Failed to upload bundle, no deployment id found");
+                }
+            } catch (IOException e) {
+                throw new MojoExecutionException("Failed to upload bundle", e);
             }
 
             getLog().info("Deployment ID: " + deploymentId);
+            Thread.sleep(5000);
             String status = client.getStatus(deploymentId);
 
             int retries = 10;
             while (!Arrays.asList("PUBLISHING", "PUBLISHED", "FAILED").contains(status) && retries-- > 0) {
                 getLog().info("Deploy status is " + status);
-                Thread.sleep(10000);
+                Thread.sleep(5000);
                 status = client.getStatus(deploymentId);
             }
 
