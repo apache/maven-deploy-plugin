@@ -182,6 +182,7 @@ public class DeployMojo extends AbstractDeployMojo {
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
+        getLog().info("Executing deploy mojo");
         State state;
         if (Boolean.parseBoolean(skip)
                 || ("releases".equals(skip) && !ArtifactUtils.isSnapshot(project.getVersion()))

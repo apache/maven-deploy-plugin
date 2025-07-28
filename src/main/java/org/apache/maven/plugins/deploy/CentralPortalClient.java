@@ -44,6 +44,7 @@ public class CentralPortalClient {
         this.username = username;
         this.password = password;
         this.publishUrl = (publishUrl != null && !publishUrl.trim().isEmpty()) ? publishUrl : CENTRAL_PORTAL_URL;
+        // System.out.println("Publish to Central Portal using url: " + publishUrl);
     }
 
     public String upload(File bundle, Boolean autoDeploy) throws IOException {
@@ -57,6 +58,7 @@ public class CentralPortalClient {
         URL url = new URL(deployUrl);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setDoOutput(true);
+        conn.setInstanceFollowRedirects(true);
         conn.setRequestMethod("POST");
         conn.setRequestProperty("Authorization", authHeader());
         conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
@@ -77,7 +79,7 @@ public class CentralPortalClient {
         }
 
         int status = conn.getResponseCode();
-        if (status != HttpURLConnection.HTTP_OK) {
+        if (status >= 400) {
             throw new IOException("Failed to upload: HTTP " + status);
         }
 
@@ -107,9 +109,13 @@ public class CentralPortalClient {
     public String getStatus(String deploymentId) throws IOException {
         URL url = new URL(publishUrl + "/publisher/status?id=" + deploymentId);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setInstanceFollowRedirects(true);
         conn.setRequestMethod("POST");
         conn.setRequestProperty("Authorization", authHeader());
-
+        int status = conn.getResponseCode();
+        if (status >= 400) {
+            throw new IOException("Failed to get status: HTTP " + status);
+        }
         try (InputStream in = conn.getInputStream()) {
             String responseBody = readFully(in);
             Pattern pattern = Pattern.compile("\"deploymentState\"\\s*:\\s*\"([^\"]+)\"");

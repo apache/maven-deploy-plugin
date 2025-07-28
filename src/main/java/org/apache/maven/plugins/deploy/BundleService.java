@@ -19,9 +19,11 @@
 package org.apache.maven.plugins.deploy;
 
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.security.DigestOutputStream;
@@ -34,9 +36,12 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import org.apache.maven.artifact.Artifact;
+import org.apache.maven.model.Model;
+import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
+import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
 public class BundleService {
 
@@ -52,7 +57,7 @@ public class BundleService {
 
     /**
      * This method requires that the "verify" phase has been executed and gpg signing has been configured.
-     * e.g. mvn install deploy:bundle
+     * e.g. mvn verify deploy:bundle
      *
      * @param bundleFile the zip file to create
      * @throws IOException if creating the zip file failed
@@ -78,10 +83,13 @@ public class BundleService {
         // pom is not in getAttachedArtifacts so add it explicitly
         File pomFile = new File(project.getBuild().getDirectory(), String.join("-", artifactId, version) + ".pom");
         if (pomFile.exists()) {
+            // Since it is the "raw" pom file that is published, not the effective pom, we must check the file,
+            // not the project. Also since the pom file is the signed one, we cannot change it to the effective pom.
+            validateForPublishing(pomFile);
             artifactFiles.add(pomFile);
         } else {
             log.error("POM file " + pomFile + " does not exist (verify phase not reached)!");
-            // throw new MojoExecutionException("POM file " + pomFile + " does not exist!");
+            throw new MojoExecutionException("POM file " + pomFile + " does not exist!");
         }
         for (Artifact artifact : project.getAttachedArtifacts()) {
             File file = artifact.getFile();
@@ -110,6 +118,38 @@ public class BundleService {
             }
         }
         log.info("Created bundle at: " + bundleFile.getAbsolutePath());
+    }
+
+    /**
+     * Validates that the following elements are present (required for publishing to central):
+     * <ul>
+     *  <li>Project description</li>
+     *  <li>License information</li>
+     *  <li>SCM URL</li>
+     *  <li>Developers information</li>
+     * </ul>
+     */
+    private void validateForPublishing(File pomFile) throws MojoExecutionException {
+        Model model = readPomFile(pomFile);
+        List<String> errs = new ArrayList<>();
+        if (model.getDescription() == null || model.getDescription().trim().isEmpty()) {
+            errs.add("description is missing");
+        }
+        if (model.getLicenses() == null || model.getLicenses().isEmpty()) {
+            errs.add("license is missing");
+        }
+        if (model.getScm() == null) {
+            errs.add("scm is missing");
+        } else if (model.getScm().getUrl() == null) {
+            errs.add("scm url is missing");
+        }
+        if (model.getDevelopers() == null || model.getDevelopers().isEmpty()) {
+            errs.add("developers is missing");
+        }
+
+        if (!errs.isEmpty()) {
+            throw new MojoExecutionException(pomFile + " is not valid for publishing: " + String.join(", ", errs));
+        }
     }
 
     private void generateChecksumsAndAddToZip(File sourceFile, String prefix, ZipOutputStream zipOut)
@@ -153,5 +193,16 @@ public class BundleService {
 
         Files.write(checksumFile.toPath(), sb.toString().getBytes(StandardCharsets.UTF_8));
         return checksumFile;
+    }
+
+    Model readPomFile(File pomFile) throws MojoExecutionException {
+        try {
+            MavenXpp3Reader reader = new MavenXpp3Reader();
+            try (Reader fileReader = new FileReader(pomFile)) {
+                return reader.read(fileReader);
+            }
+        } catch (XmlPullParserException | IOException e) {
+            throw new MojoExecutionException("Failed to parse POM file.", e);
+        }
     }
 }
