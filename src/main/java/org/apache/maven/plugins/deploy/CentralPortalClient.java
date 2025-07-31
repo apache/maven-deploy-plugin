@@ -141,4 +141,16 @@ public class CentralPortalClient {
         }
         return buffer.toString("UTF-8");
     }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public String getPublishUrl() {
+        return publishUrl;
+    }
 }

@@ -18,11 +18,15 @@
  */
 package org.apache.maven.plugins.deploy;
 
+import javax.inject.Inject;
+
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -38,6 +42,11 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.artifact.ProjectArtifact;
+import org.apache.maven.settings.Server;
+import org.apache.maven.settings.crypto.DefaultSettingsDecryptionRequest;
+import org.apache.maven.settings.crypto.SettingsDecrypter;
+import org.apache.maven.settings.crypto.SettingsDecryptionRequest;
+import org.apache.maven.settings.crypto.SettingsDecryptionResult;
 import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.deployment.DeployRequest;
 import org.eclipse.aether.repository.RemoteRepository;
@@ -70,7 +79,7 @@ public class DeployMojo extends AbstractDeployMojo {
      *
      * @since 2.8
      */
-    @Parameter(defaultValue = "false", property = "deployAtEnd")
+    @Parameter(defaultValue = "true", property = "deployAtEnd")
     private boolean deployAtEnd;
 
     /**
@@ -127,6 +136,15 @@ public class DeployMojo extends AbstractDeployMojo {
      */
     @Parameter(property = "maven.deploy.skip", defaultValue = "false")
     private String skip = Boolean.FALSE.toString();
+
+    @Parameter(property = "useCentralPortalApi", defaultValue = "true")
+    private boolean useCentralPortalApi;
+
+    @Parameter(defaultValue = "true", property = "autoDeploy")
+    private boolean autoDeploy;
+
+    @Inject
+    private SettingsDecrypter settingsDecrypter;
 
     /**
      * Set this to <code>true</code> to allow incomplete project processing. By default, such projects are forbidden
@@ -250,9 +268,14 @@ public class DeployMojo extends AbstractDeployMojo {
                 processProject(reactorProject, request);
             }
         }
-        // finally execute all deployments request, lets resolver to optimize deployment
-        for (DeployRequest request : requests.values()) {
-            deploy(request);
+        if (useCentralPortalApi) {
+            File zipBundle = createBundle(allProjectsUsingPlugin);
+            deployBundle(requests.keySet(), zipBundle);
+        } else {
+            // finally execute all deployments request, lets resolver to optimize deployment
+            for (DeployRequest request : requests.values()) {
+                deploy(request);
+            }
         }
     }
 
@@ -414,5 +437,69 @@ public class DeployMojo extends AbstractDeployMojo {
         }
 
         return repo;
+    }
+
+    protected File createBundle(List<MavenProject> allProjectsUsingPlugin) throws MojoExecutionException {
+        if (allProjectsUsingPlugin.isEmpty()) {
+            throw new MojoExecutionException("There are no deployments to process");
+        }
+        // We need the root project, project here will be the last submodule built.
+        MavenProject rootProject = project;
+        while (rootProject.getParent() != null) {
+            if (rootProject.getParent().getBasedir().exists()) {
+                rootProject = rootProject.getParent();
+            }
+        }
+        File targetDir = new File(rootProject.getBuild().getDirectory());
+        File bundleFile =
+                new File(targetDir, rootProject.getGroupId() + "-" + rootProject.getVersion() + "-bundle.zip");
+
+        try {
+            BundleService bundleService = new BundleService(rootProject, getLog());
+            bundleService.createZipBundle(bundleFile, allProjectsUsingPlugin);
+            getLog().info("Bundle created successfully: " + bundleFile);
+        } catch (Exception e) {
+            throw new MojoExecutionException("Failed to create bundle", e);
+        }
+        return bundleFile;
+    }
+
+    protected void deployBundle(Set<RemoteRepository> repos, File zipBundle) throws MojoExecutionException {
+
+        for (RemoteRepository repo : repos) {
+            String[] credentials = resolveCredentials(
+                    project.getDistributionManagement().getRepository().getId());
+            String username = credentials[0];
+            String password = credentials[1];
+            String deployUrl = repo.getUrl();
+            CentralPortalClient centralPortalClient = new CentralPortalClient(username, password, deployUrl);
+            getLog().info("Deploying " + zipBundle + " to " + centralPortalClient.getPublishUrl());
+            try {
+                centralPortalClient.upload(zipBundle, autoDeploy);
+            } catch (IOException e) {
+                // todo: should we retry?
+                throw new MojoExecutionException("Failed to deploy bundle to " + deployUrl, e);
+            }
+        }
+    }
+
+    private String[] resolveCredentials(String serverId) throws MojoExecutionException {
+        Server server = session.getSettings().getServer(serverId);
+        if (server == null) {
+            throw new MojoExecutionException("No <server> entry with id '" + serverId + "' in settings.xml");
+        }
+
+        SettingsDecryptionRequest decryptRequest = new DefaultSettingsDecryptionRequest(server);
+        SettingsDecryptionResult decryptResult = settingsDecrypter.decrypt(decryptRequest);
+        Server decryptedServer = decryptResult.getServer();
+
+        String username = decryptedServer.getUsername();
+        String password = decryptedServer.getPassword();
+
+        if (username == null || password == null) {
+            throw new MojoExecutionException("Missing credentials for server '" + serverId + "' in settings.xml");
+        }
+
+        return new String[] {username, password};
     }
 }

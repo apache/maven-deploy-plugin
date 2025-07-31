@@ -31,7 +31,10 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -56,6 +59,78 @@ public class BundleService {
     static final List<String> CHECKSUM_ALGOS = Arrays.asList("MD5", "SHA-1", "SHA-256");
 
     /**
+     * Create a mega bundle zip with the artifacts for all projects in this build..
+     * This method requires that the "verify" phase has been executed and gpg signing has been configured.
+     *
+     * @param bundleFile the zip file to create
+     * @throws IOException if creating the zip file failed
+     * @throws NoSuchAlgorithmException if md5, sha-1 or sha-256 algorithms are not available in
+     * the environment.
+     */
+    public void createZipBundle(File bundleFile, List<MavenProject> allProjectsUsingPlugin)
+            throws IOException, NoSuchAlgorithmException, MojoExecutionException {
+        bundleFile.getParentFile().mkdirs();
+        bundleFile.createNewFile();
+        log.info("Creating zip bundle at " + bundleFile.getAbsolutePath());
+
+        Map<String, List<File>> artifactFiles = new HashMap<>();
+        for (MavenProject project : allProjectsUsingPlugin) {
+            String groupId = project.getGroupId();
+            String artifactId = project.getArtifactId();
+            String version = project.getVersion();
+            String groupPath = groupId.replace('.', '/');
+            String mavenPathPrefix = String.join("/", groupPath, artifactId, version) + "/";
+            artifactFiles.computeIfAbsent(mavenPathPrefix, k -> new ArrayList<>());
+            File artifactFile = project.getArtifact().getFile();
+            // Will be null for e.g., an aggregator project
+            if (artifactFile != null && artifactFile.exists()) {
+                artifactFiles.get(mavenPathPrefix).add(artifactFile);
+            }
+            // pom is not in getAttachedArtifacts so add it explicitly
+            File pomFile = new File(project.getBuild().getDirectory(), String.join("-", artifactId, version) + ".pom");
+            if (pomFile.exists()) {
+                // Since it is the "raw" pom file that is published, not the effective pom, we must check the file,
+                // not the project. Also since the pom file is the signed one, we cannot change it to the effective pom.
+                validateForPublishing(pomFile);
+                artifactFiles.get(mavenPathPrefix).add(pomFile);
+            } else {
+                log.error("POM file " + pomFile + " does not exist (verify phase not reached)!");
+                throw new MojoExecutionException("POM file " + pomFile + " does not exist!");
+            }
+            for (Artifact artifact : project.getAttachedArtifacts()) {
+                File file = artifact.getFile();
+                if (file.exists()) {
+                    artifactFiles.get(mavenPathPrefix).add(artifact.getFile());
+                } else {
+                    log.error("Artifact " + artifact.getId() + " does not exist!");
+                }
+            }
+        }
+
+        try (ZipOutputStream zipOut = new ZipOutputStream(Files.newOutputStream(bundleFile.toPath()))) {
+
+            for (Map.Entry<String, List<File>> entry : artifactFiles.entrySet()) {
+                String mavenPathPrefix = entry.getKey();
+                for (File file : entry.getValue()) {
+                    zipOut.putNextEntry(new ZipEntry(mavenPathPrefix + file.getName()));
+                    Files.copy(file.toPath(), zipOut);
+                    zipOut.closeEntry();
+                    if (file.getName().endsWith(".asc")) {
+                        continue; // asc files has no checksums
+                    }
+                    File signFile = new File(file.getAbsolutePath() + ".asc");
+                    if (!signFile.exists()) {
+                        throw new MojoExecutionException(
+                                "The artifact " + file + " was not signed! " + signFile + " does not exists");
+                    }
+                    generateChecksumsAndAddToZip(file, mavenPathPrefix, zipOut);
+                }
+            }
+        }
+    }
+
+    /**
+     * Create a bundle zip with the artifacts for the current project only.
      * This method requires that the "verify" phase has been executed and gpg signing has been configured.
      * e.g. mvn verify deploy:bundle
      *
@@ -65,6 +140,8 @@ public class BundleService {
      * the environment.
      */
     public void createZipBundle(File bundleFile) throws IOException, NoSuchAlgorithmException, MojoExecutionException {
+        createZipBundle(bundleFile, Collections.singletonList(project));
+        /*
         bundleFile.getParentFile().mkdirs();
         bundleFile.createNewFile();
         String groupId = project.getGroupId();
@@ -118,6 +195,8 @@ public class BundleService {
             }
         }
         log.info("Created bundle at: " + bundleFile.getAbsolutePath());
+
+         */
     }
 
     /**
