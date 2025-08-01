@@ -28,9 +28,13 @@ import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.Files;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.logging.Log;
 
 public class CentralPortalClient {
 
@@ -39,12 +43,13 @@ public class CentralPortalClient {
     private final String username;
     private final String password;
     private final String publishUrl;
+    private final Log log;
 
-    public CentralPortalClient(String username, String password, String publishUrl) {
+    public CentralPortalClient(String username, String password, String publishUrl, Log log) {
         this.username = username;
         this.password = password;
         this.publishUrl = (publishUrl != null && !publishUrl.trim().isEmpty()) ? publishUrl : CENTRAL_PORTAL_URL;
-        // System.out.println("Publish to Central Portal using url: " + publishUrl);
+        this.log = log;
     }
 
     public String upload(File bundle, Boolean autoDeploy) throws IOException {
@@ -152,5 +157,48 @@ public class CentralPortalClient {
 
     public String getPublishUrl() {
         return publishUrl;
+    }
+
+    public void uploadAndCheck(File zipBundle, boolean autoDeploy) throws MojoExecutionException {
+        String deploymentId;
+        try {
+            deploymentId = upload(zipBundle, autoDeploy);
+            if (deploymentId == null) {
+                throw new MojoExecutionException("Failed to upload bundle, no deployment id found");
+            }
+        } catch (IOException e) {
+            throw new MojoExecutionException("Failed to upload bundle", e);
+        }
+
+        log.info("Deployment ID: " + deploymentId);
+        log.info("Waiting 10 seconds before checking status...");
+        try {
+            Thread.sleep(10000);
+            String status = getStatus(deploymentId);
+
+            int retries = 10;
+            while (!Arrays.asList("VALIDATED", "PUBLISHING", "PUBLISHED", "FAILED")
+                            .contains(status)
+                    && retries-- > 0) {
+                log.info("Deploy status is " + status);
+                Thread.sleep(5000);
+                status = getStatus(deploymentId);
+            }
+            switch (status) {
+                case "VALIDATED":
+                    log.info("Validated: the project is ready for publishing!");
+                    log.info("See https://central.sonatype.com/publishing/deployments for more info");
+                case "PUBLISHING":
+                    log.info("Published: Project is publishing on Central!");
+                    break;
+                case "PUBLISHED":
+                    log.info("Published successfully!");
+                    break;
+                default:
+                    throw new MojoExecutionException("Release failed with status: " + status);
+            }
+        } catch (InterruptedException | IOException e) {
+            throw new MojoExecutionException("Failed to check status", e);
+        }
     }
 }

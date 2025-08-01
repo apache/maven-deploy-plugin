@@ -22,7 +22,9 @@ import javax.inject.Inject;
 
 import java.io.File;
 import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -219,10 +221,14 @@ public class DeployMojo extends AbstractDeployMojo {
                         altReleaseDeploymentRepository,
                         altDeploymentRepository);
 
-                DeployRequest request = new DeployRequest();
-                request.setRepository(deploymentRepository);
-                processProject(project, request);
-                deploy(request);
+                if (useCentralPortalApi) {
+                    createAndDeploySingleProjectBundle(deploymentRepository);
+                } else {
+                    DeployRequest request = new DeployRequest();
+                    request.setRepository(deploymentRepository);
+                    processProject(project, request);
+                    deploy(request);
+                }
                 state = State.DEPLOYED;
             } else {
                 putPluginContextValue(DEPLOY_ALT_SNAPSHOT_DEPLOYMENT_REPOSITORY, altSnapshotDeploymentRepository);
@@ -450,9 +456,8 @@ public class DeployMojo extends AbstractDeployMojo {
                 rootProject = rootProject.getParent();
             }
         }
-        File targetDir = new File(rootProject.getBuild().getDirectory());
-        File bundleFile =
-                new File(targetDir, rootProject.getGroupId() + "-" + rootProject.getVersion() + "-bundle.zip");
+
+        File bundleFile = createBundleFile(rootProject);
 
         try {
             BundleService bundleService = new BundleService(rootProject, getLog());
@@ -464,22 +469,33 @@ public class DeployMojo extends AbstractDeployMojo {
         return bundleFile;
     }
 
-    protected void deployBundle(Set<RemoteRepository> repos, File zipBundle) throws MojoExecutionException {
+    File createBundleFile(MavenProject project) {
+        File targetDir = new File(project.getBuild().getDirectory());
+        return new File(targetDir, project.getGroupId() + "-" + project.getVersion() + "-bundle.zip");
+    }
 
+    private void createAndDeploySingleProjectBundle(RemoteRepository deploymentRepository)
+            throws MojoExecutionException {
+        BundleService bundleService = new BundleService(project, getLog());
+        File bundleFile = createBundleFile(project);
+        try {
+            bundleService.createZipBundle(bundleFile);
+        } catch (IOException | NoSuchAlgorithmException e) {
+            throw new MojoExecutionException("Failed to create zip bundle", e);
+        }
+        deployBundle(Collections.singleton(deploymentRepository), bundleFile);
+    }
+
+    protected void deployBundle(Set<RemoteRepository> repos, File zipBundle) throws MojoExecutionException {
         for (RemoteRepository repo : repos) {
             String[] credentials = resolveCredentials(
                     project.getDistributionManagement().getRepository().getId());
             String username = credentials[0];
             String password = credentials[1];
             String deployUrl = repo.getUrl();
-            CentralPortalClient centralPortalClient = new CentralPortalClient(username, password, deployUrl);
+            CentralPortalClient centralPortalClient = new CentralPortalClient(username, password, deployUrl, getLog());
             getLog().info("Deploying " + zipBundle + " to " + centralPortalClient.getPublishUrl());
-            try {
-                centralPortalClient.upload(zipBundle, autoDeploy);
-            } catch (IOException e) {
-                // todo: should we retry?
-                throw new MojoExecutionException("Failed to deploy bundle to " + deployUrl, e);
-            }
+            centralPortalClient.uploadAndCheck(zipBundle, autoDeploy);
         }
     }
 

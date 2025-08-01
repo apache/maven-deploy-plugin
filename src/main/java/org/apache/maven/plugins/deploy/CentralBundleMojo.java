@@ -27,7 +27,8 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 
 /**
- * Can be reached with
+ * This is useful for manual upload of the bundle file to central.
+ * It can be reached with
  * <code>mvn verify deploy:bundle</code>
  */
 @Mojo(name = "bundle", defaultPhase = LifecyclePhase.DEPLOY)
