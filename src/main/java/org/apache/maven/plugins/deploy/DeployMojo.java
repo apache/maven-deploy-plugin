@@ -139,7 +139,7 @@ public class DeployMojo extends AbstractDeployMojo {
     @Parameter(property = "maven.deploy.skip", defaultValue = "false")
     private String skip = Boolean.FALSE.toString();
 
-    @Parameter(property = "useCentralPortalApi", defaultValue = "true")
+    @Parameter(property = "useCentralPortalApi", defaultValue = "false")
     private boolean useCentralPortalApi;
 
     @Parameter(defaultValue = "true", property = "autoDeploy")
