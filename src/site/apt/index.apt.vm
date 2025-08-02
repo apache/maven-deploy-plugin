@@ -61,7 +61,7 @@ ${project.name}
 
 * Goals Overview
 
-  The deploy plugin has 2 goals:
+  The deploy plugin has 3 goals:
 
   * {{{./deploy-mojo.html}deploy:deploy}} is used to automatically install the
     artifact, its pom and the attached artifacts produced by a particular
@@ -72,6 +72,9 @@ ${project.name}
     along with its pom. In that case the artifact information can be taken from
     an optionally specified pomFile, but can be completed/overriden using the
     command line.
+
+  * {{{./deploy-bundle-mojo.html}deploy:bundle}} is used when you just want to create a
+    zip bundle that you want to inspect and then manually upload and publish on Maven Central.
 
    []
 
@@ -105,6 +108,8 @@ ${project.name}
   * {{{./examples/deploy-ssh-external.html}Deployment with external SSH}}
 
   * {{{./examples/deploy-network-issues.html}Workarounds when there are network issues}}
+
+  * {{{./examples/deploy-central.html}Deployment using the Central Portal API}}
 
   []
 
