@@ -31,7 +31,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -85,6 +84,11 @@ public class BundleService {
             // Will be null for e.g., an aggregator project
             if (artifactFile != null && artifactFile.exists()) {
                 artifactFiles.get(mavenPathPrefix).add(artifactFile);
+                File signFile = new File(artifactFile.getAbsolutePath() + ".asc");
+                if (!signFile.exists()) {
+                    throw new MojoExecutionException(artifactFile + " is not signed, " + signFile + " is missing");
+                }
+                artifactFiles.get(mavenPathPrefix).add(signFile);
             }
             // pom is not in getAttachedArtifacts so add it explicitly
             File pomFile = new File(project.getBuild().getDirectory(), String.join("-", artifactId, version) + ".pom");
@@ -92,11 +96,29 @@ public class BundleService {
                 // Since it is the "raw" pom file that is published, not the effective pom, we must check the file,
                 // not the project. Also since the pom file is the signed one, we cannot change it to the effective pom.
                 validateForPublishing(pomFile);
+
                 artifactFiles.get(mavenPathPrefix).add(pomFile);
+                File signFile = new File(pomFile.getAbsolutePath() + ".asc");
+                if (!signFile.exists()) {
+                    throw new MojoExecutionException(
+                            "POM file " + pomFile + " is not signed, " + signFile + " is missing");
+                }
+                artifactFiles.get(mavenPathPrefix).add(signFile);
+
             } else {
                 log.error("POM file " + pomFile + " does not exist (verify phase not reached)!");
                 throw new MojoExecutionException("POM file " + pomFile + " does not exist!");
             }
+            log.info("**********************************");
+            log.info("Artifacts are:");
+            project.getArtifacts().forEach(artifact -> {
+                log.info(artifact.getFile().getAbsolutePath());
+            });
+            log.info("Attached artifacts are:");
+            project.getAttachedArtifacts().forEach(artifact -> {
+                log.info(artifact.getFile().getAbsolutePath());
+            });
+            log.info("**********************************");
             for (Artifact artifact : project.getAttachedArtifacts()) {
                 File file = artifact.getFile();
                 if (file.exists()) {
@@ -104,20 +126,26 @@ public class BundleService {
                 } else {
                     log.error("Artifact " + artifact.getId() + " does not exist!");
                 }
+                File signFile = new File(file.getAbsolutePath() + ".asc");
+                if (!signFile.exists()) {
+                    throw new MojoExecutionException("File " + file + " is not signed, " + signFile + " is missing");
+                }
+                artifactFiles.get(mavenPathPrefix).add(signFile);
             }
         }
 
-        try (ZipOutputStream zipOut = new ZipOutputStream(Files.newOutputStream(bundleFile.toPath()))) {
+        log.info("Adding the following entries to the zip file");
+        log.info("********************************************");
 
+        try (ZipOutputStream zipOut = new ZipOutputStream(Files.newOutputStream(bundleFile.toPath()))) {
             for (Map.Entry<String, List<File>> entry : artifactFiles.entrySet()) {
                 String mavenPathPrefix = entry.getKey();
                 for (File file : entry.getValue()) {
-                    zipOut.putNextEntry(new ZipEntry(mavenPathPrefix + file.getName()));
-                    Files.copy(file.toPath(), zipOut);
-                    zipOut.closeEntry();
+                    addToZip(file, mavenPathPrefix, zipOut);
                     if (file.getName().endsWith(".asc")) {
                         continue; // asc files has no checksums
                     }
+                    // Ensure the artifact is signed before continuing to create and add checksums
                     File signFile = new File(file.getAbsolutePath() + ".asc");
                     if (!signFile.exists()) {
                         throw new MojoExecutionException(
@@ -140,8 +168,6 @@ public class BundleService {
      * the environment.
      */
     public void createZipBundle(File bundleFile) throws IOException, NoSuchAlgorithmException, MojoExecutionException {
-        createZipBundle(bundleFile, Collections.singletonList(project));
-        /*
         bundleFile.getParentFile().mkdirs();
         bundleFile.createNewFile();
         String groupId = project.getGroupId();
@@ -155,6 +181,11 @@ public class BundleService {
         // Will be null for e.g., an aggregator project
         if (artifactFile != null && artifactFile.exists()) {
             artifactFiles.add(artifactFile);
+            File signFile = new File(artifactFile.getAbsolutePath() + ".asc");
+            if (!signFile.exists()) {
+                throw new MojoExecutionException(artifactFile + " is not signed, " + signFile + " is missing");
+            }
+            artifactFiles.add(signFile);
         }
 
         // pom is not in getAttachedArtifacts so add it explicitly
@@ -164,6 +195,11 @@ public class BundleService {
             // not the project. Also since the pom file is the signed one, we cannot change it to the effective pom.
             validateForPublishing(pomFile);
             artifactFiles.add(pomFile);
+            File signFile = new File(pomFile.getAbsolutePath() + ".asc");
+            if (!signFile.exists()) {
+                throw new MojoExecutionException("POM file " + pomFile + " is not signed, " + signFile + " is missing");
+            }
+            artifactFiles.add(signFile);
         } else {
             log.error("POM file " + pomFile + " does not exist (verify phase not reached)!");
             throw new MojoExecutionException("POM file " + pomFile + " does not exist!");
@@ -172,6 +208,11 @@ public class BundleService {
             File file = artifact.getFile();
             if (file.exists()) {
                 artifactFiles.add(artifact.getFile());
+                File signFile = new File(file.getAbsolutePath() + ".asc");
+                if (!signFile.exists()) {
+                    throw new MojoExecutionException(file + " is not signed, " + signFile + " is missing");
+                }
+                artifactFiles.add(signFile);
             } else {
                 log.error("Artifact " + artifact.getId() + " does not exist!");
             }
@@ -180,9 +221,7 @@ public class BundleService {
         try (ZipOutputStream zipOut = new ZipOutputStream(Files.newOutputStream(bundleFile.toPath()))) {
 
             for (File file : artifactFiles) {
-                zipOut.putNextEntry(new ZipEntry(mavenPathPrefix + file.getName()));
-                Files.copy(file.toPath(), zipOut);
-                zipOut.closeEntry();
+                addToZip(file, mavenPathPrefix, zipOut);
                 if (file.getName().endsWith(".asc")) {
                     continue; // asc files has no checksums
                 }
@@ -195,8 +234,6 @@ public class BundleService {
             }
         }
         log.info("Created bundle at: " + bundleFile.getAbsolutePath());
-
-         */
     }
 
     /**
@@ -231,13 +268,18 @@ public class BundleService {
         }
     }
 
+    private void addToZip(File file, String prefix, ZipOutputStream zipOut) throws IOException {
+        log.info("addToZip  - " + file.getAbsolutePath());
+        zipOut.putNextEntry(new ZipEntry(prefix + file.getName()));
+        Files.copy(file.toPath(), zipOut);
+        zipOut.closeEntry();
+    }
+
     private void generateChecksumsAndAddToZip(File sourceFile, String prefix, ZipOutputStream zipOut)
             throws NoSuchAlgorithmException, IOException {
         for (String algo : CHECKSUM_ALGOS) {
             File checksumFile = generateChecksum(sourceFile, algo);
-            zipOut.putNextEntry(new ZipEntry(prefix + checksumFile.getName()));
-            Files.copy(checksumFile.toPath(), zipOut);
-            zipOut.closeEntry();
+            addToZip(checksumFile, prefix, zipOut);
         }
     }
 

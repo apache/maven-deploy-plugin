@@ -19,7 +19,7 @@
 import org.apache.maven.model.Model
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader
 // Generate jars
-"mvn verify".execute().waitFor()
+"mvn package".execute().waitFor()
 
 // Since we do not want to mess with external gpg config, we just create fake asc files
 signFile(copyPom("pom.xml", "target"))
@@ -40,6 +40,7 @@ def signJarFiles(String dir) {
 
 static def signFile(File file) {
   def ascFile = new File(file.getParentFile(), "${file.getName()}.asc")
+  println "Setup: creating signing file: $ascFile"
   ascFile << "fake signed"
 }
 
@@ -76,6 +77,12 @@ static def readPomInfo(File pomFile) {
 }
 
 def getTestDir() {
-  new File("${basedir}")
+  def bd
+  if (binding.hasVariable('basedir')) {
+    bd = binding.getVariable('basedir')
+  } else {
+    bd = System.getProperty("basedir")
+  }
+  bd instanceof File ? bd : new File(bd)
 }
 

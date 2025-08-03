@@ -19,6 +19,7 @@
 package org.apache.maven.plugins.deploy;
 
 import java.io.File;
+import java.util.List;
 
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
@@ -37,6 +38,12 @@ public class CentralBundleMojo extends AbstractDeployMojo {
     @Parameter(defaultValue = "${project}", readonly = true)
     private MavenProject project;
 
+    @Parameter(defaultValue = "${reactorProjects}", required = true, readonly = true)
+    private List<MavenProject> reactorProjects;
+
+    @Parameter(defaultValue = "true", property = "deployAtEnd")
+    private boolean deployAtEnd;
+
     @Override
     public void execute() throws MojoExecutionException {
         File targetDir = new File(project.getBuild().getDirectory());
@@ -44,7 +51,11 @@ public class CentralBundleMojo extends AbstractDeployMojo {
 
         try {
             BundleService bundleService = new BundleService(project, getLog());
-            bundleService.createZipBundle(bundleFile);
+            if (deployAtEnd) {
+                bundleService.createZipBundle(bundleFile, reactorProjects);
+            } else {
+                bundleService.createZipBundle(bundleFile);
+            }
             getLog().info("Bundle created successfully: " + bundleFile);
         } catch (Exception e) {
             throw new MojoExecutionException("Failed to create bundle", e);
