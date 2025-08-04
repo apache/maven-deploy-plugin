@@ -18,18 +18,10 @@
  */
 import org.apache.maven.model.Model
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader
-// Generate jars
-"mvn package".execute().waitFor()
 
 // Since we do not want to mess with external gpg config, we just create fake asc files
 signFile(copyPom("pom.xml", "target"))
-signFile(copyPom("common/pom.xml", "common/target"))
-signJarFiles("common/target")
-signFile(copyPom("subA/pom.xml", "subA/target"))
-signJarFiles("subA/target")
-
-// returning null is required by the invoker plugin
-return null
+signJarFiles("target")
 
 def signJarFiles(String dir) {
   def targetDir = new File(getTestDir(), dir)
@@ -76,13 +68,7 @@ static def readPomInfo(File pomFile) {
   }
 }
 
-def getTestDir() {
-  def bd
-  if (binding.hasVariable('basedir')) {
-    bd = binding.getVariable('basedir')
-  } else {
-    bd = System.getProperty("basedir")
-  }
-  bd instanceof File ? bd : new File(bd)
+File getTestDir() {
+  return project.basedir as File
 }
 

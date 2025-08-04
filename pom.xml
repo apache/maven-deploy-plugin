@@ -224,7 +224,7 @@ under the License.
                 <debug>true</debug>
                 <showErrors>true</showErrors>
                 <cloneProjectsTo>${project.build.directory}/it</cloneProjectsTo>
-                <cloneClean>false</cloneClean>
+                <cloneClean>true</cloneClean>
                 <pomIncludes>
                   <pomInclude>*/pom.xml</pomInclude>
                   <pomInclude>*/non-default-pom.xml</pomInclude>

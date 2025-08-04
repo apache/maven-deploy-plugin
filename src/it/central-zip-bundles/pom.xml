@@ -42,8 +42,8 @@
   </licenses>
   <developers>
     <developer>
-    <id>pnyfelt</id>
-    <name>Per Nyfelt</name>
+      <id>pnyfelt</id>
+      <name>Per Nyfelt</name>
     </developer>
   </developers>
   <scm>
@@ -121,8 +121,40 @@
     </pluginManagement>
     <plugins>
       <plugin>
+        <groupId>org.codehaus.gmavenplus</groupId>
+        <artifactId>gmavenplus-plugin</artifactId>
+        <version>1.13.1</version>
+        <executions>
+          <execution>
+            <id>simulate-signing</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>execute</goal>
+            </goals>
+            <configuration>
+              <scripts>
+                <source>fakeSign.groovy</source>
+              </scripts>
+            </configuration>
+          </execution>
+        </executions>
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.groovy</groupId>
+            <artifactId>groovy</artifactId>
+            <version>4.0.27</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.groovy</groupId>
+            <artifactId>groovy-ant</artifactId>
+            <version>4.0.27</version>
+          </dependency>
+        </dependencies>
+      </plugin>
+      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-deploy-plugin</artifactId>
+        <version>@project.version@</version>
       </plugin>
     </plugins>
   </build>

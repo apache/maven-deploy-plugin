@@ -50,4 +50,22 @@ Note, normally we would have the gpg plugin configured in the build, e.g:
   </executions>
 </plugin>
 ```
-But this requires some external setup so we just create fake asc files in this test.
+But this requires some external setup so we just create fake asc files in this test. 
+We cannot do it in setup.groovy as the invoker plugin uses <cloneClean>true</cloneClean> so
+instead we mimic what the sign plugin would do in a groovy script (fakeSign.groovy) that we
+call from the pom (and hence it is part of the build, which is also closer to reality).
+
+## Running only this test
+```shell
+mvn -Prun-its verify -Dinvoker.test=central-zip-bundles
+```
+
+## Running the test manually
+```shell
+CLASSPATH=$(find "$MAVEN_HOME/lib" -name "*.jar" | tr '\n' ':' | sed 's/:$//')
+groovy -cp $CLASSPATH -Dbasedir=$PWD setup.groovy
+mvn verify deploy:bundle
+groovy -cp $CLASSPATH -Dbasedir=$PWD verify.groovy
+```
+
+
