@@ -72,7 +72,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
-          <version>3.14.0</version>
+          <version>@mavenCompilerPluginVersion@</version>
           <configuration>
             <source>${maven.compiler.source}</source>
             <target>${maven.compiler.target}</target>
@@ -84,7 +84,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-deploy-plugin</artifactId>
-          <version>3.1.5-SNAPSHOT</version>
+          <version>@project.version@</version>
           <configuration>
             <useCentralPortalApi>true</useCentralPortalApi>
             <autoDeploy>false</autoDeploy>
@@ -94,7 +94,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-javadoc-plugin</artifactId>
-          <version>3.11.2</version>
+          <version>@mavenJavadocPluginVersion@</version>
           <executions>
             <execution>
               <id>attach-javadocs</id>
@@ -107,7 +107,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-source-plugin</artifactId>
-          <version>3.3.1</version>
+          <version>@mavenSourcePluginVersion@</version>
           <executions>
             <execution>
               <id>attach-sources</id>
@@ -121,6 +121,7 @@
     </pluginManagement>
     <plugins>
       <plugin>
+        <!-- simulate what the gpg plugin would do -->
         <groupId>org.codehaus.gmavenplus</groupId>
         <artifactId>gmavenplus-plugin</artifactId>
         <version>1.13.1</version>
@@ -154,7 +155,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-deploy-plugin</artifactId>
-        <version>@project.version@</version>
       </plugin>
     </plugins>
   </build>

@@ -20,13 +20,14 @@ import java.util.zip.ZipFile
 
 // Verify that bundles exists
 def aggregatorZip = new File(getBaseDir(), "target/publishing-example-parent-1.0.0-bundle.zip")
+assert aggregatorZip.exists()
+// We should NOT have any bundles for the sub modules
 def commonZip = new File(getBaseDir(), "common/target/publishing-example-common-1.0.0-bundle.zip")
 def subAZip = new File(getBaseDir(), "subA/target/publishing-example-subA-1.0.0-bundle.zip")
-assert aggregatorZip.exists()
-assert commonZip.exists()
-assert subAZip.exists()
+assert !commonZip.exists()
+assert !subAZip.exists()
 
-// Check the content of each file
+// Check the content of the bundle
 String groupId = "se.alipsa.maven.example"
 def expectedAggregatorEntries = { String artifactId, String version ->
   String basePath = "${groupId.replace('.', '/')}/${artifactId}/${version}/"
@@ -45,6 +46,11 @@ def expectedFullEntries = {String artifactId, String version ->
   String basePath = "${groupId.replace('.', '/')}/${artifactId}/${version}/"
   String artifactPath = basePath + artifactId + '-' + version
   [
+      artifactPath + '.pom',
+      artifactPath +'.pom.asc',
+      artifactPath +'.pom.md5',
+      artifactPath +'.pom.sha1',
+      artifactPath +'.pom.sha256',
       artifactPath + '.jar',
       artifactPath + '.jar.asc',
       artifactPath + '.jar.md5',
@@ -62,9 +68,10 @@ def expectedFullEntries = {String artifactId, String version ->
       artifactPath + '-javadoc.jar.sha256'
   ] + expectedAggregatorEntries(artifactId, version)
 }
+// Ensure aggregator, common and subA files exists
 checkZipContent(aggregatorZip, "publishing-example-parent", "1.0.0", expectedAggregatorEntries)
-checkZipContent(commonZip, "publishing-example-common", "1.0.0", expectedFullEntries)
-checkZipContent(subAZip, "publishing-example-subA", "1.0.0", expectedFullEntries)
+checkZipContent(aggregatorZip, "publishing-example-common", "1.0.0", expectedFullEntries)
+checkZipContent(aggregatorZip, "publishing-example-subA", "1.0.0", expectedFullEntries)
 
 static def checkZipContent(File zipFile, String artifactId, String version, Closure expectedMethod) {
 
