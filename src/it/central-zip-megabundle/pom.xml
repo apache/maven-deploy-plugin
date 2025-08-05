@@ -87,8 +87,8 @@
           <version>@project.version@</version>
           <configuration>
             <useCentralPortalApi>true</useCentralPortalApi>
-            <autoDeploy>false</autoDeploy>
             <deployAtEnd>true</deployAtEnd>
+            <uploadToCentral>false</uploadToCentral>
           </configuration>
         </plugin>
         <plugin>

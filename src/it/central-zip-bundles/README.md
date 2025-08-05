@@ -63,7 +63,6 @@ mvn -Prun-its verify -Dinvoker.test=central-zip-bundles
 ## Running the test manually
 ```shell
 CLASSPATH=$(find "$MAVEN_HOME/lib" -name "*.jar" | tr '\n' ':' | sed 's/:$//')
-groovy -cp $CLASSPATH -Dbasedir=$PWD setup.groovy
 mvn verify deploy:bundle
 groovy -cp $CLASSPATH -Dbasedir=$PWD verify.groovy
 ```

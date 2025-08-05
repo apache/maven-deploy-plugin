@@ -96,5 +96,6 @@ File getBaseDir() {
     // from command line (e.g. with -Dbasedir=$PWD)
     bd = System.getProperty("basedir")
   }
+  if (bd == null) bd = '.'
   bd instanceof File ? bd : new File(bd)
 }

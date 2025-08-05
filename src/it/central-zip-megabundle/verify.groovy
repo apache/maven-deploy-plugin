@@ -19,11 +19,13 @@
 import java.util.zip.ZipFile
 
 // Verify that bundles exists
-def aggregatorZip = new File(getBaseDir(), "target/publishing-example-parent-1.0.0-bundle.zip")
-assert aggregatorZip.exists()
+def megaZip = new File(getBaseDir(), "target/se.alipsa.maven.example-1.0.0-bundle.zip")
+assert megaZip.exists()
 // We should NOT have any bundles for the sub modules
+def aggregatorZip = new File(getBaseDir(), "target/publishing-example-parent-1.0.0-bundle.zip")
 def commonZip = new File(getBaseDir(), "common/target/publishing-example-common-1.0.0-bundle.zip")
 def subAZip = new File(getBaseDir(), "subA/target/publishing-example-subA-1.0.0-bundle.zip")
+assert !aggregatorZip.exists()
 assert !commonZip.exists()
 assert !subAZip.exists()
 
@@ -46,11 +48,6 @@ def expectedFullEntries = {String artifactId, String version ->
   String basePath = "${groupId.replace('.', '/')}/${artifactId}/${version}/"
   String artifactPath = basePath + artifactId + '-' + version
   [
-      artifactPath + '.pom',
-      artifactPath +'.pom.asc',
-      artifactPath +'.pom.md5',
-      artifactPath +'.pom.sha1',
-      artifactPath +'.pom.sha256',
       artifactPath + '.jar',
       artifactPath + '.jar.asc',
       artifactPath + '.jar.md5',
@@ -68,13 +65,23 @@ def expectedFullEntries = {String artifactId, String version ->
       artifactPath + '-javadoc.jar.sha256'
   ] + expectedAggregatorEntries(artifactId, version)
 }
-// Ensure aggregator, common and subA files exists
-checkZipContent(aggregatorZip, "publishing-example-parent", "1.0.0", expectedAggregatorEntries)
-checkZipContent(aggregatorZip, "publishing-example-common", "1.0.0", expectedFullEntries)
-checkZipContent(aggregatorZip, "publishing-example-subA", "1.0.0", expectedFullEntries)
+// Ensure aggregator, common and subA files exists in the mega bundle
+
+checkZipContent(megaZip, "publishing-example-parent", "1.0.0", expectedAggregatorEntries)
+checkZipContent(megaZip, "publishing-example-common", "1.0.0", expectedFullEntries)
+checkZipContent(megaZip, "publishing-example-subA", "1.0.0", expectedFullEntries)
+List<String> aggregatorEntries = expectedAggregatorEntries("publishing-example-parent", "1.0.0")
+List<String> commonEntries = expectedFullEntries("publishing-example-common", "1.0.0")
+List<String> subAEntries = expectedFullEntries("publishing-example-subA", "1.0.0")
+
+def actualEntries
+try (ZipFile zip = new ZipFile(megaZip)) {
+  actualEntries = zip.entries().collect { it.name }
+}
+int expectedEntries = aggregatorEntries.size() + commonEntries.size() + subAEntries.size()
+assert expectedEntries == actualEntries.size() : "Mismatch in number of entries in ZIP, expected $expectedEntries but was ${actualEntries.size()}"
 
 static def checkZipContent(File zipFile, String artifactId, String version, Closure expectedMethod) {
-
   println "Checking content of $zipFile"
   List<String> expectedEntries = expectedMethod(artifactId, version)
   List<String> actualEntries
@@ -85,8 +92,7 @@ static def checkZipContent(File zipFile, String artifactId, String version, Clos
     println "  - checking $it"
     assert actualEntries.contains(it) : "Expected entry not found in ZIP: $it"
   }
-  assert expectedEntries.size() == actualEntries.size() : "Mismatch in number of entries in ZIP"
-
+  return actualEntries
 }
 
 // make it possible to run this script from different locations (command line, gmavenplus, invoker)
@@ -102,6 +108,10 @@ File getBaseDir() {
   } else {
     // from command line (e.g. with -Dbasedir=$PWD)
     bd = System.getProperty("basedir")
+  }
+  if (bd == null) {
+    // invoked from command line and forgot to set property, assume we are in the project root
+    bd = "."
   }
   bd instanceof File ? bd : new File(bd)
 }

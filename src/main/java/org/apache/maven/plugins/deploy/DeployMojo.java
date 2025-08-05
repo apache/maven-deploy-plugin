@@ -139,11 +139,34 @@ public class DeployMojo extends AbstractDeployMojo {
     @Parameter(property = "maven.deploy.skip", defaultValue = "false")
     private String skip = Boolean.FALSE.toString();
 
+    /**
+     * If <code>false</code>, the deploy plugin will use the legacy deployment api.
+     * If <code>true</code>, the new central portal api will be used.
+     * Default is <code>false</code>.
+     * @since 3.1.5
+     */
     @Parameter(property = "useCentralPortalApi", defaultValue = "false")
     private boolean useCentralPortalApi;
 
+    /**
+     * If this is set to false, the bundle will be uploaded to central but not released (published).
+     * You can release it manually at <a href="https://central.sonatype.com/publishing/deployments">
+     * central deployments</a>. If true, the bundle will be uploaded, validated and then
+     * automatically released if it is a valid deployment bundle.
+     * Default is <code>true</code> i.e. upload and release automatically.
+     * @since 3.1.5
+     */
     @Parameter(defaultValue = "true", property = "autoDeploy")
     private boolean autoDeploy;
+
+    /**
+     * Set this to <code>false</code> to create the bundle but not upload it to central.
+     * This is useful if e.g. you want to check it and then manually upload the bundle.
+     * Default is <code>true</code> (i.e. upload it).
+     * @since 3.1.5
+     */
+    @Parameter(defaultValue = "true", property = "uploadToCentral")
+    private boolean uploadToCentral;
 
     @Inject
     private SettingsDecrypter settingsDecrypter;
@@ -202,7 +225,9 @@ public class DeployMojo extends AbstractDeployMojo {
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
-        getLog().info("Executing deploy mojo");
+        getLog().info("Executing deploy mojo: \n deployAtEnd = " + deployAtEnd
+                + "\n skip = " + skip + "\n useCentralPortalApi = " + useCentralPortalApi
+                + "\n autoDeploy = " + autoDeploy);
         State state;
         if (Boolean.parseBoolean(skip)
                 || ("releases".equals(skip) && !ArtifactUtils.isSnapshot(project.getVersion()))
@@ -251,6 +276,7 @@ public class DeployMojo extends AbstractDeployMojo {
     }
 
     private void deployAllAtOnce(List<MavenProject> allProjectsUsingPlugin) throws MojoExecutionException {
+        getLog().info("deployAllAtOnce");
         Map<RemoteRepository, DeployRequest> requests = new LinkedHashMap<>();
 
         // collect all arifacts from all modules to deploy
@@ -274,9 +300,13 @@ public class DeployMojo extends AbstractDeployMojo {
                 processProject(reactorProject, request);
             }
         }
-        if (useCentralPortalApi) {
+        if (useCentralPortalApi && deployAtEnd) {
+            getLog().info("deployAllAtOnce - create bundle");
             File zipBundle = createBundle(allProjectsUsingPlugin);
-            deployBundle(requests.keySet(), zipBundle);
+            if (uploadToCentral) {
+                getLog().info("deployAllAtOnce - deploy to central portal");
+                deployBundle(requests.keySet(), zipBundle);
+            }
         } else {
             // finally execute all deployments request, lets resolver to optimize deployment
             for (DeployRequest request : requests.values()) {
@@ -446,6 +476,7 @@ public class DeployMojo extends AbstractDeployMojo {
     }
 
     protected File createBundle(List<MavenProject> allProjectsUsingPlugin) throws MojoExecutionException {
+        getLog().info("createBundle");
         if (allProjectsUsingPlugin.isEmpty()) {
             throw new MojoExecutionException("There are no deployments to process");
         }
@@ -456,12 +487,15 @@ public class DeployMojo extends AbstractDeployMojo {
                 rootProject = rootProject.getParent();
             }
         }
-
-        File bundleFile = createBundleFile(rootProject);
+        // Locate the mega bundle in the top-level directory of the project
+        // If we use project, it will be the last module built which is semi-random.
+        File targetDir = new File(rootProject.getBuild().getDirectory());
+        File bundleFile =
+                new File(targetDir, rootProject.getGroupId() + "-" + rootProject.getVersion() + "-bundle.zip");
 
         try {
-            BundleService bundleService = new BundleService(rootProject, getLog());
-            bundleService.createZipBundle(bundleFile, allProjectsUsingPlugin);
+            Bundler bundler = new Bundler(rootProject, getLog());
+            bundler.createZipBundle(bundleFile, allProjectsUsingPlugin);
             getLog().info("Bundle created successfully: " + bundleFile);
         } catch (Exception e) {
             throw new MojoExecutionException("Failed to create bundle", e);
@@ -469,21 +503,20 @@ public class DeployMojo extends AbstractDeployMojo {
         return bundleFile;
     }
 
-    File createBundleFile(MavenProject project) {
-        File targetDir = new File(project.getBuild().getDirectory());
-        return new File(targetDir, project.getGroupId() + "-" + project.getVersion() + "-bundle.zip");
-    }
-
     private void createAndDeploySingleProjectBundle(RemoteRepository deploymentRepository)
             throws MojoExecutionException {
-        BundleService bundleService = new BundleService(project, getLog());
-        File bundleFile = createBundleFile(project);
+        getLog().info("createAndDeploySingleProjectBundle");
+        Bundler bundler = new Bundler(project, getLog());
+        File targetDir = new File(project.getBuild().getDirectory());
+        File bundleFile = new File(targetDir, project.getArtifactId() + "-" + project.getVersion() + "-bundle.zip");
         try {
-            bundleService.createZipBundle(bundleFile);
+            bundler.createZipBundle(bundleFile);
         } catch (IOException | NoSuchAlgorithmException e) {
             throw new MojoExecutionException("Failed to create zip bundle", e);
         }
-        deployBundle(Collections.singleton(deploymentRepository), bundleFile);
+        if (uploadToCentral) {
+            deployBundle(Collections.singleton(deploymentRepository), bundleFile);
+        }
     }
 
     protected void deployBundle(Set<RemoteRepository> repos, File zipBundle) throws MojoExecutionException {

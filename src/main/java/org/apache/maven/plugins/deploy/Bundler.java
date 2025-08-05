@@ -31,6 +31,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,12 +46,12 @@ import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 
-public class BundleService {
+public class Bundler {
 
     MavenProject project;
     Log log;
 
-    public BundleService(MavenProject project, Log log) {
+    public Bundler(MavenProject project, Log log) {
         this.project = project;
         this.log = log;
     }
@@ -109,16 +110,7 @@ public class BundleService {
                 log.error("POM file " + pomFile + " does not exist (verify phase not reached)!");
                 throw new MojoExecutionException("POM file " + pomFile + " does not exist!");
             }
-            log.info("**********************************");
-            log.info("Artifacts are:");
-            project.getArtifacts().forEach(artifact -> {
-                log.info(artifact.getFile().getAbsolutePath());
-            });
-            log.info("Attached artifacts are:");
-            project.getAttachedArtifacts().forEach(artifact -> {
-                log.info(artifact.getFile().getAbsolutePath());
-            });
-            log.info("**********************************");
+
             for (Artifact artifact : project.getAttachedArtifacts()) {
                 File file = artifact.getFile();
                 if (file.exists()) {
@@ -133,9 +125,6 @@ public class BundleService {
                 artifactFiles.get(mavenPathPrefix).add(signFile);
             }
         }
-
-        log.info("Adding the following entries to the zip file");
-        log.info("********************************************");
 
         try (ZipOutputStream zipOut = new ZipOutputStream(Files.newOutputStream(bundleFile.toPath()))) {
             for (Map.Entry<String, List<File>> entry : artifactFiles.entrySet()) {
@@ -168,6 +157,8 @@ public class BundleService {
      * the environment.
      */
     public void createZipBundle(File bundleFile) throws IOException, NoSuchAlgorithmException, MojoExecutionException {
+        createZipBundle(bundleFile, Collections.singletonList(project));
+        /*
         bundleFile.getParentFile().mkdirs();
         bundleFile.createNewFile();
         String groupId = project.getGroupId();
@@ -234,6 +225,8 @@ public class BundleService {
             }
         }
         log.info("Created bundle at: " + bundleFile.getAbsolutePath());
+
+         */
     }
 
     /**
@@ -269,7 +262,7 @@ public class BundleService {
     }
 
     private void addToZip(File file, String prefix, ZipOutputStream zipOut) throws IOException {
-        log.info("addToZip  - " + file.getAbsolutePath());
+        log.info("Create bundle, addToZip  - " + file.getAbsolutePath());
         zipOut.putNextEntry(new ZipEntry(prefix + file.getName()));
         Files.copy(file.toPath(), zipOut);
         zipOut.closeEntry();
