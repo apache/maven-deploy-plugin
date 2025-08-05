@@ -225,9 +225,6 @@ public class DeployMojo extends AbstractDeployMojo {
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
-        getLog().info("Executing deploy mojo: \n deployAtEnd = " + deployAtEnd
-                + "\n skip = " + skip + "\n useCentralPortalApi = " + useCentralPortalApi
-                + "\n autoDeploy = " + autoDeploy);
         State state;
         if (Boolean.parseBoolean(skip)
                 || ("releases".equals(skip) && !ArtifactUtils.isSnapshot(project.getVersion()))
@@ -276,7 +273,6 @@ public class DeployMojo extends AbstractDeployMojo {
     }
 
     private void deployAllAtOnce(List<MavenProject> allProjectsUsingPlugin) throws MojoExecutionException {
-        getLog().info("deployAllAtOnce");
         Map<RemoteRepository, DeployRequest> requests = new LinkedHashMap<>();
 
         // collect all arifacts from all modules to deploy
@@ -301,10 +297,8 @@ public class DeployMojo extends AbstractDeployMojo {
             }
         }
         if (useCentralPortalApi && deployAtEnd) {
-            getLog().info("deployAllAtOnce - create bundle");
             File zipBundle = createBundle(allProjectsUsingPlugin);
             if (uploadToCentral) {
-                getLog().info("deployAllAtOnce - deploy to central portal");
                 deployBundle(requests.keySet(), zipBundle);
             }
         } else {
@@ -476,19 +470,19 @@ public class DeployMojo extends AbstractDeployMojo {
     }
 
     protected File createBundle(List<MavenProject> allProjectsUsingPlugin) throws MojoExecutionException {
-        getLog().info("createBundle");
         if (allProjectsUsingPlugin.isEmpty()) {
-            throw new MojoExecutionException("There are no deployments to process");
+            throw new MojoExecutionException("There are no deployments to process so no bundle to create");
         }
-        // We need the root project, project here will be the last submodule built.
+        // Locate the mega bundle in the top-level directory of the project
+        // If we use project, it will be the last module built which is semi-random.
         MavenProject rootProject = project;
         while (rootProject.getParent() != null) {
             if (rootProject.getParent().getBasedir().exists()) {
                 rootProject = rootProject.getParent();
             }
         }
-        // Locate the mega bundle in the top-level directory of the project
-        // If we use project, it will be the last module built which is semi-random.
+        // Since it is a mega bundle (containing all sub projects),
+        // name the zip using groupId and version.
         File targetDir = new File(rootProject.getBuild().getDirectory());
         File bundleFile =
                 new File(targetDir, rootProject.getGroupId() + "-" + rootProject.getVersion() + "-bundle.zip");
@@ -505,7 +499,6 @@ public class DeployMojo extends AbstractDeployMojo {
 
     private void createAndDeploySingleProjectBundle(RemoteRepository deploymentRepository)
             throws MojoExecutionException {
-        getLog().info("createAndDeploySingleProjectBundle");
         Bundler bundler = new Bundler(project, getLog());
         File targetDir = new File(project.getBuild().getDirectory());
         File bundleFile = new File(targetDir, project.getArtifactId() + "-" + project.getVersion() + "-bundle.zip");

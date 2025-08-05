@@ -71,7 +71,6 @@ public class Bundler {
             throws IOException, NoSuchAlgorithmException, MojoExecutionException {
         bundleFile.getParentFile().mkdirs();
         bundleFile.createNewFile();
-        log.info("Creating zip bundle at " + bundleFile.getAbsolutePath());
 
         Map<String, List<File>> artifactFiles = new HashMap<>();
         for (MavenProject project : allProjectsUsingPlugin) {
@@ -158,75 +157,6 @@ public class Bundler {
      */
     public void createZipBundle(File bundleFile) throws IOException, NoSuchAlgorithmException, MojoExecutionException {
         createZipBundle(bundleFile, Collections.singletonList(project));
-        /*
-        bundleFile.getParentFile().mkdirs();
-        bundleFile.createNewFile();
-        String groupId = project.getGroupId();
-        String artifactId = project.getArtifactId();
-        String version = project.getVersion();
-        String groupPath = groupId.replace('.', '/');
-        String mavenPathPrefix = String.join("/", groupPath, artifactId, version) + "/";
-
-        List<File> artifactFiles = new ArrayList<>();
-        File artifactFile = project.getArtifact().getFile();
-        // Will be null for e.g., an aggregator project
-        if (artifactFile != null && artifactFile.exists()) {
-            artifactFiles.add(artifactFile);
-            File signFile = new File(artifactFile.getAbsolutePath() + ".asc");
-            if (!signFile.exists()) {
-                throw new MojoExecutionException(artifactFile + " is not signed, " + signFile + " is missing");
-            }
-            artifactFiles.add(signFile);
-        }
-
-        // pom is not in getAttachedArtifacts so add it explicitly
-        File pomFile = new File(project.getBuild().getDirectory(), String.join("-", artifactId, version) + ".pom");
-        if (pomFile.exists()) {
-            // Since it is the "raw" pom file that is published, not the effective pom, we must check the file,
-            // not the project. Also since the pom file is the signed one, we cannot change it to the effective pom.
-            validateForPublishing(pomFile);
-            artifactFiles.add(pomFile);
-            File signFile = new File(pomFile.getAbsolutePath() + ".asc");
-            if (!signFile.exists()) {
-                throw new MojoExecutionException("POM file " + pomFile + " is not signed, " + signFile + " is missing");
-            }
-            artifactFiles.add(signFile);
-        } else {
-            log.error("POM file " + pomFile + " does not exist (verify phase not reached)!");
-            throw new MojoExecutionException("POM file " + pomFile + " does not exist!");
-        }
-        for (Artifact artifact : project.getAttachedArtifacts()) {
-            File file = artifact.getFile();
-            if (file.exists()) {
-                artifactFiles.add(artifact.getFile());
-                File signFile = new File(file.getAbsolutePath() + ".asc");
-                if (!signFile.exists()) {
-                    throw new MojoExecutionException(file + " is not signed, " + signFile + " is missing");
-                }
-                artifactFiles.add(signFile);
-            } else {
-                log.error("Artifact " + artifact.getId() + " does not exist!");
-            }
-        }
-
-        try (ZipOutputStream zipOut = new ZipOutputStream(Files.newOutputStream(bundleFile.toPath()))) {
-
-            for (File file : artifactFiles) {
-                addToZip(file, mavenPathPrefix, zipOut);
-                if (file.getName().endsWith(".asc")) {
-                    continue; // asc files has no checksums
-                }
-                File signFile = new File(file.getAbsolutePath() + ".asc");
-                if (!signFile.exists()) {
-                    throw new MojoExecutionException(
-                            "The artifact " + file + " was not signed! " + signFile + " does not exists");
-                }
-                generateChecksumsAndAddToZip(file, mavenPathPrefix, zipOut);
-            }
-        }
-        log.info("Created bundle at: " + bundleFile.getAbsolutePath());
-
-         */
     }
 
     /**

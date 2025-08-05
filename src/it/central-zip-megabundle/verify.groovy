@@ -89,8 +89,8 @@ static def checkZipContent(File zipFile, String artifactId, String version, Clos
     actualEntries = zip.entries().collect { it.name }
   }
   expectedEntries.each {
-    println "  - checking $it"
-    assert actualEntries.contains(it) : "Expected entry not found in ZIP: $it"
+    //println "  - checking $it"
+    assert actualEntries.contains(it) : "Expected entry not found in $zipFile.name: $it"
   }
   return actualEntries
 }
