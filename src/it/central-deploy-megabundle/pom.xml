@@ -62,7 +62,7 @@
     <repository>
       <id>central</id>
       <name>Central Repository</name>
-      <url>https://central.sonatype.com/api/v1</url>
+      <url>http://localhost:8088/api/v1</url>
     </repository>
   </distributionManagement>
 
@@ -72,7 +72,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
-          <version>3.14.0</version>
+          <version>@mavenCompilerPluginVersion@</version>
           <configuration>
             <source>${maven.compiler.source}</source>
             <target>${maven.compiler.target}</target>
@@ -84,7 +84,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-deploy-plugin</artifactId>
-          <version>3.1.5-SNAPSHOT</version>
+          <version>@project.version@</version>
           <configuration>
             <useCentralPortalApi>true</useCentralPortalApi>
             <deployAtEnd>true</deployAtEnd>
@@ -94,7 +94,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-javadoc-plugin</artifactId>
-          <version>3.11.2</version>
+          <version>@mavenJavadocPluginVersion@</version>
           <executions>
             <execution>
               <id>attach-javadocs</id>
@@ -107,7 +107,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-source-plugin</artifactId>
-          <version>3.3.1</version>
+          <version>@mavenSourcePluginVersion@</version>
           <executions>
             <execution>
               <id>attach-sources</id>
@@ -121,18 +121,36 @@
     </pluginManagement>
     <plugins>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-gpg-plugin</artifactId>
-        <version>3.2.8</version>
+        <!-- simulate what the gpg plugin would do -->
+        <groupId>org.codehaus.gmavenplus</groupId>
+        <artifactId>gmavenplus-plugin</artifactId>
+        <version>1.13.1</version>
         <executions>
           <execution>
-            <id>sign-artifacts</id>
+            <id>simulate-signing</id>
             <phase>verify</phase>
             <goals>
-              <goal>sign</goal>
+              <goal>execute</goal>
             </goals>
+            <configuration>
+              <scripts>
+                <source>fakeSign.groovy</source>
+              </scripts>
+            </configuration>
           </execution>
         </executions>
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.groovy</groupId>
+            <artifactId>groovy</artifactId>
+            <version>4.0.27</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.groovy</groupId>
+            <artifactId>groovy-ant</artifactId>
+            <version>4.0.27</version>
+          </dependency>
+        </dependencies>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

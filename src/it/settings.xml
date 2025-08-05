@@ -52,4 +52,11 @@ under the License.
       </pluginRepositories>
     </profile>
   </profiles>
+  <servers>
+    <server>
+      <id>central</id>
+      <username>testUser</username>
+      <password>testPwd</password>
+    </server>
+  </servers>
 </settings>

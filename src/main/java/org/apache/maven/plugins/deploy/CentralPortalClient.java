@@ -85,6 +85,13 @@ public class CentralPortalClient {
 
         int status = conn.getResponseCode();
         if (status >= 400) {
+            log.error(deployUrl + " returned HTTP error code : " + status);
+            try (InputStream in = conn.getErrorStream()) {
+                String body = readFully(in);
+                log.error("Response body: " + body);
+            } catch (IOException e) {
+                log.error("Failed to read response body", e);
+            }
             throw new IOException("Failed to upload: HTTP " + status);
         }
 
@@ -119,9 +126,21 @@ public class CentralPortalClient {
         conn.setRequestProperty("Authorization", authHeader());
         int status = conn.getResponseCode();
         if (status >= 400) {
+            log.error(url + " returned HTTP error code : " + status);
+            try (InputStream in = conn.getErrorStream()) {
+                if (in != null) {
+                    String body = readFully(in);
+                    log.error("Response body: " + body);
+                }
+            } catch (IOException e) {
+                log.error("Failed to read response body", e);
+            }
             throw new IOException("Failed to get status: HTTP " + status);
         }
         try (InputStream in = conn.getInputStream()) {
+            if (in == null) {
+                return "no response body";
+            }
             String responseBody = readFully(in);
             Pattern pattern = Pattern.compile("\"deploymentState\"\\s*:\\s*\"([^\"]+)\"");
             Matcher matcher = pattern.matcher(responseBody);
@@ -134,7 +153,7 @@ public class CentralPortalClient {
     }
 
     private String authHeader() {
-        return "Bearer " + Base64.getEncoder().encodeToString((username + ":" + password).getBytes());
+        return "Bearer " + Base64.getEncoder().encodeToString((getUsername() + ":" + getPassword()).getBytes());
     }
 
     private String readFully(InputStream in) throws IOException {
@@ -144,7 +163,7 @@ public class CentralPortalClient {
         while ((bytesRead = in.read(chunk)) != -1) {
             buffer.write(chunk, 0, bytesRead);
         }
-        return buffer.toString("UTF-8");
+        return buffer.toString("UTF-8").trim();
     }
 
     public String getUsername() {
