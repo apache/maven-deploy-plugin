@@ -147,7 +147,7 @@ public class CentralPortalClient {
             if (matcher.find()) {
                 return matcher.group(1);
             } else {
-                return "deploymentState not found";
+                return "deploymentState not found in $responseBody";
             }
         }
     }

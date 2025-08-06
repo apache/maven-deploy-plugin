@@ -30,10 +30,16 @@ def server = new Server(port)
 def context = new ServletContextHandler(ServletContextHandler.SESSIONS)
 context.setContextPath("/")
 
-def bundles = new ConcurrentHashMap<String, byte[]>()
+def bundles = new ConcurrentHashMap<String, Bundle>()
 def mapper = new ObjectMapper()
+class Bundle {
+  byte[] content
+  String name
+  String publishingType
+  String fileName
+}
 
-// /api/v1 - Upload endpoint
+// /api/v1/publisher/upload - Upload endpoint
 context.addServlet(new ServletHolder(new HttpServlet() {
   protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
     try {
@@ -63,8 +69,14 @@ context.addServlet(new ServletHolder(new HttpServlet() {
       }
       def deploymentId = UUID.randomUUID().toString()
 
-      bundles.put(deploymentId, zipData)
-      println("Received bundle " + name)
+      Bundle bundle = new Bundle()
+      bundle.content = zipData
+      bundle.name = name
+      bundle.publishingType = publishingType
+      bundle.fileName = part.getSubmittedFileName()
+
+      bundles.put(deploymentId, bundle)
+      println("Central Simulator received bundle $name, publishingType: $publishingType")
 
       resp.setContentType("text/plain")
       resp.writer.write(deploymentId)
@@ -86,7 +98,7 @@ context.addServlet(new ServletHolder(new HttpServlet() {
   }
 }), "/api/v1/publisher/upload")
 
-// /publisher/status - Status check
+// /api/v1/publisher/status - Status check
 context.addServlet(new ServletHolder(new HttpServlet() {
   protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
     try {
@@ -97,20 +109,21 @@ context.addServlet(new ServletHolder(new HttpServlet() {
       }
 
       def deploymentId = req.getParameter("id")
-      def data = bundles.get(deploymentId)
+      def bundleInfo = bundles.get(deploymentId)
 
-      if (data == null) {
+      if (bundleInfo == null) {
         resp.writer.write("Deployment $deploymentId not found")
         resp.setStatus(404)
         return
       }
+      String deployState = bundleInfo.publishingType == "AUTOMATIC" ? "PUBLISHING" : "VALIDATED"
 
       resp.setContentType("application/json")
       Map<String, Object> deployments = new HashMap<>()
       deployments.put(deploymentId, [
           deploymentId: deploymentId,
-          deploymentState: "VALIDATED",
-          purls: ["pkg:maven/com.sonatype.central.example/example_java_project@0.0.7"]
+          deploymentState: deployState,
+          purls: ["pkg:maven/se.alipsa.maven.example/example_java_project@0.0.7"]
       ])
       resp.writer.write(mapper.writeValueAsString(deployments))
     } catch (Exception e) {
@@ -130,15 +143,24 @@ context.addServlet(new ServletHolder(new HttpServlet() {
   }
 }), "/api/v1/publisher/status")
 
-// /getBundleIds - get a json list of all uploaded bundles
+// /getBundleIds - get a json list of all uploaded bundles (test only api, not part of central api)
 context.addServlet(new ServletHolder(new HttpServlet() {
   protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
     resp.setContentType("application/json")
-    resp.writer.write(mapper.writeValueAsString(bundles.keys()))
+    List<Map<String, String>> bundleInfo = new ArrayList()
+    for (Map.Entry<String, Bundle> entry : bundles.entrySet()) {
+      bundleInfo << [
+          deploymentId: entry.key,
+          name: entry.value.name,
+          publishingType: entry.value.publishingType,
+          fileName: entry.value.fileName
+      ]
+    }
+    resp.writer.write(mapper.writeValueAsString(bundleInfo))
   }
-}), "/getBundleIds")
+}), "/getBundleInfo")
 
-// /getBundle - Retrieve the uploaded bundle by deploymentId
+// /getBundle - Retrieve the uploaded bundle by deploymentId (test only api, not part of central api)
 context.addServlet(new ServletHolder(new HttpServlet() {
   protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
     def id = req.getParameter("deploymentId")
@@ -150,11 +172,11 @@ context.addServlet(new ServletHolder(new HttpServlet() {
 
     resp.setContentType("application/zip")
     resp.setHeader("Content-Disposition", "attachment; filename=\"${id}.zip\"")
-    resp.outputStream.write(zip)
+    resp.outputStream.write(zip.content)
   }
 }), "/getBundle")
 
-// /shutdown - Shut down the server gracefully
+// /shutdown - Shut down the server gracefully (test only api, not part of central api)
 context.addServlet(new ServletHolder(new HttpServlet() {
   protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
     resp.writer.write("Shutting down...")
@@ -165,6 +187,7 @@ context.addServlet(new ServletHolder(new HttpServlet() {
   }
 }), "/shutdown")
 
+// catch all for everything else (test only api, not part of central api)
 context.addServlet(new ServletHolder(new HttpServlet() {
   protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
     // Log or print the unmatched request URI
@@ -186,4 +209,3 @@ private String authHeader() {
 
 server.setHandler(context)
 server.start()
-
