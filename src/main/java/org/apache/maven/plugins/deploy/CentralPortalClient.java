@@ -40,12 +40,16 @@ public class CentralPortalClient {
 
     static final String CENTRAL_PORTAL_URL = "https://central.sonatype.com/api/v1";
 
-    private final String username;
-    private final String password;
-    private final String publishUrl;
-    private final Log log;
+    private String username;
+    private String password;
+    private String publishUrl;
+    private Log log;
 
-    public CentralPortalClient(String username, String password, String publishUrl, Log log) {
+    public CentralPortalClient() {
+        this.publishUrl = CENTRAL_PORTAL_URL;
+    }
+
+    public void setVariables(String username, String password, String publishUrl, Log log) {
         this.username = username;
         this.password = password;
         this.publishUrl = (publishUrl != null && !publishUrl.trim().isEmpty()) ? publishUrl : CENTRAL_PORTAL_URL;
@@ -166,18 +170,6 @@ public class CentralPortalClient {
         return buffer.toString("UTF-8").trim();
     }
 
-    public String getUsername() {
-        return username;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public String getPublishUrl() {
-        return publishUrl;
-    }
-
     public void uploadAndCheck(File zipBundle, boolean autoDeploy) throws MojoExecutionException {
         String deploymentId;
         try {
@@ -219,5 +211,37 @@ public class CentralPortalClient {
         } catch (InterruptedException | IOException e) {
             throw new MojoExecutionException("Failed to check status", e);
         }
+    }
+
+    public Log getLog() {
+        return log;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public String getPublishUrl() {
+        return publishUrl;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public void setPublishUrl(String publishUrl) {
+        this.publishUrl = publishUrl;
+    }
+
+    public void setLog(Log log) {
+        this.log = log;
     }
 }

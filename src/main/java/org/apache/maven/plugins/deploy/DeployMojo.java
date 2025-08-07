@@ -200,6 +200,9 @@ public class DeployMojo extends AbstractDeployMojo {
     private static final String DEPLOY_ALT_DEPLOYMENT_REPOSITORY =
             DeployMojo.class.getName() + ".altDeploymentRepository";
 
+    // Make it a member variable to allow test to mock central portal client
+    private CentralPortalClient centralPortalClient = new CentralPortalClient();
+
     private void putState(State state) {
         getPluginContext().put(DEPLOY_PROCESSED_MARKER, state.name());
     }
@@ -275,7 +278,7 @@ public class DeployMojo extends AbstractDeployMojo {
     private void deployAllAtOnce(List<MavenProject> allProjectsUsingPlugin) throws MojoExecutionException {
         Map<RemoteRepository, DeployRequest> requests = new LinkedHashMap<>();
 
-        // collect all arifacts from all modules to deploy
+        // collect all artifacts from all modules to deploy
         // requests are grouped by used remote repository
         for (MavenProject reactorProject : allProjectsUsingPlugin) {
             Map<String, Object> pluginContext = session.getPluginContext(pluginDescriptor, reactorProject);
@@ -514,13 +517,13 @@ public class DeployMojo extends AbstractDeployMojo {
 
     protected void deployBundle(Set<RemoteRepository> repos, File zipBundle) throws MojoExecutionException {
         for (RemoteRepository repo : repos) {
-            String[] credentials = resolveCredentials(
-                    project.getDistributionManagement().getRepository().getId());
+            String[] credentials = resolveCredentials(repo.getId());
             String username = credentials[0];
             String password = credentials[1];
             String deployUrl = repo.getUrl();
-            CentralPortalClient centralPortalClient = new CentralPortalClient(username, password, deployUrl, getLog());
-            getLog().info("Deploying " + zipBundle + " to " + centralPortalClient.getPublishUrl());
+            centralPortalClient.setVariables(username, password, deployUrl, getLog());
+            getLog().info("Deploying " + zipBundle + " to " + repo.getId() + " at "
+                    + centralPortalClient.getPublishUrl());
             centralPortalClient.uploadAndCheck(zipBundle, autoDeploy);
         }
     }
@@ -543,5 +546,10 @@ public class DeployMojo extends AbstractDeployMojo {
         }
 
         return new String[] {username, password};
+    }
+
+    // Allow mockito to mock the centralPortalClient
+    void setCentralPortalClient(CentralPortalClient centralPortalClient) {
+        this.centralPortalClient = centralPortalClient;
     }
 }

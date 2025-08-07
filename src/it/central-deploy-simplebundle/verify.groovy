@@ -21,38 +21,41 @@ import groovy.json.JsonSlurper
 import java.nio.file.Files
 import java.util.zip.ZipFile
 
-String getBaseUrl() {
-  "http://localhost:8088"
-}
+String baseUrl = "http://localhost:8088"
 
-URLConnection conn = new URI("$baseUrl/getBundleInfo").toURL().openConnection()
+URLConnection conn = new URI("$baseUrl/getBundleIds").toURL().openConnection()
 conn.setRequestMethod("GET")
 conn.connect()
 def json = conn.inputStream.text
-List bundles = new JsonSlurper().parseText(json)
-println "verify: Received bundles: $bundles"
+def ids = new JsonSlurper().parseText(json)
+println "verify: Received bundle IDs: $ids"
 
-// Check that exactly 3 bundles was uploaded
-assert bundles.size() == 3 : "Expected exactly 3 bundles, but got ${bundles.size()}"
+// Check that exactly one bundle was uploaded
+assert ids.size() == 1 : "Expected exactly one bundle, but got ${ids.size()}"
+def deploymentId = ids[0]
+
+// download and check the zip content
+conn = new URI("$baseUrl/getBundle?deploymentId=$deploymentId").toURL().openConnection()
+conn.setRequestMethod("GET")
+conn.connect()
+def zip = Files.createTempFile("bundle", ".zip")
+def megaZip = zip.toFile()
+if (megaZip.exists()) {
+  megaZip.delete()
+}
+Files.copy(conn.inputStream, zip)
 
 String groupId = "se.alipsa.maven.example"
-def expectedAggregatorEntries = { String artifactId, String version ->
-  String basePath = "${groupId.replace('.', '/')}/${artifactId}/${version}/"
 
+def expectedEntries = {String artifactId, String version ->
+  String basePath = "${groupId.replace('.', '/')}/${artifactId}/${version}/"
   String artifactPath = basePath + artifactId + '-' + version
   [
       artifactPath + '.pom',
       artifactPath +'.pom.asc',
       artifactPath +'.pom.md5',
       artifactPath +'.pom.sha1',
-      artifactPath +'.pom.sha256'
-  ]
-}
-
-def expectedFullEntries = {String artifactId, String version ->
-  String basePath = "${groupId.replace('.', '/')}/${artifactId}/${version}/"
-  String artifactPath = basePath + artifactId + '-' + version
-  [
+      artifactPath +'.pom.sha256',
       artifactPath + '.jar',
       artifactPath + '.jar.asc',
       artifactPath + '.jar.md5',
@@ -68,37 +71,17 @@ def expectedFullEntries = {String artifactId, String version ->
       artifactPath + '-javadoc.jar.md5',
       artifactPath + '-javadoc.jar.sha1',
       artifactPath + '-javadoc.jar.sha256'
-  ] + expectedAggregatorEntries(artifactId, version)
+  ]
 }
 
-bundles.each { Map info ->
-  File zipFile = download(info.deploymentId as String)
-  String fileName = info.fileName
-  if (fileName.contains('parent')) {
-    checkZipContent(zipFile, "publishing-example-parent", "1.0.0", expectedAggregatorEntries)
-  } else if (fileName.contains("common")) {
-    checkZipContent(zipFile, "publishing-example-common", "1.0.0", expectedFullEntries)
-  } else if(fileName.contains("subA")) {
-    checkZipContent(zipFile, "publishing-example-subA", "1.0.0", expectedFullEntries)
-  } else {
-    throw new Exception("Unexpected bundle name: ${info.fileName}")
-  }
-  zipFile.deleteOnExit()
-}
+checkZipContent(megaZip, "publishing-example-simple", "1.0.0-SNAPSHOT", expectedEntries)
+List<String> entries = expectedEntries("publishing-example-simple", "1.0.0-SNAPSHOT")
 
-// download zip content
-File download(String deploymentId) {
-  def conn = new URI("$baseUrl/getBundle?deploymentId=$deploymentId").toURL().openConnection()
-  conn.setRequestMethod("GET")
-  conn.connect()
-  def zip = Files.createTempFile("bundle", ".zip")
-  def zipFile = zip.toFile()
-  if (zipFile.exists()) {
-    zipFile.delete()
-  }
-  Files.copy(conn.inputStream, zip)
-  zipFile
+def actualEntries
+try (ZipFile zipFile = new ZipFile(megaZip)) {
+  actualEntries = zipFile.entries().collect { it.name }
 }
+assert entries.size() == actualEntries.size() : "Mismatch in number of entries in ZIP, expected $expectedEntries but was ${actualEntries.size()}"
 
 static def checkZipContent(File zipFile, String artifactId, String version, Closure expectedMethod) {
   println "Checking content of $zipFile"
@@ -111,10 +94,10 @@ static def checkZipContent(File zipFile, String artifactId, String version, Clos
     //println "  - checking $it"
     assert actualEntries.contains(it) : "Expected entry not found in $zipFile.name: $it"
   }
-  assert expectedEntries.size() == actualEntries.size() : "Mismatch in number of entries in ZIP"
+  return actualEntries
 }
-
-
+// Cleanup
+megaZip.deleteOnExit()
 // Shut down the server
 try {
   conn = new URI("$baseUrl/shutdown").toURL().openConnection()

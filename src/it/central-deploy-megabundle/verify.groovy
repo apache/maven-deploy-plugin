@@ -116,6 +116,7 @@ try {
   conn.setRequestMethod("POST")
   conn.connect()
   println conn.inputStream.text
+  Thread.sleep(1000)
 } catch (Exception e) {
   println "Shutdown failed: ${e.message}"
 }
