@@ -204,6 +204,8 @@ public class DeployMojo extends AbstractDeployMojo {
     private CentralPortalClient centralPortalClient = new CentralPortalClient();
 
     private void putState(State state) {
+        getLog().info("putState: pluginContext@" + getPluginContext().hashCode() + " putting " + DEPLOY_PROCESSED_MARKER
+                + "=" + state.name());
         getPluginContext().put(DEPLOY_PROCESSED_MARKER, state.name());
     }
 
@@ -263,6 +265,7 @@ public class DeployMojo extends AbstractDeployMojo {
             }
         }
 
+        getLog().info("Setting state to " + state.name() + " for " + project.getArtifactId());
         putState(state);
 
         List<MavenProject> allProjectsUsingPlugin = getAllProjectsUsingPlugin();
@@ -315,9 +318,11 @@ public class DeployMojo extends AbstractDeployMojo {
     private boolean allProjectsMarked(List<MavenProject> allProjectsUsingPlugin) {
         for (MavenProject reactorProject : allProjectsUsingPlugin) {
             if (!hasState(reactorProject)) {
+                getLog().info(reactorProject.getArtifactId() + " not marked for deploy");
                 return false;
             }
         }
+        getLog().info("All projects marked for deploy");
         return true;
     }
 
@@ -326,6 +331,7 @@ public class DeployMojo extends AbstractDeployMojo {
         for (MavenProject reactorProject : reactorProjects) {
             if (hasExecution(reactorProject.getPlugin("org.apache.maven.plugins:maven-deploy-plugin"))) {
                 result.add(reactorProject);
+                getLog().info(reactorProject.getArtifactId() + " added to All projects using plugin");
             }
         }
         return result;
@@ -507,6 +513,7 @@ public class DeployMojo extends AbstractDeployMojo {
         File bundleFile = new File(targetDir, project.getArtifactId() + "-" + project.getVersion() + "-bundle.zip");
         try {
             bundler.createZipBundle(bundleFile);
+            getLog().info("Bundle created successfully: " + bundleFile);
         } catch (IOException | NoSuchAlgorithmException e) {
             throw new MojoExecutionException("Failed to create zip bundle", e);
         }

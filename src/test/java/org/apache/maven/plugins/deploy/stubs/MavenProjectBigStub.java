@@ -31,6 +31,7 @@ import org.apache.maven.model.Build;
 import org.apache.maven.model.DeploymentRepository;
 import org.apache.maven.model.DistributionManagement;
 import org.apache.maven.model.Plugin;
+import org.apache.maven.model.PluginExecution;
 
 public class MavenProjectBigStub extends org.apache.maven.plugin.testing.stubs.MavenProjectStub {
     private ArtifactRepository deploymentRepository;
@@ -83,6 +84,11 @@ public class MavenProjectBigStub extends org.apache.maven.plugin.testing.stubs.M
     public Build getBuild() {
         if (build == null) {
             Plugin plugin = new Plugin();
+            plugin.setGroupId("org.apache.maven.plugins");
+            plugin.setArtifactId("maven-deploy-plugin");
+            PluginExecution pluginExecution = new PluginExecution();
+            pluginExecution.setGoals(Collections.singletonList("deploy"));
+            plugin.setExecutions(Collections.singletonList(pluginExecution));
             Build bld = new Build();
             bld.setPlugins(Collections.singletonList(plugin));
             bld.setDirectory("target");
