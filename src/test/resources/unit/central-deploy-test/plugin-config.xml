@@ -17,6 +17,10 @@ specific language governing permissions and limitations
 under the License.
 -->
 <project>
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.apache.maven.test</groupId>
+  <artifactId>central-deploy-test</artifactId>
+  <version>1.0.0</version>
   <build>
     <plugins>
       <plugin>

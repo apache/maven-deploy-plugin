@@ -192,7 +192,7 @@ public class Bundler {
     }
 
     private void addToZip(File file, String prefix, ZipOutputStream zipOut) throws IOException {
-        log.info("Create bundle, addToZip  - " + file.getAbsolutePath());
+        log.debug("Create bundle, addToZip  - " + file.getAbsolutePath());
         zipOut.putNextEntry(new ZipEntry(prefix + file.getName()));
         Files.copy(file.toPath(), zipOut);
         zipOut.closeEntry();

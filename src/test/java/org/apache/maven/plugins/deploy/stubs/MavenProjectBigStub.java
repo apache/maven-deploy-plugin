@@ -81,12 +81,13 @@ public class MavenProjectBigStub extends org.apache.maven.plugin.testing.stubs.M
 
     @Override
     public Build getBuild() {
-        if (build != null) {
-            return build;
+        if (build == null) {
+            Plugin plugin = new Plugin();
+            Build bld = new Build();
+            bld.setPlugins(Collections.singletonList(plugin));
+            bld.setDirectory("target");
+            this.build = bld;
         }
-        Plugin plugin = new Plugin();
-        Build build = new Build();
-        build.setPlugins(Collections.singletonList(plugin));
         return build;
     }
 
