@@ -45,6 +45,7 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
+import org.eclipse.aether.util.ChecksumUtils;
 
 public class Bundler {
 
@@ -200,43 +201,24 @@ public class Bundler {
 
     private void generateChecksumsAndAddToZip(File sourceFile, String prefix, ZipOutputStream zipOut)
             throws NoSuchAlgorithmException, IOException {
-        for (String algo : CHECKSUM_ALGOS) {
-            File checksumFile = generateChecksum(sourceFile, algo);
+        for (File checksumFile : generateChecksums(sourceFile, CHECKSUM_ALGOS)) {
             addToZip(checksumFile, prefix, zipOut);
         }
     }
 
-    public File generateChecksum(File file, String algo) throws NoSuchAlgorithmException, IOException {
-        String extension = algo.toLowerCase().replace("-", "");
-        File checksumFile = new File(file.getAbsolutePath() + "." + extension);
-        // It might have been generated externally. In that case, use that.
-        if (checksumFile.exists()) {
-            return checksumFile;
-        }
-
-        // Create the checksum file
-        MessageDigest digest = MessageDigest.getInstance(algo);
-        try (InputStream is = Files.newInputStream(file.toPath());
-                OutputStream nullOut = new OutputStream() {
-                    @Override
-                    public void write(int b) {}
-                };
-                DigestOutputStream dos = new DigestOutputStream(nullOut, digest)) {
-
-            byte[] buffer = new byte[8192];
-            int bytesRead;
-            while ((bytesRead = is.read(buffer)) != -1) {
-                dos.write(buffer, 0, bytesRead);
+    public List<File> generateChecksums(File file, List<String> algos) throws IOException {
+        Map<String, Object> results = ChecksumUtils.calc(file, algos);
+        List<File> checkSumFiles = new ArrayList<>();
+        for (Map.Entry<String, Object> entry : results.entrySet()) {
+            String extension = entry.getKey().toLowerCase().replace("-", "");
+            File checksumFile = new File(file.getAbsolutePath() + "." + extension);
+            log.info("generateChecksums: " + extension);
+            if (!checksumFile.exists()) {
+                Files.write(checksumFile.toPath(), entry.getValue().toString().getBytes(StandardCharsets.UTF_8));
             }
+            checkSumFiles.add(checksumFile);
         }
-
-        StringBuilder sb = new StringBuilder();
-        for (byte b : digest.digest()) {
-            sb.append(String.format("%02x", b));
-        }
-
-        Files.write(checksumFile.toPath(), sb.toString().getBytes(StandardCharsets.UTF_8));
-        return checksumFile;
+        return checkSumFiles;
     }
 
     Model readPomFile(File pomFile) throws MojoExecutionException {
