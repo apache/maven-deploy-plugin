@@ -14,20 +14,16 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 -->
-# maven-central-publishing-example
+# central-deploy-simplebundle
 
-This is a multimodule example showing deployment to maven central 
+This is a basic example showing deployment to maven central 
 using the new central publishing rest api.
 
-The maven-deploy-plugin used is a [modified fork](https://github.com/perNyfelt/maven-deploy-plugin/tree/add_central_support) of the apache maven deploy plugin.
 
 The project consist of 
-- an aggregator
-- a common sub module
-- two sub modules that each depends on the common submodule
+- a main pom that produces a jar, javadoc and sources
 
-Each module (including the main aggregator) will be deployed separately.
-I.e. when deploying the whole project, 1 zip file will be created and uploaded to central.
+When deploying the whole project, 1 zip file will be created and uploaded to central.
 
 ## Running only this test
 ```shell
@@ -36,7 +32,12 @@ mvn -Prun-its verify -Dinvoker.test=central-deploy-simplebundle
 
 ## Running the test manually
 ```shell
+# copy resources
+mvn -Prun-its verify -Dinvoker.test=central-deploy-simplebundle
+cd target/it/central-deploy-bundles
 CLASSPATH=$(find "$MAVEN_HOME/lib" -name "*.jar" | tr '\n' ':' | sed 's/:$//')
-mvn verify deploy:bundle
+CLASSPATH=$CLASSPATH:$(./addDependencies.groovy)
+groovy -cp $CLASSPATH -Dbasedir=$PWD setup.groovy &
+mvn --settings ../../../src/it/settings.xml deploy
 groovy -cp $CLASSPATH -Dbasedir=$PWD verify.groovy
 ```

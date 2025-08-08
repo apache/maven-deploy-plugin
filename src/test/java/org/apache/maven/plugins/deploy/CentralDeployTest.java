@@ -26,6 +26,7 @@ import java.nio.file.Files;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.zip.ZipFile;
 
@@ -148,7 +149,7 @@ public class CentralDeployTest extends AbstractMojoTestCase {
         setVariableValueToObject(mojo, "deployAtEnd", deployAtEnd);
 
         centralPortalClient = mock(CentralPortalClient.class);
-        String fakeDeploymentId = "deployment-123";
+        String fakeDeploymentId = "deployment-" + subDirName;
         when(centralPortalClient.upload(any(File.class), anyBoolean())).thenReturn(fakeDeploymentId);
         String status = autoDeploy ? "PUBLISHING" : "VALIDATED";
         when(centralPortalClient.getStatus(fakeDeploymentId)).thenReturn(status);
@@ -176,14 +177,14 @@ public class CentralDeployTest extends AbstractMojoTestCase {
     }
 
     // (5) Negative test: missing .asc files should fail
-    public void testCentralPortalFailsIfSignatureMissing() throws Exception {
+    public void testRainySignatureMissing() throws Exception {
         setVariableValueToObject(mojo, "useCentralPortalApi", true);
         setVariableValueToObject(mojo, "autoDeploy", true);
         setVariableValueToObject(mojo, "uploadToCentral", true);
         setVariableValueToObject(mojo, "deployAtEnd", true);
 
         centralPortalClient = mock(CentralPortalClient.class);
-        String fakeDeploymentId = "deployment-123";
+        String fakeDeploymentId = "deployment-5";
         when(centralPortalClient.upload(any(File.class), anyBoolean())).thenReturn(fakeDeploymentId);
         when(centralPortalClient.getStatus(fakeDeploymentId)).thenReturn("PUBLISHING");
         when(centralPortalClient.getPublishUrl()).thenReturn(SERVER_URL);
@@ -200,12 +201,55 @@ public class CentralDeployTest extends AbstractMojoTestCase {
         File targetSubDir = new File(getBasedir(), project.getBuild().getDirectory() + "/central-deploy-test-5");
         project.getBuild().setDirectory(targetSubDir.getAbsolutePath());
         createAndAttachFakeSignedArtifacts(targetSubDir);
+        // Remove the pom sign file
         new File(targetSubDir, ARTIFACT_ID + "-" + VERSION + ".pom.asc").delete();
 
         MojoExecutionException thrown = assertThrows(MojoExecutionException.class, () -> mojo.execute());
         assertTrue(
-                "Expected MojoExecutionException to be Failed to create bundle but was " + thrown.toString(),
-                thrown.getMessage().contains("Failed to create bundle"));
+                "Expected MojoExecutionException to be 'POM file [pomFile] is not signed, [pomFile].asc is missing' but was "
+                        + thrown.toString(),
+                thrown.getMessage().contains("pom is not signed,")
+                        && thrown.getMessage().contains(".asc is missing"));
+    }
+
+    // (6) Negative test: missing javadoc files should fail
+    public void testRainyJavadocMissing() throws Exception {
+        setVariableValueToObject(mojo, "useCentralPortalApi", true);
+        setVariableValueToObject(mojo, "autoDeploy", false);
+        setVariableValueToObject(mojo, "uploadToCentral", false);
+        setVariableValueToObject(mojo, "deployAtEnd", false);
+
+        centralPortalClient = mock(CentralPortalClient.class);
+        String fakeDeploymentId = "deployment-6";
+        when(centralPortalClient.upload(any(File.class), anyBoolean())).thenReturn(fakeDeploymentId);
+        when(centralPortalClient.getStatus(fakeDeploymentId)).thenReturn("PUBLISHING");
+        when(centralPortalClient.getPublishUrl()).thenReturn(SERVER_URL);
+        setVariableValueToObject(mojo, "centralPortalClient", centralPortalClient);
+
+        Artifact projectArtifact = createProjectArtifact();
+
+        project.setArtifact(projectArtifact);
+        project.setGroupId(GROUP_ID);
+        project.setArtifactId(ARTIFACT_ID);
+        project.setVersion(VERSION);
+
+        // create a subdir under target to isolate tests from each other
+        File targetSubDir = new File(getBasedir(), project.getBuild().getDirectory() + "/central-deploy-test-6");
+        project.getBuild().setDirectory(targetSubDir.getAbsolutePath());
+        createAndAttachFakeSignedArtifacts(targetSubDir);
+        // Remove the javadoc files
+        for (File file : Objects.requireNonNull(targetSubDir.listFiles())) {
+            if (file.getName().contains("-javadoc.")) {
+                assertTrue(file.delete());
+            }
+        }
+
+        MojoExecutionException thrown = assertThrows(MojoExecutionException.class, () -> mojo.execute());
+        assertTrue(
+                "Expected MojoExecutionException to be 'File [javadocFile] is not signed, [javadocFile].asc is missing' but was "
+                        + thrown.toString(),
+                thrown.getMessage().contains(" is not signed,")
+                        && thrown.getMessage().contains(".asc is missing"));
     }
 
     private Artifact createProjectArtifact() {

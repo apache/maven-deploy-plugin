@@ -14,12 +14,10 @@
  See the License for the specific language governing permissions and
  limitations under the License.
 -->
-# maven-central-publishing-example
+# central-zip-bundles
 
-This is a multimodule example showing deployment to maven central 
+This is a multimodule example showing the creation of the zip bundle (for deployment to maven central) 
 using the new central publishing rest api.
-
-The maven-deploy-plugin used is a [modified fork](https://github.com/perNyfelt/maven-deploy-plugin/tree/add_central_support) of the apache maven deploy plugin.
 
 The project consist of 
 - an aggregator
@@ -50,10 +48,10 @@ Note, normally we would have the gpg plugin configured in the build, e.g:
   </executions>
 </plugin>
 ```
-But this requires some external setup so we just create fake asc files in this test. 
-We cannot do it in setup.groovy as the invoker plugin uses <cloneClean>true</cloneClean> so
-instead we mimic what the sign plugin would do in a groovy script (fakeSign.groovy) that we
-call from the pom (and hence it is part of the build, which is also closer to reality).
+But this requires some external setup so we just create fake asc files in this test using a
+a groovy script. We cannot do it in setup.groovy as the invoker plugin uses <cloneClean>true</cloneClean> 
+config, so instead we mimic what the sign plugin would do in another groovy script (fakeSign.groovy) 
+that we call from the pom (and hence it is part of the build, which is also closer to reality).
 
 ## Running only this test
 ```shell
@@ -63,7 +61,7 @@ mvn -Prun-its verify -Dinvoker.test=central-zip-bundles
 ## Running the test manually
 ```shell
 CLASSPATH=$(find "$MAVEN_HOME/lib" -name "*.jar" | tr '\n' ':' | sed 's/:$//')
-mvn verify deploy:bundle
+mvn deploy
 groovy -cp $CLASSPATH -Dbasedir=$PWD verify.groovy
 ```
 

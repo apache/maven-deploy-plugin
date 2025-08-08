@@ -500,6 +500,8 @@ public class DeployMojo extends AbstractDeployMojo {
             Bundler bundler = new Bundler(rootProject, getLog());
             bundler.createZipBundle(bundleFile, allProjectsUsingPlugin);
             getLog().info("Bundle created successfully: " + bundleFile);
+        } catch (MojoExecutionException e) {
+            throw e;
         } catch (Exception e) {
             throw new MojoExecutionException("Failed to create bundle", e);
         }
