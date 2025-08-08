@@ -37,6 +37,7 @@ import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.DeploymentRepository;
 import org.apache.maven.model.DistributionManagement;
+import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 import org.apache.maven.plugins.deploy.stubs.MavenProjectBigStub;
 import org.apache.maven.project.DefaultMavenProjectHelper;
@@ -46,6 +47,7 @@ import org.apache.maven.settings.Settings;
 import org.eclipse.aether.DefaultRepositorySystemSession;
 import org.mockito.MockitoAnnotations;
 
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
@@ -117,41 +119,43 @@ public class CentralDeployTest extends AbstractMojoTestCase {
      * (1.0) autoDeploy = true, uploadToCentral = true, deployAtEnd = false
      * Individual bundles (even when there is only a simple project) are named after the artifactId
      */
-    public void testCentralPortalAutoDeployTrueUploadToCentralTrueDeployAtEndFalse() throws Exception {
-        autoDeployTrueUploadToCentralTrue(BASE_NAME + "-bundle.zip", false, "test-deployAtEnd-false");
+    public void testCentralPortalAutoDeployTrueDeployAtEndFalse() throws Exception {
+        sunnyDayTest(BASE_NAME + "-bundle.zip", true, false, "central-deploy-test-1");
     }
 
     /**
      * (1.1) autoDeploy = true, uploadToCentral = true, deployAtEnd = true
      * Mega-bundles are named after the groupId
      */
-    public void testCentralPortalAutoDeployTrueUploadToCentralTrueDeployAtEndTrue() throws Exception {
-        autoDeployTrueUploadToCentralTrue(GROUP_ID + "-" + VERSION + "-bundle.zip", true, "test-deployAtEnd-true");
+    public void testCentralPortalAutoDeployTrueDeployAtEndTrue() throws Exception {
+        sunnyDayTest(GROUP_ID + "-" + VERSION + "-bundle.zip", true, true, "central-deploy-test-2");
     }
 
-    private void autoDeployTrueUploadToCentralTrue(String bundleName, boolean deployAtEnd, String subDirName)
+    public void testCentralPortalAutoDeployFalseDeployAtEndTrue() throws Exception {
+        sunnyDayTest(GROUP_ID + "-" + VERSION + "-bundle.zip", false, true, "central-deploy-test-3");
+    }
+
+    public void testCentralPortalAutoDeployFalseDeployAtEndFalse() throws Exception {
+        sunnyDayTest(BASE_NAME + "-bundle.zip", false, false, "central-deploy-test-4");
+    }
+
+    private void sunnyDayTest(String bundleName, boolean autoDeploy, boolean deployAtEnd, String subDirName)
             throws Exception {
 
         setVariableValueToObject(mojo, "useCentralPortalApi", true);
-        setVariableValueToObject(mojo, "autoDeploy", true);
+        setVariableValueToObject(mojo, "autoDeploy", autoDeploy);
         setVariableValueToObject(mojo, "uploadToCentral", true);
         setVariableValueToObject(mojo, "deployAtEnd", deployAtEnd);
 
         centralPortalClient = mock(CentralPortalClient.class);
         String fakeDeploymentId = "deployment-123";
         when(centralPortalClient.upload(any(File.class), anyBoolean())).thenReturn(fakeDeploymentId);
-        when(centralPortalClient.getStatus(fakeDeploymentId)).thenReturn("PUBLISHING");
+        String status = autoDeploy ? "PUBLISHING" : "VALIDATED";
+        when(centralPortalClient.getStatus(fakeDeploymentId)).thenReturn(status);
         when(centralPortalClient.getPublishUrl()).thenReturn(SERVER_URL);
         setVariableValueToObject(mojo, "centralPortalClient", centralPortalClient);
 
-        Artifact projectArtifact = new DefaultArtifact(
-                GROUP_ID,
-                ARTIFACT_ID,
-                VERSION,
-                null, // scope
-                "jar", // type
-                null, // classifier
-                artifactHandler);
+        Artifact projectArtifact = createProjectArtifact();
 
         project.setArtifact(projectArtifact);
         project.setGroupId(GROUP_ID);
@@ -167,172 +171,53 @@ public class CentralDeployTest extends AbstractMojoTestCase {
 
         File bundleZip = new File(targetSubDir, bundleName);
         assertTrue("Expected central bundle zip to be created at " + bundleZip.getAbsolutePath(), bundleZip.exists());
-        String prefix = GROUP_ID.replace('.', '/') + "/" + ARTIFACT_ID + "/" + VERSION + "/";
-        assertBundleContent(prefix, bundleZip);
-    }
 
-    /*
-    // (2) autoDeploy = false, uploadToCentral = true
-    public void testCentralPortalAutoDeployFalseUploadToCentralTrue() throws Exception {
-        File testPom = new File(getBasedir(), "target/test-classes/unit/central-deploy-test/plugin-config.xml");
-        mojo = (DeployMojo) lookupMojo("deploy", testPom);
-        openMocks = MockitoAnnotations.openMocks(this);
-        assertNotNull(mojo);
-
-        setVariableValueToObject(mojo, "useCentralPortalApi", true);
-        setVariableValueToObject(mojo, "autoDeploy", false);
-        setVariableValueToObject(mojo, "uploadToCentral", true);
-
-        setVariableValueToObject(mojo, "project", project);
-        project.setArtifact(new DeployArtifactStub());
-        project.setGroupId("org.apache.maven.test");
-        project.setArtifactId("central-deploy-test");
-        project.setVersion("1.0.1");
-        setVariableValueToObject(mojo, "pluginContext", new ConcurrentHashMap<>());
-        setVariableValueToObject(mojo, "reactorProjects", Collections.singletonList(project));
-
-        File baseDir = new File(getBasedir(), "target/fake-central-artifacts-2");
-        String baseName = "central-deploy-test-1.0.1";
-        File artifactFile = createFakeSignedArtifacts(baseName, baseDir);
-
-        DeployArtifactStub artifact = (DeployArtifactStub) project.getArtifact();
-        artifact.setFile(artifactFile);
-        project.setFile(new File(baseDir, baseName + ".pom"));
-
-        ArtifactRepositoryStub repoStub = getRepoStub(mojo);
-        repoStub.setAppendToUrl("central-deploy-test");
-
-        mojo.execute();
-
-        File bundleZip = new File(project.getBasedir(), "target/central-bundle.zip");
-        assertTrue("Expected central bundle zip to be created", bundleZip.exists());
-        assertBundleContains(bundleZip, baseName);
-
-        File remoteDir = new File(getBasedir(), "target/remote-repo/central-deploy-test");
-        assertFalse("Jar should NOT be deployed to remote repo", new File(remoteDir, baseName + ".jar").exists());
-    }
-
-     */
-
-    /*
-    // (3) autoDeploy = true, uploadToCentral = false
-    public void testCentralPortalAutoDeployTrueUploadToCentralFalse() throws Exception {
-        File testPom = new File(getBasedir(), "target/test-classes/unit/central-deploy-test/plugin-config.xml");
-        mojo = (DeployMojo) lookupMojo("deploy", testPom);
-        openMocks = MockitoAnnotations.openMocks(this);
-        assertNotNull(mojo);
-
-        setVariableValueToObject(mojo, "useCentralPortalApi", true);
-        setVariableValueToObject(mojo, "autoDeploy", true);
-        setVariableValueToObject(mojo, "uploadToCentral", false);
-
-        setVariableValueToObject(mojo, "project", project);
-        project.setArtifact(new DeployArtifactStub());
-        project.setGroupId("org.apache.maven.test");
-        project.setArtifactId("central-deploy-test");
-        project.setVersion("1.0.2");
-        setVariableValueToObject(mojo, "pluginContext", new ConcurrentHashMap<>());
-        setVariableValueToObject(mojo, "reactorProjects", Collections.singletonList(project));
-
-        File baseDir = new File(getBasedir(), "target/fake-central-artifacts-3");
-        String baseName = "central-deploy-test-1.0.2";
-        File artifactFile = createFakeSignedArtifacts(baseName, baseDir);
-
-        DeployArtifactStub artifact = (DeployArtifactStub) project.getArtifact();
-        artifact.setFile(artifactFile);
-        project.setFile(new File(baseDir, baseName + ".pom"));
-
-        ArtifactRepositoryStub repoStub = getRepoStub(mojo);
-        repoStub.setAppendToUrl("central-deploy-test");
-
-        mojo.execute();
-
-        File remoteDir = new File(getBasedir(), "target/remote-repo/central-deploy-test");
-        assertTrue("Jar should be deployed to remote repo", new File(remoteDir, baseName + ".jar").exists());
-        assertTrue("POM should be deployed to remote repo", new File(remoteDir, baseName + ".pom").exists());
-    }
-
-    // (4) autoDeploy = false, uploadToCentral = false
-    public void testCentralPortalAutoDeployFalseUploadToCentralFalse() throws Exception {
-        File testPom = new File(getBasedir(), "target/test-classes/unit/central-deploy-test/plugin-config.xml");
-        mojo = (DeployMojo) lookupMojo("deploy", testPom);
-        openMocks = MockitoAnnotations.openMocks(this);
-        assertNotNull(mojo);
-
-        setVariableValueToObject(mojo, "useCentralPortalApi", true);
-        setVariableValueToObject(mojo, "autoDeploy", false);
-        setVariableValueToObject(mojo, "uploadToCentral", false);
-
-        setVariableValueToObject(mojo, "project", project);
-        project.setArtifact(new DeployArtifactStub());
-        project.setGroupId("org.apache.maven.test");
-        project.setArtifactId("central-deploy-test");
-        project.setVersion("1.0.3");
-        setVariableValueToObject(mojo, "pluginContext", new ConcurrentHashMap<>());
-        setVariableValueToObject(mojo, "reactorProjects", Collections.singletonList(project));
-
-        File baseDir = new File(getBasedir(), "target/fake-central-artifacts-4");
-        String baseName = "central-deploy-test-1.0.3";
-        File artifactFile = createFakeSignedArtifacts(baseName, baseDir);
-
-        DeployArtifactStub artifact = (DeployArtifactStub) project.getArtifact();
-        artifact.setFile(artifactFile);
-        project.setFile(new File(baseDir, baseName + ".pom"));
-
-        ArtifactRepositoryStub repoStub = getRepoStub(mojo);
-        repoStub.setAppendToUrl("central-deploy-test");
-
-        mojo.execute();
-
-        File remoteDir = new File(getBasedir(), "target/remote-repo/central-deploy-test");
-        assertTrue("Jar should be deployed to remote repo", new File(remoteDir, baseName + ".jar").exists());
-        assertTrue("POM should be deployed to remote repo", new File(remoteDir, baseName + ".pom").exists());
+        assertBundleContent(bundleZip);
     }
 
     // (5) Negative test: missing .asc files should fail
     public void testCentralPortalFailsIfSignatureMissing() throws Exception {
-        File testPom = new File(getBasedir(), "target/test-classes/unit/central-deploy-test/plugin-config.xml");
-        mojo = (DeployMojo) lookupMojo("deploy", testPom);
-        openMocks = MockitoAnnotations.openMocks(this);
-        assertNotNull(mojo);
-
         setVariableValueToObject(mojo, "useCentralPortalApi", true);
         setVariableValueToObject(mojo, "autoDeploy", true);
         setVariableValueToObject(mojo, "uploadToCentral", true);
+        setVariableValueToObject(mojo, "deployAtEnd", true);
 
-        setVariableValueToObject(mojo, "project", project);
-        project.setArtifact(new DeployArtifactStub());
-        project.setGroupId("org.apache.maven.test");
-        project.setArtifactId("central-deploy-test");
-        project.setVersion("1.0.4");
-        setVariableValueToObject(mojo, "pluginContext", new ConcurrentHashMap<>());
-        setVariableValueToObject(mojo, "reactorProjects", Collections.singletonList(project));
+        centralPortalClient = mock(CentralPortalClient.class);
+        String fakeDeploymentId = "deployment-123";
+        when(centralPortalClient.upload(any(File.class), anyBoolean())).thenReturn(fakeDeploymentId);
+        when(centralPortalClient.getStatus(fakeDeploymentId)).thenReturn("PUBLISHING");
+        when(centralPortalClient.getPublishUrl()).thenReturn(SERVER_URL);
+        setVariableValueToObject(mojo, "centralPortalClient", centralPortalClient);
 
-        File baseDir = new File(getBasedir(), "target/fake-central-artifacts-5");
-        baseDir.mkdirs();
-        String baseName = "central-deploy-test-1.0.4";
+        Artifact projectArtifact = createProjectArtifact();
 
-        File artifactFile = new File(baseDir, baseName + ".jar");
-        File pomFile = new File(baseDir, baseName + ".pom");
-        Files.write(
-                artifactFile.toPath(),
-                Collections.singletonList("jar content at " + new Date().toString()),
-                StandardCharsets.UTF_8);
-        Files.write(
-                pomFile.toPath(),
-                Collections.singletonList("pom content at " + new Date().toString()),
-                StandardCharsets.UTF_8);
+        project.setArtifact(projectArtifact);
+        project.setGroupId(GROUP_ID);
+        project.setArtifactId(ARTIFACT_ID);
+        project.setVersion(VERSION);
 
-        DeployArtifactStub artifact = (DeployArtifactStub) project.getArtifact();
-        artifact.setFile(artifactFile);
-        project.setFile(pomFile);
-
-        ArtifactRepositoryStub repoStub = getRepoStub(mojo);
-        repoStub.setAppendToUrl("central-deploy-test");
+        // create a subdir under target to isolate tests from each other
+        File targetSubDir = new File(getBasedir(), project.getBuild().getDirectory() + "/central-deploy-test-5");
+        project.getBuild().setDirectory(targetSubDir.getAbsolutePath());
+        createAndAttachFakeSignedArtifacts(targetSubDir);
+        new File(targetSubDir, ARTIFACT_ID + "-" + VERSION + ".pom.asc").delete();
 
         MojoExecutionException thrown = assertThrows(MojoExecutionException.class, () -> mojo.execute());
-        assertTrue(thrown.getMessage().contains("Missing required signature files"));
-    }*/
+        assertTrue(
+                "Expected MojoExecutionException to be Failed to create bundle but was " + thrown.toString(),
+                thrown.getMessage().contains("Failed to create bundle"));
+    }
+
+    private Artifact createProjectArtifact() {
+        return new DefaultArtifact(
+                GROUP_ID,
+                ARTIFACT_ID,
+                VERSION,
+                null, // scope
+                "jar", // type
+                null, // classifier
+                artifactHandler);
+    }
 
     private DistributionManagement createDistributionManagement() {
         DistributionManagement distributionManagement = new DistributionManagement();
@@ -424,7 +309,8 @@ public class CentralDeployTest extends AbstractMojoTestCase {
     }
 
     // Helper method to verify central bundle contents
-    private void assertBundleContent(String prefix, File bundleZip) throws IOException {
+    private void assertBundleContent(File bundleZip) throws IOException {
+        String prefix = GROUP_ID.replace('.', '/') + "/" + ARTIFACT_ID + "/" + VERSION + "/";
         try (ZipFile zip = new ZipFile(bundleZip)) {
             assertZipHasEntries(
                     zip,
