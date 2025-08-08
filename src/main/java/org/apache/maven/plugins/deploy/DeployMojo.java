@@ -204,8 +204,6 @@ public class DeployMojo extends AbstractDeployMojo {
     private CentralPortalClient centralPortalClient = new CentralPortalClient();
 
     private void putState(State state) {
-        getLog().info("putState: pluginContext@" + getPluginContext().hashCode() + " putting " + DEPLOY_PROCESSED_MARKER
-                + "=" + state.name());
         getPluginContext().put(DEPLOY_PROCESSED_MARKER, state.name());
     }
 
@@ -265,7 +263,6 @@ public class DeployMojo extends AbstractDeployMojo {
             }
         }
 
-        getLog().info("Setting state to " + state.name() + " for " + project.getArtifactId());
         putState(state);
 
         List<MavenProject> allProjectsUsingPlugin = getAllProjectsUsingPlugin();
@@ -318,11 +315,9 @@ public class DeployMojo extends AbstractDeployMojo {
     private boolean allProjectsMarked(List<MavenProject> allProjectsUsingPlugin) {
         for (MavenProject reactorProject : allProjectsUsingPlugin) {
             if (!hasState(reactorProject)) {
-                getLog().info(reactorProject.getArtifactId() + " not marked for deploy");
                 return false;
             }
         }
-        getLog().info("All projects marked for deploy");
         return true;
     }
 
@@ -331,7 +326,6 @@ public class DeployMojo extends AbstractDeployMojo {
         for (MavenProject reactorProject : reactorProjects) {
             if (hasExecution(reactorProject.getPlugin("org.apache.maven.plugins:maven-deploy-plugin"))) {
                 result.add(reactorProject);
-                getLog().info(reactorProject.getArtifactId() + " added to All projects using plugin");
             }
         }
         return result;
@@ -531,7 +525,7 @@ public class DeployMojo extends AbstractDeployMojo {
             String password = credentials[1];
             String deployUrl = repo.getUrl();
             centralPortalClient.setVariables(username, password, deployUrl, getLog());
-            getLog().info("Deploying " + zipBundle + " to " + repo.getId() + " at "
+            getLog().info("Deploying " + zipBundle.getName() + " to " + repo.getId() + " at "
                     + centralPortalClient.getPublishUrl());
             centralPortalClient.uploadAndCheck(zipBundle, autoDeploy);
         }
