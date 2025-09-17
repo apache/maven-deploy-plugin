@@ -34,10 +34,10 @@ ${project.name}
   also be used to deploy a particular artifact (e.g. a third party jar like
   Sun's non redistributable reference implementations).
 
-  As a repository contains more than the artifacts (POMs, the metadata, MD5 and
-  SHA1 hash files...), deploying means not only copying the artifacts, but
-  making sure all this information is correctly updated. It's the reponsibility
-  of the deploy plugin.
+  As a repository contains more than JAR files (POMs, the metadata, MD5 and
+  SHA1 hash files...), deploying means not only uploading a single file, but
+  making sure all associated artifacts are correctly updated as well.
+  This is the reponsibility of the deploy plugin.
 
   To work, the deployment will require:
 
@@ -64,13 +64,13 @@ ${project.name}
   The deploy plugin has 2 goals:
 
   * {{{./deploy-mojo.html}deploy:deploy}} is used to automatically install the
-    artifact, its pom and the attached artifacts produced by a particular
+    artifact, its pom, and the attached artifacts produced by a particular
     project. Most if not all of the information related to the deployment is stored
     in the project's pom.
 
   * {{{./deploy-file-mojo.html}deploy:deploy-file}} is used to install a single artifact
-    along with its pom. In that case the artifact information can be taken from
-    an optionally specified pomFile, but can be completed/overriden using the
+    along with its pom. In that case, the artifact information can be taken from
+    an optionally specified pomFile, but can be completed/overridden using the
     command line.
 
    []
@@ -80,15 +80,15 @@ ${project.name}
   General instructions on how to use the Deploy Plugin can be found on the {{{./usage.html}usage page}}. Some more
   specific use cases are described in the examples given below.
 
-  In case you still have questions regarding the plugin's usage, please have a look at the {{{./faq.html}FAQ}} and feel
-  free to contact the {{{./mailing-lists.html}user mailing list}}. The posts to the mailing list are archived and could
+  If you have questions about the plugin's usage, please read the {{{./faq.html}FAQ}} and feel
+  free to contact the {{{./mailing-lists.html}user mailing list}}. Posts to the mailing list are archived and could
   already contain the answer to your question as part of an older thread. Hence, it is also worth browsing/searching
   the {{{./mailing-lists.html}mail archive}}.
 
-  If you feel like the plugin is missing a feature or has a defect, you can file a feature request or bug report in our
+  If you think the plugin is missing a feature or has a defect, you can file a feature request or bug report in our
   {{{./issue-management.html}issue tracker}}. When creating a new issue, please provide a comprehensive description of your
-  concern. Especially for fixing bugs it is crucial that the developers can reproduce your problem. For this reason,
-  entire debug logs, POMs or most preferably little demo projects attached to the issue are very much appreciated.
+  concern. Especially for fixing bugs, it is crucial that the developers can reproduce your problem. For this reason,
+  entire debug logs, POMs, or most preferably little demo projects attached to the issue are very much appreciated.
   Of course, patches are welcome, too. Contributors can check out the project from our
   {{{./scm.html}source repository}} and will find supplementary information in the
   {{{https://maven.apache.org/guides/development/guide-helping.html}guide to helping with Maven}}.
@@ -96,7 +96,7 @@ ${project.name}
 * Examples
 
   To provide you with better understanding on some usages of the deploy plugin,
-  you can take a look into the following examples:
+  you can see the following examples:
 
   <Project Deployment:>
 

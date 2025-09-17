@@ -48,7 +48,7 @@ Deploying With Network Issues
         <artifactId>maven-deploy-plugin</artifactId>
         <configuration>
           <retryFailedDeploymentCount>3</retryFailedDeploymentCount>
-        <configuration>
+        </configuration>
       </plugin>
     </plugins>
   </build>
