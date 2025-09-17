@@ -26,6 +26,7 @@ date: 2006-07-14
 
 Here are examples of using the deploy plugin for project deployment:
 
+- [Deployment with HTTP(S)](./examples/deploy-http.html)
 - [Deployment with FTP](./examples/deploy-ftp.html)
 - [Deployment with external SSH](./examples/deploy-ssh-external.html)
 - [Workarounds when there are network issues](./examples/deploy-network-issues.html)
