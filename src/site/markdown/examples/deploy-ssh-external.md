@@ -1,38 +1,32 @@
- ------
- Deployment of artifacts in an external SSH command
- ------
- Jason van Zyl
- ------
- 2005-10-12
- ------
+---
+title: Deployment of artifacts in an external SSH command
+author: 
+  - Jason van Zyl
+date: 2005-10-12
+---
 
-~~ Licensed to the Apache Software Foundation (ASF) under one
-~~ or more contributor license agreements.  See the NOTICE file
-~~ distributed with this work for additional information
-~~ regarding copyright ownership.  The ASF licenses this file
-~~ to you under the Apache License, Version 2.0 (the
-~~ "License"); you may not use this file except in compliance
-~~ with the License.  You may obtain a copy of the License at
-~~
-~~   http://www.apache.org/licenses/LICENSE-2.0
-~~
-~~ Unless required by applicable law or agreed to in writing,
-~~ software distributed under the License is distributed on an
-~~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-~~ KIND, either express or implied.  See the License for the
-~~ specific language governing permissions and limitations
-~~ under the License.
+<!-- Licensed to the Apache Software Foundation (ASF) under one-->
+<!-- or more contributor license agreements.  See the NOTICE file-->
+<!-- distributed with this work for additional information-->
+<!-- regarding copyright ownership.  The ASF licenses this file-->
+<!-- to you under the Apache License, Version 2.0 (the-->
+<!-- "License"); you may not use this file except in compliance-->
+<!-- with the License.  You may obtain a copy of the License at-->
+<!---->
+<!--   http://www.apache.org/licenses/LICENSE-2.0-->
+<!---->
+<!-- Unless required by applicable law or agreed to in writing,-->
+<!-- software distributed under the License is distributed on an-->
+<!-- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY-->
+<!-- KIND, either express or implied.  See the License for the-->
+<!-- specific language governing permissions and limitations-->
+<!-- under the License.-->
 
-~~ NOTE: For help with the syntax of this file, see:
-~~ http://maven.apache.org/doxia/references/apt-format.html
+# Deployment of artifacts in an external SSH command
 
-Deployment of artifacts in an external SSH command
+In order to deploy artifacts using SSH you must first specify the use of an SSH server in the **distributionManagement** element of your POM as well as specifying an `extension` in your `build` element which will pull in the SSH artifacts required to deploy with SSH:
 
- In order to deploy artifacts using SSH you must first specify the use of an SSH server in the
- <<distributionManagement>> element of your POM as well as specifying an <<<extension>>> in your
- <<<build>>> element which will pull in the SSH artifacts required to deploy with SSH:
-
-+----+
+```unknown
 
 <project>
   ...
@@ -55,14 +49,11 @@ Deployment of artifacts in an external SSH command
   </build>
   ..
 </project>
+```
 
-+----+
+If you are deploying from Unix or have Cygwin installed you won&apos;t need to any additional configuration in your `settings.xml` file as everything will be taken from the environment\. But if you are on Windows and are using something like `plink` then you will need something like the following:
 
- If you are deploying from Unix or have Cygwin installed you won't need to any additional configuration in your <<<settings.xml>>>
- file as everything will be taken from the environment. But if you are on Windows and are using something like <<<plink>>> then
- you will need something like the following:
-
-+----+
+```unknown
 
 <settings>
   ...
@@ -80,21 +71,17 @@ Deployment of artifacts in an external SSH command
   </servers>
   ...
 </settings>
+```
 
-+----+
+You should, of course, make sure that you can login into the specified SSH server by hand before attempting the deployment with Maven\. Once you have verified that everything is setup correctly you can now deploy your artifacts using Maven:
 
- You should, of course, make sure that you can login into the specified SSH server by hand before attempting the
- deployment with Maven. Once you have verified that everything is setup correctly you can now deploy your artifacts
- using Maven:
-
-+----+
+```unknown
 mvn deploy
-+----+
+```
 
- Sometimes you may have permissions problems deploying and if so you can set the file and directory permissions
- like so:
+Sometimes you may have permissions problems deploying and if so you can set the file and directory permissions like so:
 
-+----+
+```unknown
 
  <settings>
    ...
@@ -116,10 +103,7 @@ mvn deploy
    </servers>
    ...
  </settings>
+```
 
-+----+
+**NOTE:** If you are using Putty it will expect the private key to be in the `PPK` format and not the standard format so make sure you use `puttygen` to convert your openssh format key to `PPK` format or generate another one\. Windows users can find the Putty tools on the [PuTTY Download Page](https://www.chiark.greenend.org.uk/~sgtatham/putty/latest.html)\.
 
- <<NOTE:>> If you are using Putty it will expect the private key to be in the <<<PPK>>> format and not the standard
- format so make sure you use <<<puttygen>>> to convert your openssh format key to <<<PPK>>> format or generate another
- one. Windows users can find the Putty tools on the
- {{{https://www.chiark.greenend.org.uk/~sgtatham/putty/latest.html}PuTTY Download Page}}.
