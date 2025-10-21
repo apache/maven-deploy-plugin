@@ -237,6 +237,7 @@ under the License.
             <plugin>
               <groupId>org.apache.maven.plugins</groupId>
               <artifactId>maven-invoker-plugin</artifactId>
+              <version>3.9.1</version>
               <configuration>
                 <debug>true</debug>
                 <showErrors>true</showErrors>
