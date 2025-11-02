@@ -59,7 +59,7 @@ import static org.mockito.Mockito.when;
 
 @MojoTest
 @ExtendWith(MockitoExtension.class)
-public class DeployMojoPomPackagingTest {
+class DeployMojoPomPackagingTest {
 
     private static final String LOCAL_REPO = "/target/local-repo";
 
@@ -82,7 +82,7 @@ public class DeployMojoPomPackagingTest {
     @Test
     @InjectMojo(goal = "deploy")
     @MojoParameter(name = "deployAtEnd", value = "false")
-    public void testBasicDeployWithPackagingAsPom(DeployMojo mojo) throws Exception {
+    void basicDeployWithPackagingAsPom(DeployMojo mojo) throws Exception {
         assertNotNull(mojo);
 
         ArtifactDeployerRequest request = execute(mojo);

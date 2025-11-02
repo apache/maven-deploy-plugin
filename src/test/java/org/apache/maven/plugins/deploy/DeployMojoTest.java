@@ -70,7 +70,7 @@ import static org.mockito.Mockito.when;
  */
 @MojoTest
 @ExtendWith(MockitoExtension.class)
-public class DeployMojoTest {
+class DeployMojoTest {
 
     private static final String LOCAL_REPO = "target/local-repo";
 
@@ -92,14 +92,14 @@ public class DeployMojoTest {
 
     @Test
     @InjectMojo(goal = "deploy")
-    public void testDeployTestEnvironment(DeployMojo mojo) {
+    void deployTestEnvironment(DeployMojo mojo) {
         assertNotNull(mojo);
     }
 
     @Test
     @InjectMojo(goal = "deploy")
     @MojoParameter(name = "deployAtEnd", value = "false")
-    public void testBasicDeploy(DeployMojo mojo) throws Exception {
+    void basicDeploy(DeployMojo mojo) throws Exception {
         assertNotNull(mojo);
         Project project = (Project) getVariableValueFromObject(mojo, "project");
         artifactManager.setPath(
@@ -123,7 +123,7 @@ public class DeployMojoTest {
     @Test
     @InjectMojo(goal = "deploy")
     @MojoParameter(name = "deployAtEnd", value = "false")
-    public void testSkippingDeploy(DeployMojo mojo) throws Exception {
+    void skippingDeploy(DeployMojo mojo) throws Exception {
         assertNotNull(mojo);
 
         File file = new File(getBasedir(), "target/test-classes/unit/maven-deploy-test-1.0-SNAPSHOT.jar");
@@ -142,7 +142,7 @@ public class DeployMojoTest {
     @Test
     @InjectMojo(goal = "deploy")
     @MojoParameter(name = "deployAtEnd", value = "false")
-    public void testDeployIfArtifactFileIsNull(DeployMojo mojo) throws Exception {
+    void deployIfArtifactFileIsNull(DeployMojo mojo) throws Exception {
         assertNotNull(mojo);
 
         Project project = (Project) getVariableValueFromObject(mojo, "project");
@@ -154,7 +154,7 @@ public class DeployMojoTest {
     @Test
     @InjectMojo(goal = "deploy")
     @MojoParameter(name = "deployAtEnd", value = "false")
-    public void testDeployWithAttachedArtifacts(DeployMojo mojo) throws Exception {
+    void deployWithAttachedArtifacts(DeployMojo mojo) throws Exception {
         assertNotNull(mojo);
         Project project = (Project) getVariableValueFromObject(mojo, "project");
         projectManager.attachArtifact(
@@ -182,7 +182,7 @@ public class DeployMojoTest {
 
     @Test
     @InjectMojo(goal = "deploy")
-    public void testLegacyAltDeploymentRepositoryWithDefaultLayout(DeployMojo mojo) throws IllegalAccessException {
+    void legacyAltDeploymentRepositoryWithDefaultLayout(DeployMojo mojo) throws Exception {
         setVariableValueToObject(mojo, "altDeploymentRepository", "altDeploymentRepository::default::http://localhost");
 
         RemoteRepository repository = mojo.getDeploymentRepository(true);
@@ -192,7 +192,7 @@ public class DeployMojoTest {
 
     @Test
     @InjectMojo(goal = "deploy")
-    public void testLegacyAltDeploymentRepositoryWithLegacyLayout(DeployMojo mojo) throws IllegalAccessException {
+    void legacyAltDeploymentRepositoryWithLegacyLayout(DeployMojo mojo) throws Exception {
         setVariableValueToObject(mojo, "altDeploymentRepository", "altDeploymentRepository::legacy::http://localhost");
 
         MojoException e = assertThrows(
@@ -207,7 +207,7 @@ public class DeployMojoTest {
 
     @Test
     @InjectMojo(goal = "deploy")
-    public void testInsaneAltDeploymentRepository(DeployMojo mojo) throws IllegalAccessException {
+    void insaneAltDeploymentRepository(DeployMojo mojo) throws Exception {
         setVariableValueToObject(
                 mojo, "altDeploymentRepository", "altDeploymentRepository::hey::wow::foo::http://localhost");
 
@@ -223,7 +223,7 @@ public class DeployMojoTest {
 
     @Test
     @InjectMojo(goal = "deploy")
-    public void testDefaultScmSvnAltDeploymentRepository(DeployMojo mojo) throws IllegalAccessException {
+    void defaultScmSvnAltDeploymentRepository(DeployMojo mojo) throws Exception {
         setVariableValueToObject(
                 mojo, "altDeploymentRepository", "altDeploymentRepository::default::scm:svn:http://localhost");
 
@@ -234,7 +234,7 @@ public class DeployMojoTest {
 
     @Test
     @InjectMojo(goal = "deploy")
-    public void testLegacyScmSvnAltDeploymentRepository(DeployMojo mojo) throws IllegalAccessException {
+    void legacyScmSvnAltDeploymentRepository(DeployMojo mojo) throws Exception {
         setVariableValueToObject(
                 mojo, "altDeploymentRepository", "altDeploymentRepository::legacy::scm:svn:http://localhost");
 
@@ -250,7 +250,7 @@ public class DeployMojoTest {
 
     @Test
     @InjectMojo(goal = "deploy")
-    public void testAltSnapshotDeploymentRepository(DeployMojo mojo) throws IllegalAccessException {
+    void altSnapshotDeploymentRepository(DeployMojo mojo) throws Exception {
         setVariableValueToObject(mojo, "altDeploymentRepository", "altReleaseDeploymentRepository::http://localhost");
 
         RemoteRepository repository = mojo.getDeploymentRepository(true);
@@ -260,7 +260,7 @@ public class DeployMojoTest {
 
     @Test
     @InjectMojo(goal = "deploy")
-    public void testAltReleaseDeploymentRepository(DeployMojo mojo) throws IllegalAccessException {
+    void altReleaseDeploymentRepository(DeployMojo mojo) throws Exception {
         setVariableValueToObject(mojo, "altDeploymentRepository", "altReleaseDeploymentRepository::http://localhost");
 
         RemoteRepository repository = mojo.getDeploymentRepository(false);
