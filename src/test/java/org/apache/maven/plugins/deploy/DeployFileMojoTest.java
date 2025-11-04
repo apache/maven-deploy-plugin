@@ -58,7 +58,7 @@ import static org.mockito.Mockito.when;
  * @author <a href="mailto:aramirez@apache.org">Allan Ramirez</a>
  */
 @MojoTest
-public class DeployFileMojoTest {
+class DeployFileMojoTest {
     private static final String LOCAL_REPO = "target/local-repo";
 
     @Inject
@@ -75,7 +75,7 @@ public class DeployFileMojoTest {
 
     @Test
     @InjectMojo(goal = "deploy-file")
-    public void testDeployTestEnvironment(DeployFileMojo mojo) {
+    void deployTestEnvironment(DeployFileMojo mojo) {
         assertNotNull(mojo);
     }
 
@@ -93,7 +93,7 @@ public class DeployFileMojoTest {
     @MojoParameter(name = "description", value = "POM was created from deploy:deploy-file")
     @MojoParameter(name = "generatePom", value = "true")
     @MojoParameter(name = "skip", value = "snapshots")
-    public void testBasicDeployFile(DeployFileMojo mojo) throws Exception {
+    void basicDeployFile(DeployFileMojo mojo) throws Exception {
         assertNotNull(mojo);
 
         String groupId = (String) getVariableValueFromObject(mojo, "groupId");
@@ -155,7 +155,7 @@ public class DeployFileMojoTest {
     @MojoParameter(name = "url", value = "file://${session.topDirectory}/target/remote-repo/deploy-file")
     @MojoParameter(name = "classifier", value = "bin")
     @MojoParameter(name = "generatePom", value = "true")
-    public void testDeployIfClassifierIsSet(DeployFileMojo mojo) throws Exception {
+    void deployIfClassifierIsSet(DeployFileMojo mojo) throws Exception {
         assertNotNull(mojo);
 
         String groupId = (String) getVariableValueFromObject(mojo, "groupId");
@@ -196,7 +196,7 @@ public class DeployFileMojoTest {
     @MojoParameter(name = "repositoryId", value = "deploy-test")
     @MojoParameter(name = "url", value = "file://${session.topDirectory}/target/remote-repo/deploy-file")
     @MojoParameter(name = "generatePom", value = "true")
-    public void testDeployIfArtifactIsNotJar(DeployFileMojo mojo) throws Exception {
+    void deployIfArtifactIsNotJar(DeployFileMojo mojo) throws Exception {
         assertNotNull(mojo);
 
         String groupId = (String) getVariableValueFromObject(mojo, "groupId");

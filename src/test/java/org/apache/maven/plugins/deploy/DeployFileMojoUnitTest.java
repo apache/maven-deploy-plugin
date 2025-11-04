@@ -32,12 +32,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /**
  * @author <a href="jerome@coffeebreaks.org">Jerome Lacoste</a>
  */
-public class DeployFileMojoUnitTest {
+class DeployFileMojoUnitTest {
     MockDeployFileMojo mojo;
     Parent parent;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         parent = Parent.newBuilder()
                 .groupId("parentGroup")
                 .artifactId("parentArtifact")
@@ -61,7 +61,7 @@ public class DeployFileMojoUnitTest {
     }
 
     @Test
-    public void testProcessPomFromPomFileWithParent4() {
+    void processPomFromPomFileWithParent4() {
         mojo.setPomFile(Paths.get("foo.bar"));
         setMojoModel(mojo, null, "artifact", "version", "packaging", parent);
         mojo.initProperties();
@@ -69,7 +69,7 @@ public class DeployFileMojoUnitTest {
     }
 
     @Test
-    public void testProcessPomFromPomFileWithParent5() {
+    void processPomFromPomFileWithParent5() {
         mojo.setPomFile(Paths.get("foo.bar"));
         setMojoModel(mojo, "group", "artifact", "version", "packaging", parent);
         mojo.initProperties();
@@ -77,7 +77,7 @@ public class DeployFileMojoUnitTest {
     }
 
     @Test
-    public void testProcessPomFromPomFileWithParent6() {
+    void processPomFromPomFileWithParent6() {
         mojo.setPomFile(Paths.get("foo.bar"));
         setMojoModel(mojo, "group", "artifact", "version", "packaging", null);
         mojo.initProperties();
@@ -85,7 +85,7 @@ public class DeployFileMojoUnitTest {
     }
 
     @Test
-    public void testProcessPomFromPomFileWithOverrides() {
+    void processPomFromPomFileWithOverrides() {
         mojo.setPomFile(Paths.get("foo.bar"));
         setMojoModel(mojo, "group", "artifact", "version", "packaging", null);
         mojo.setGroupId("groupO");
