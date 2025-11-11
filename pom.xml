@@ -89,6 +89,8 @@ under the License.
     <mavenWarPluginVersion>${version.maven-war-plugin}</mavenWarPluginVersion>
 
     <project.build.outputTimestamp>2025-02-23T17:24:00Z</project.build.outputTimestamp>
+
+    <version.maven-invoker-plugin>3.9.1</version.maven-invoker-plugin>
   </properties>
 
   <dependencies>
