@@ -18,6 +18,8 @@
  */
 package org.apache.maven.plugins.deploy;
 
+import javax.inject.Inject;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -41,12 +43,14 @@ import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.rtinfo.RuntimeInformation;
 import org.codehaus.plexus.util.FileUtils;
 import org.codehaus.plexus.util.IOUtil;
 import org.codehaus.plexus.util.StringUtils;
 import org.codehaus.plexus.util.xml.ReaderFactory;
 import org.codehaus.plexus.util.xml.WriterFactory;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
+import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.RepositorySystemSession;
 import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.artifact.ArtifactType;
@@ -196,6 +200,11 @@ public class DeployFileMojo extends AbstractDeployMojo {
      */
     @Parameter(property = "maven.deploy.file.skip", defaultValue = "false")
     private String skip = Boolean.FALSE.toString();
+
+    @Inject
+    protected DeployFileMojo(RuntimeInformation runtimeInformation, RepositorySystem repositorySystem) {
+        super(runtimeInformation, repositorySystem);
+    }
 
     void initProperties() throws MojoExecutionException {
         if (pomFile == null) {

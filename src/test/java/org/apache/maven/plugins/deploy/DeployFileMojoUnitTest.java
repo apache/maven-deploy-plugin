@@ -23,22 +23,21 @@ import java.io.File;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Parent;
 import org.apache.maven.plugin.MojoExecutionException;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author <a href="jerome@coffeebreaks.org">Jerome Lacoste</a>
  */
-public class DeployFileMojoUnitTest {
-    MockDeployFileMojo mojo;
-    Parent parent;
+class DeployFileMojoUnitTest {
+    private MockDeployFileMojo mojo;
+    private Parent parent;
 
-    @Before
-    public void setUp() {
+    @BeforeEach
+    void setUp() {
         Model pomModel = new Model();
         pomModel.setPackaging(null);
 
@@ -50,29 +49,22 @@ public class DeployFileMojoUnitTest {
         mojo = new MockDeployFileMojo(pomModel);
     }
 
-    @After
-    public void tearDown() {
-        mojo = null;
-    }
-
     static class MockDeployFileMojo extends DeployFileMojo {
         private Model model;
 
         MockDeployFileMojo(Model model) {
+            super(null, null);
             this.model = model;
         }
 
-        public void setModel(Model model) {
-            this.model = model;
-        }
-
+        @Override
         protected Model readModel(File pomFile) {
             return model;
         }
     }
 
     @Test
-    public void testProcessPomFromPomFileWithParent1() {
+    void testProcessPomFromPomFileWithParent1() {
         mojo.setPomFile(new File("foo.bar"));
 
         setMojoModel(mojo.model, null, null, null, null, parent);
@@ -87,7 +79,7 @@ public class DeployFileMojoUnitTest {
     }
 
     @Test
-    public void testProcessPomFromPomFileWithParent2() {
+    void testProcessPomFromPomFileWithParent2() {
         mojo.setPomFile(new File("foo.bar"));
         setMojoModel(mojo.model, null, "artifact", null, null, parent);
 
@@ -101,7 +93,7 @@ public class DeployFileMojoUnitTest {
     }
 
     @Test
-    public void testProcessPomFromPomFileWithParent3() {
+    void testProcessPomFromPomFileWithParent3() {
         mojo.setPomFile(new File("foo.bar"));
         setMojoModel(mojo.model, null, "artifact", "version", null, parent);
 
@@ -115,7 +107,7 @@ public class DeployFileMojoUnitTest {
     }
 
     @Test
-    public void testProcessPomFromPomFileWithParent4() throws MojoExecutionException {
+    void testProcessPomFromPomFileWithParent4() throws MojoExecutionException {
         mojo.setPomFile(new File("foo.bar"));
         setMojoModel(mojo.model, null, "artifact", "version", "packaging", parent);
 
@@ -125,7 +117,7 @@ public class DeployFileMojoUnitTest {
     }
 
     @Test
-    public void testProcessPomFromPomFileWithParent5() throws MojoExecutionException {
+    void testProcessPomFromPomFileWithParent5() throws MojoExecutionException {
         mojo.setPomFile(new File("foo.bar"));
         setMojoModel(mojo.model, "group", "artifact", "version", "packaging", parent);
 
@@ -135,7 +127,7 @@ public class DeployFileMojoUnitTest {
     }
 
     @Test
-    public void testProcessPomFromPomFileWithParent6() throws MojoExecutionException {
+    void testProcessPomFromPomFileWithParent6() throws MojoExecutionException {
         mojo.setPomFile(new File("foo.bar"));
         setMojoModel(mojo.model, "group", "artifact", "version", "packaging", null);
 
@@ -145,7 +137,7 @@ public class DeployFileMojoUnitTest {
     }
 
     @Test
-    public void testProcessPomFromPomFileWithOverrides() throws MojoExecutionException {
+    void testProcessPomFromPomFileWithOverrides() throws MojoExecutionException {
         mojo.setPomFile(new File("foo.bar"));
         setMojoModel(mojo.model, "group", "artifact", "version", "packaging", null);
 

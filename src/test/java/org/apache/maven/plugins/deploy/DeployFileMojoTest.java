@@ -18,46 +18,51 @@
  */
 package org.apache.maven.plugins.deploy;
 
+import javax.inject.Inject;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import org.apache.maven.api.plugin.testing.Basedir;
+import org.apache.maven.api.plugin.testing.InjectMojo;
+import org.apache.maven.api.plugin.testing.MojoTest;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Model;
-import org.apache.maven.plugin.testing.AbstractMojoTestCase;
 import org.eclipse.aether.DefaultRepositorySystemSession;
 import org.eclipse.aether.internal.impl.DefaultLocalPathComposer;
 import org.eclipse.aether.internal.impl.SimpleLocalRepositoryManagerFactory;
 import org.eclipse.aether.repository.LocalRepository;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
+import static org.apache.maven.api.plugin.testing.MojoExtension.getBasedir;
+import static org.apache.maven.api.plugin.testing.MojoExtension.getVariableValueFromObject;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.when;
 
 /**
  * @author <a href="mailto:aramirez@apache.org">Allan Ramirez</a>
  */
-public class DeployFileMojoTest extends AbstractMojoTestCase {
-    private static final String LOCAL_REPO = getBasedir() + "/target/local-repo";
-
-    private List<String> expectedFiles;
-
-    private List<String> fileList;
+@MojoTest
+class DeployFileMojoTest {
 
     private File remoteRepo;
 
-    private AutoCloseable openMocks;
-
-    @Mock
+    @Inject
     private MavenSession session;
 
-    @InjectMocks
-    private DeployFileMojo mojo;
-
-    public void setUp() throws Exception {
-        super.setUp();
+    @BeforeEach
+    void setUp() throws Exception {
+        DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
+        repositorySession.setLocalRepositoryManager(
+                new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
+                        .newInstance(repositorySession, new LocalRepository(getBasedir() + "/target/local-repo")));
+        when(session.getRepositorySession()).thenReturn(repositorySession);
 
         remoteRepo = new File(getBasedir(), "target/remote-repo");
 
@@ -66,36 +71,18 @@ public class DeployFileMojoTest extends AbstractMojoTestCase {
         }
     }
 
-    @Override
-    public void tearDown() throws Exception {
-        super.tearDown();
-        if (openMocks != null) {
-            openMocks.close();
-        }
-    }
-
-    public void testDeployTestEnvironment() throws Exception {
-        File testPom = new File(getBasedir(), "target/test-classes/unit/deploy-file-test/plugin-config.xml");
-
-        AbstractDeployMojo mojo = (AbstractDeployMojo) lookupMojo("deploy-file", testPom);
-
+    @Test
+    @InjectMojo(goal = "deploy-file")
+    void testDeployTestEnvironment(DeployFileMojo mojo) throws Exception {
         assertNotNull(mojo);
     }
 
-    public void testBasicDeployFile() throws Exception {
-        File testPom = new File(getBasedir(), "target/test-classes/unit/deploy-file-test/plugin-config.xml");
-
-        mojo = (DeployFileMojo) lookupMojo("deploy-file", testPom);
-
-        openMocks = MockitoAnnotations.openMocks(this);
+    @Test
+    @InjectMojo(goal = "deploy-file", pom = "plugin-config.xml")
+    @Basedir("/unit/deploy-file-test")
+    void testBasicDeployFile(DeployFileMojo mojo) throws Exception {
 
         assertNotNull(mojo);
-
-        DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
-        repositorySession.setLocalRepositoryManager(
-                new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
-                        .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
-        when(session.getRepositorySession()).thenReturn(repositorySession);
 
         String groupId = (String) getVariableValueFromObject(mojo, "groupId");
 
@@ -155,8 +142,8 @@ public class DeployFileMojoTest extends AbstractMojoTestCase {
         assertEquals("POM was created from deploy:deploy-file", model.getDescription());
 
         // check the remote-repo
-        expectedFiles = new ArrayList<>();
-        fileList = new ArrayList<>();
+        ArrayList<String> expectedFiles = new ArrayList<>();
+        List<String> fileList = new ArrayList<>();
 
         File repo = new File(remoteRepo, "deploy-file-test");
 
@@ -187,20 +174,12 @@ public class DeployFileMojoTest extends AbstractMojoTestCase {
         assertEquals(0, getSizeOfExpectedFiles(fileList, expectedFiles));
     }
 
-    public void testDeployIfClassifierIsSet() throws Exception {
-        File testPom = new File(getBasedir(), "target/test-classes/unit/deploy-file-classifier/plugin-config.xml");
-
-        mojo = (DeployFileMojo) lookupMojo("deploy-file", testPom);
-
-        openMocks = MockitoAnnotations.openMocks(this);
+    @Test
+    @InjectMojo(goal = "deploy-file", pom = "plugin-config.xml")
+    @Basedir("/unit/deploy-file-classifier")
+    void testDeployIfClassifierIsSet(DeployFileMojo mojo) throws Exception {
 
         assertNotNull(mojo);
-
-        DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
-        repositorySession.setLocalRepositoryManager(
-                new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
-                        .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
-        when(session.getRepositorySession()).thenReturn(repositorySession);
 
         String classifier = (String) getVariableValueFromObject(mojo, "classifier");
 
@@ -237,21 +216,12 @@ public class DeployFileMojoTest extends AbstractMojoTestCase {
         assertTrue(prodDeployedArtifact.exists());
     }
 
-    public void testDeployIfArtifactIsNotJar() throws Exception {
-        File testPom =
-                new File(getBasedir(), "target/test-classes/unit/deploy-file-artifact-not-jar/plugin-config.xml");
-
-        mojo = (DeployFileMojo) lookupMojo("deploy-file", testPom);
-
-        openMocks = MockitoAnnotations.openMocks(this);
+    @Test
+    @InjectMojo(goal = "deploy-file", pom = "plugin-config.xml")
+    @Basedir("/unit/deploy-file-artifact-not-jar")
+    void testDeployIfArtifactIsNotJar(DeployFileMojo mojo) throws Exception {
 
         assertNotNull(mojo);
-
-        DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
-        repositorySession.setLocalRepositoryManager(
-                new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
-                        .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
-        when(session.getRepositorySession()).thenReturn(repositorySession);
 
         String groupId = (String) getVariableValueFromObject(mojo, "groupId");
 
@@ -276,19 +246,12 @@ public class DeployFileMojoTest extends AbstractMojoTestCase {
         assertTrue(file.exists());
     }
 
-    public void testDeployFileIfPackagingIsSet() throws Exception {
-        File testPom = new File(getBasedir(), "target/test-classes/unit/deploy-file-packaging/plugin-config.xml");
-        mojo = (DeployFileMojo) lookupMojo("deploy-file", testPom);
-
-        openMocks = MockitoAnnotations.openMocks(this);
+    @Test
+    @InjectMojo(goal = "deploy-file", pom = "plugin-config.xml")
+    @Basedir("/unit/deploy-file-packaging")
+    void testDeployFileIfPackagingIsSet(DeployFileMojo mojo) throws Exception {
 
         assertNotNull(mojo);
-
-        DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
-        repositorySession.setLocalRepositoryManager(
-                new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
-                        .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
-        when(session.getRepositorySession()).thenReturn(repositorySession);
 
         String packaging = (String) getVariableValueFromObject(mojo, "packaging");
 
