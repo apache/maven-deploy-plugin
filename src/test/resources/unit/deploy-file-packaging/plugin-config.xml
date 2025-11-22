@@ -16,21 +16,21 @@ under the License.
 -->
 
 <project>
-    <build>
-        <plugins>
-            <plugin>
-                <artifactId>maven-deploy-plugin</artifactId>
-                <configuration>
-                    <groupId>org.apache.maven.test</groupId>
-                    <artifactId>maven-deploy-file-test</artifactId>
-                    <version>1.0</version>
-                    <packaging>differentpackaging</packaging>
-                    <file>${basedir}/src/test/resources/unit/deploy-file-packaging/target/deploy-test-file-1.0-SNAPSHOT.jar</file>
-                    <repositoryId>deploy-test</repositoryId>
-                    <url>file://${basedir}/target/remote-repo/deploy-file-packaging</url>
-                    <generatePom>true</generatePom>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-deploy-plugin</artifactId>
+        <configuration>
+          <groupId>org.apache.maven.test</groupId>
+          <artifactId>maven-deploy-file-test</artifactId>
+          <version>1.0</version>
+          <packaging>differentpackaging</packaging>
+          <file>${basedir}/target/deploy-test-file-1.0-SNAPSHOT.jar</file>
+          <repositoryId>deploy-test</repositoryId>
+          <url>file://${basedir}/target/remote-repo/deploy-file-packaging</url>
+          <generatePom>true</generatePom>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 </project>

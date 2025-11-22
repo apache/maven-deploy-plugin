@@ -18,6 +18,8 @@
  */
 package org.apache.maven.plugins.deploy;
 
+import javax.inject.Inject;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -38,6 +40,8 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.artifact.ProjectArtifact;
+import org.apache.maven.rtinfo.RuntimeInformation;
+import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.deployment.DeployRequest;
 import org.eclipse.aether.repository.RemoteRepository;
@@ -139,6 +143,11 @@ public class DeployMojo extends AbstractDeployMojo {
      */
     @Parameter(defaultValue = "false", property = "allowIncompleteProjects")
     private boolean allowIncompleteProjects;
+
+    @Inject
+    protected DeployMojo(RuntimeInformation runtimeInformation, RepositorySystem repositorySystem) {
+        super(runtimeInformation, repositorySystem);
+    }
 
     private enum State {
         SKIPPED,
