@@ -22,7 +22,6 @@ import org.apache.maven.execution.MavenSession;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.rtinfo.RuntimeInformation;
 import org.eclipse.aether.RepositorySystem;
@@ -52,18 +51,21 @@ public abstract class AbstractDeployMojo extends AbstractMojo {
     @Parameter(property = "retryFailedDeploymentCount", defaultValue = "1")
     private int retryFailedDeploymentCount;
 
-    @Component
-    private RuntimeInformation runtimeInformation;
+    private final RuntimeInformation runtimeInformation;
 
     @Parameter(defaultValue = "${session}", readonly = true, required = true)
     protected MavenSession session;
 
-    @Component
-    protected RepositorySystem repositorySystem;
+    protected final RepositorySystem repositorySystem;
 
     private static final String AFFECTED_MAVEN_PACKAGING = "maven-plugin";
 
     private static final String FIXED_MAVEN_VERSION = "3.9.0";
+
+    protected AbstractDeployMojo(RuntimeInformation runtimeInformation, RepositorySystem repositorySystem) {
+        this.runtimeInformation = runtimeInformation;
+        this.repositorySystem = repositorySystem;
+    }
 
     /* Setters and Getters */
 

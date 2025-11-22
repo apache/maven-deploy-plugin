@@ -692,7 +692,7 @@ public class DeployMojoTest extends AbstractMojoTestCase {
     }
 
     public void testLegacyAltDeploymentRepositoryWithDefaultLayout() throws Exception {
-        mojo = new DeployMojo();
+        mojo = new DeployMojo(null, null);
 
         setVariableValueToObject(mojo, "project", project);
         setVariableValueToObject(mojo, "session", session);
@@ -707,7 +707,7 @@ public class DeployMojoTest extends AbstractMojoTestCase {
     }
 
     public void testLegacyAltDeploymentRepositoryWithLegacyLayout() throws Exception {
-        mojo = new DeployMojo();
+        mojo = new DeployMojo(null, null);
 
         setVariableValueToObject(mojo, "project", project);
         setVariableValueToObject(mojo, "session", session);
@@ -727,7 +727,7 @@ public class DeployMojoTest extends AbstractMojoTestCase {
     }
 
     public void testInsaneAltDeploymentRepository() throws Exception {
-        mojo = new DeployMojo();
+        mojo = new DeployMojo(null, null);
 
         setVariableValueToObject(mojo, "project", project);
         setVariableValueToObject(mojo, "session", session);
@@ -747,7 +747,7 @@ public class DeployMojoTest extends AbstractMojoTestCase {
     }
 
     public void testDefaultScmSvnAltDeploymentRepository() throws Exception {
-        mojo = new DeployMojo();
+        mojo = new DeployMojo(null, null);
 
         setVariableValueToObject(mojo, "project", project);
         setVariableValueToObject(mojo, "session", session);
@@ -763,7 +763,7 @@ public class DeployMojoTest extends AbstractMojoTestCase {
     }
 
     public void testLegacyScmSvnAltDeploymentRepository() throws Exception {
-        mojo = new DeployMojo();
+        mojo = new DeployMojo(null, null);
 
         setVariableValueToObject(mojo, "project", project);
         String altDeploymentRepository = "altDeploymentRepository::legacy::scm:svn:http://localhost";
@@ -782,7 +782,7 @@ public class DeployMojoTest extends AbstractMojoTestCase {
     }
 
     public void testAltSnapshotDeploymentRepository() throws Exception {
-        mojo = new DeployMojo();
+        mojo = new DeployMojo(null, null);
 
         setVariableValueToObject(mojo, "project", project);
         setVariableValueToObject(mojo, "session", session);
@@ -797,7 +797,7 @@ public class DeployMojoTest extends AbstractMojoTestCase {
     }
 
     public void testAltReleaseDeploymentRepository() throws Exception {
-        mojo = new DeployMojo();
+        mojo = new DeployMojo(null, null);
 
         setVariableValueToObject(mojo, "project", project);
         setVariableValueToObject(mojo, "session", session);
