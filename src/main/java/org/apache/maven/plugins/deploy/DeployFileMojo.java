@@ -368,7 +368,7 @@ public class DeployFileMojo extends AbstractDeployMojo {
                     ProducedArtifact deployable = session.createProducedArtifact(
                             artifact.getGroupId(),
                             artifact.getArtifactId(),
-                            artifact.getVersion().asString(),
+                            artifact.getVersion().toString(),
                             classifiers.substring(ci, nci).trim(),
                             extension,
                             type);
