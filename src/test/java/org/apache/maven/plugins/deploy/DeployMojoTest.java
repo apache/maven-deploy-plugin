@@ -18,154 +18,103 @@
  */
 package org.apache.maven.plugins.deploy;
 
+import javax.inject.Inject;
+
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.maven.api.plugin.testing.Basedir;
+import org.apache.maven.api.plugin.testing.InjectMojo;
+import org.apache.maven.api.plugin.testing.MojoParameter;
+import org.apache.maven.api.plugin.testing.MojoTest;
+import org.apache.maven.artifact.DefaultArtifact;
+import org.apache.maven.artifact.handler.manager.ArtifactHandlerManager;
+import org.apache.maven.bridge.MavenRepositorySystem;
 import org.apache.maven.execution.MavenSession;
+import org.apache.maven.model.Repository;
 import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugin.descriptor.PluginDescriptor;
-import org.apache.maven.plugin.testing.AbstractMojoTestCase;
-import org.apache.maven.plugin.testing.stubs.MavenProjectStub;
-import org.apache.maven.plugins.deploy.stubs.ArtifactRepositoryStub;
-import org.apache.maven.plugins.deploy.stubs.DeployArtifactStub;
 import org.apache.maven.project.MavenProject;
-import org.codehaus.plexus.util.FileUtils;
-import org.eclipse.aether.DefaultRepositorySystemSession;
-import org.eclipse.aether.RepositorySystem;
-import org.eclipse.aether.internal.impl.DefaultLocalPathComposer;
-import org.eclipse.aether.internal.impl.SimpleLocalRepositoryManagerFactory;
-import org.eclipse.aether.repository.LocalRepository;
+import org.apache.maven.project.MavenProjectHelper;
 import org.eclipse.aether.repository.RemoteRepository;
-import org.junit.Ignore;
-import org.mockito.InjectMocks;
-import org.mockito.MockitoAnnotations;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.when;
 
 /**
  * @author <a href="mailto:aramirez@apache.org">Allan Ramirez</a>
  */
-public class DeployMojoTest extends AbstractMojoTestCase {
+@MojoTest(realRepositorySession = true)
+@Basedir("/unit/deploy-test")
+class DeployMojoTest {
+
+    @TempDir
+    private Path tempDir;
+
     private File remoteRepo;
 
     private File localRepo;
 
-    private static final String LOCAL_REPO = getBasedir() + "/target/local-repo";
+    @Inject
+    private MavenSession mavenSession;
 
-    private static final String REMOTE_REPO = getBasedir() + "/target/remote-repo";
+    @Inject
+    private MavenProject mavenProject;
 
-    DeployArtifactStub artifact;
+    @Inject
+    private MavenRepositorySystem repositorySystem;
 
-    final MavenProjectStub project = new MavenProjectStub();
+    @Inject
+    private ArtifactHandlerManager artifactHandlerManager;
 
-    private AutoCloseable openMocks;
+    @Inject
+    private MavenProjectHelper mavenProjectHelper;
 
-    private MavenSession session;
+    @BeforeEach
+    void setUp() throws Exception {
+        remoteRepo = tempDir.resolve("remote-repo").toFile();
+        localRepo = tempDir.resolve("local-repo").toFile();
 
-    @InjectMocks
-    private DeployMojo mojo;
+        Repository deploymentRepository = new Repository();
+        deploymentRepository.setId("deploy-test");
+        deploymentRepository.setUrl("file://" + remoteRepo.getAbsolutePath());
 
-    public void setUp() throws Exception {
-        super.setUp();
+        mavenProject.setSnapshotArtifactRepository(
+                repositorySystem.buildArtifactRepositoryFromRepo(deploymentRepository));
 
-        session = mock(MavenSession.class);
-        when(session.getPluginContext(any(PluginDescriptor.class), any(MavenProject.class)))
-                .thenReturn(new ConcurrentHashMap<>());
-        DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
-        repositorySession.setLocalRepositoryManager(
-                new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
-                        .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
-        when(session.getRepositorySession()).thenReturn(repositorySession);
+        mavenProject.setGroupId("org.apache.maven.test");
+        mavenProject.setArtifactId("maven-deploy-test");
+        mavenProject.setVersion("1.0-SNAPSHOT");
 
-        remoteRepo = new File(REMOTE_REPO);
-
-        remoteRepo.mkdirs();
-
-        localRepo = new File(LOCAL_REPO);
-
-        if (localRepo.exists()) {
-            FileUtils.deleteDirectory(localRepo);
-        }
-
-        if (remoteRepo.exists()) {
-            FileUtils.deleteDirectory(remoteRepo);
-        }
+        when(mavenSession.getProjects()).thenReturn(Collections.singletonList(mavenProject));
+        mavenSession.getRequest().setLocalRepositoryPath(localRepo);
     }
 
-    public void tearDown() throws Exception {
-        super.tearDown();
-
-        if (remoteRepo.exists()) {
-            // FileUtils.deleteDirectory( remoteRepo );
-        }
-
-        if (openMocks != null) {
-            openMocks.close();
-        }
-    }
-
-    public void testDeployTestEnvironment() throws Exception {
-        File testPom = new File(getBasedir(), "target/test-classes/unit/basic-deploy-test/plugin-config.xml");
-
-        mojo = (DeployMojo) lookupMojo("deploy", testPom);
-
+    @Test
+    @InjectMojo(goal = "deploy")
+    void testDeployTestEnvironment(DeployMojo mojo) {
         assertNotNull(mojo);
     }
 
-    public void testBasicDeploy() throws Exception {
-        File testPom = new File(getBasedir(), "target/test-classes/unit/basic-deploy-test/plugin-config.xml");
+    @Test
+    @InjectMojo(goal = "deploy")
+    void testBasicDeploy(DeployMojo mojo) throws Exception {
+        mojo.setPluginContext(new ConcurrentHashMap<>());
 
-        mojo = (DeployMojo) lookupMojo("deploy", testPom);
-
-        openMocks = MockitoAnnotations.openMocks(this);
-
-        assertNotNull(mojo);
-
-        DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
-        repositorySession.setLocalRepositoryManager(
-                new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
-                        .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
-        when(session.getRepositorySession()).thenReturn(repositorySession);
-
-        File file = new File(
-                getBasedir(),
-                "target/test-classes/unit/basic-deploy-test/target/" + "deploy-test-file-1.0-SNAPSHOT.jar");
-
-        assertTrue(file.exists());
-
-        MavenProject project = (MavenProject) getVariableValueFromObject(mojo, "project");
-        project.setGroupId("org.apache.maven.test");
-        project.setArtifactId("maven-deploy-test");
-        project.setVersion("1.0-SNAPSHOT");
-
-        setVariableValueToObject(mojo, "pluginContext", new ConcurrentHashMap<>());
-        setVariableValueToObject(mojo, "reactorProjects", Collections.singletonList(project));
-
-        artifact = (DeployArtifactStub) project.getArtifact();
-
-        String packaging = project.getPackaging();
-
-        assertEquals("jar", packaging);
-
-        artifact.setFile(file);
-
-        ArtifactRepositoryStub repo = getRepoStub(mojo);
-
-        assertNotNull(repo);
-
-        repo.setAppendToUrl("basic-deploy-test");
-
-        assertEquals("deploy-test", repo.getId());
-        assertEquals("deploy-test", repo.getKey());
-        assertEquals("file", repo.getProtocol());
-        assertEquals("file://" + getBasedir() + "/target/remote-repo/basic-deploy-test", repo.getUrl());
+        setProjectArtifact(mavenProject, "jar");
+        assertEquals("jar", mavenProject.getPackaging());
 
         mojo.execute();
 
@@ -187,8 +136,6 @@ public class DeployMojoTest extends AbstractMojoTestCase {
         // extra Aether files
         expectedFiles.add("resolver-status.properties");
         expectedFiles.add("resolver-status.properties");
-
-        File localRepo = new File(LOCAL_REPO, "");
 
         File[] files = localRepo.listFiles();
 
@@ -224,8 +171,6 @@ public class DeployMojoTest extends AbstractMojoTestCase {
         expectedFiles.add("maven-metadata.xml.md5");
         expectedFiles.add("maven-metadata.xml.sha1");
 
-        remoteRepo = new File(remoteRepo, "basic-deploy-test");
-
         files = remoteRepo.listFiles();
 
         for (File file1 : Objects.requireNonNull(files)) {
@@ -237,100 +182,28 @@ public class DeployMojoTest extends AbstractMojoTestCase {
         assertEquals(0, getSizeOfExpectedFiles(fileList, expectedFiles));
     }
 
-    public void testSkippingDeploy() throws Exception {
-        File testPom = new File(getBasedir(), "target/test-classes/unit/basic-deploy-test/plugin-config.xml");
-
-        mojo = (DeployMojo) lookupMojo("deploy", testPom);
-
-        assertNotNull(mojo);
-
-        File file = new File(
-                getBasedir(),
-                "target/test-classes/unit/basic-deploy-test/target/" + "deploy-test-file-1.0-SNAPSHOT.jar");
-
-        assertTrue(file.exists());
-
-        MavenProject project = (MavenProject) getVariableValueFromObject(mojo, "project");
-
-        setVariableValueToObject(mojo, "pluginDescriptor", new PluginDescriptor());
-        setVariableValueToObject(mojo, "pluginContext", new ConcurrentHashMap<>());
-        setVariableValueToObject(mojo, "reactorProjects", Collections.singletonList(project));
-        setVariableValueToObject(mojo, "session", session);
-
-        artifact = (DeployArtifactStub) project.getArtifact();
-
-        String packaging = project.getPackaging();
-
-        assertEquals("jar", packaging);
-
-        artifact.setFile(file);
-
-        ArtifactRepositoryStub repo = getRepoStub(mojo);
-
-        assertNotNull(repo);
-
-        repo.setAppendToUrl("basic-deploy-test");
-
-        assertEquals("deploy-test", repo.getId());
-        assertEquals("deploy-test", repo.getKey());
-        assertEquals("file", repo.getProtocol());
-        assertEquals("file://" + getBasedir() + "/target/remote-repo/basic-deploy-test", repo.getUrl());
-
-        setVariableValueToObject(mojo, "skip", Boolean.TRUE.toString());
+    @Test
+    @InjectMojo(goal = "deploy")
+    @MojoParameter(name = "skip", value = "true")
+    void testSkippingDeploy(DeployMojo mojo) throws Exception {
+        mojo.setPluginContext(new ConcurrentHashMap<>());
 
         mojo.execute();
-
-        File localRepo = new File(LOCAL_REPO, "");
 
         File[] files = localRepo.listFiles();
-
         assertNull(files);
-
-        remoteRepo = new File(remoteRepo, "basic-deploy-test");
 
         files = remoteRepo.listFiles();
-
         assertNull(files);
     }
 
-    public void testBasicDeployWithPackagingAsPom() throws Exception {
-        File testPom = new File(getBasedir(), "target/test-classes/unit/basic-deploy-pom/plugin-config.xml");
+    @Test
+    @InjectMojo(goal = "deploy")
+    void testBasicDeployWithPackagingAsPom(DeployMojo mojo) throws Exception {
+        mojo.setPluginContext(new ConcurrentHashMap<>());
 
-        mojo = (DeployMojo) lookupMojo("deploy", testPom);
-
-        openMocks = MockitoAnnotations.openMocks(this);
-
-        assertNotNull(mojo);
-
-        DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
-        repositorySession.setLocalRepositoryManager(
-                new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
-                        .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
-        when(session.getRepositorySession()).thenReturn(repositorySession);
-
-        File pomFile = new File(
-                getBasedir(),
-                "target/test-classes/unit/basic-deploy-pom/target/" + "deploy-test-file-1.0-SNAPSHOT.pom");
-
-        assertTrue(pomFile.exists());
-
-        MavenProject project = (MavenProject) getVariableValueFromObject(mojo, "project");
-        project.setGroupId("org.apache.maven.test");
-        project.setArtifactId("maven-deploy-test");
-        project.setVersion("1.0-SNAPSHOT");
-
-        setVariableValueToObject(mojo, "pluginContext", new ConcurrentHashMap<>());
-        setVariableValueToObject(mojo, "reactorProjects", Collections.singletonList(project));
-
-        artifact = (DeployArtifactStub) project.getArtifact();
-
-        artifact.setArtifactHandlerExtension(project.getPackaging());
-
-        artifact.setFile(pomFile);
-
-        ArtifactRepositoryStub repo = getRepoStub(mojo);
-
-        repo.setAppendToUrl("basic-deploy-pom");
+        setProjectArtifact(mavenProject, "pom");
+        mavenProject.setPackaging("pom");
 
         mojo.execute();
 
@@ -353,7 +226,6 @@ public class DeployMojoTest extends AbstractMojoTestCase {
         expectedFiles.add("maven-metadata.xml");
         expectedFiles.add("maven-metadata.xml.md5");
         expectedFiles.add("maven-metadata.xml.sha1");
-        remoteRepo = new File(remoteRepo, "basic-deploy-pom");
 
         File[] files = remoteRepo.listFiles();
 
@@ -366,44 +238,13 @@ public class DeployMojoTest extends AbstractMojoTestCase {
         assertEquals(0, getSizeOfExpectedFiles(fileList, expectedFiles));
     }
 
-    public void testBasicDeployWithPackagingAsBom() throws Exception {
-        File testPom = new File(getBasedir(), "target/test-classes/unit/basic-deploy-bom/plugin-config.xml");
+    @Test
+    @InjectMojo(goal = "deploy")
+    void testBasicDeployWithPackagingAsBom(DeployMojo mojo) throws Exception {
+        mojo.setPluginContext(new ConcurrentHashMap<>());
 
-        mojo = (DeployMojo) lookupMojo("deploy", testPom);
-
-        openMocks = MockitoAnnotations.openMocks(this);
-
-        assertNotNull(mojo);
-
-        DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
-        repositorySession.setLocalRepositoryManager(
-                new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
-                        .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
-        when(session.getRepositorySession()).thenReturn(repositorySession);
-
-        File pomFile = new File(
-                getBasedir(),
-                "target/test-classes/unit/basic-deploy-bom/target/" + "deploy-test-file-1.0-SNAPSHOT.pom");
-
-        assertTrue(pomFile.exists());
-
-        MavenProject project = (MavenProject) getVariableValueFromObject(mojo, "project");
-        project.setGroupId("org.apache.maven.test");
-        project.setArtifactId("maven-deploy-test");
-        project.setVersion("1.0-SNAPSHOT");
-
-        setVariableValueToObject(mojo, "pluginContext", new ConcurrentHashMap<>());
-        setVariableValueToObject(mojo, "reactorProjects", Collections.singletonList(project));
-
-        artifact = (DeployArtifactStub) project.getArtifact();
-
-        artifact.setArtifactHandlerExtension(project.getPackaging());
-
-        artifact.setFile(pomFile);
-
-        ArtifactRepositoryStub repo = getRepoStub(mojo);
-
-        repo.setAppendToUrl("basic-deploy-bom");
+        setProjectArtifact(mavenProject, "pom");
+        mavenProject.setPackaging("bom");
 
         mojo.execute();
 
@@ -426,7 +267,6 @@ public class DeployMojoTest extends AbstractMojoTestCase {
         expectedFiles.add("maven-metadata.xml");
         expectedFiles.add("maven-metadata.xml.md5");
         expectedFiles.add("maven-metadata.xml.sha1");
-        remoteRepo = new File(remoteRepo, "basic-deploy-bom");
 
         File[] files = remoteRepo.listFiles();
 
@@ -439,30 +279,13 @@ public class DeployMojoTest extends AbstractMojoTestCase {
         assertEquals(0, getSizeOfExpectedFiles(fileList, expectedFiles));
     }
 
-    public void testDeployIfArtifactFileIsNull() throws Exception {
-        File testPom = new File(getBasedir(), "target/test-classes/unit/basic-deploy-test/plugin-config.xml");
+    @Test
+    @InjectMojo(goal = "deploy")
+    void testDeployIfArtifactFileIsNull(DeployMojo mojo) throws Exception {
+        mojo.setPluginContext(new ConcurrentHashMap<>());
 
-        mojo = (DeployMojo) lookupMojo("deploy", testPom);
-
-        openMocks = MockitoAnnotations.openMocks(this);
-
-        setVariableValueToObject(mojo, "session", session);
-
-        assertNotNull(mojo);
-
-        MavenProject project = (MavenProject) getVariableValueFromObject(mojo, "project");
-        project.setGroupId("org.apache.maven.test");
-        project.setArtifactId("maven-deploy-test");
-        project.setVersion("1.0-SNAPSHOT");
-
-        setVariableValueToObject(mojo, "pluginContext", new ConcurrentHashMap<>());
-        setVariableValueToObject(mojo, "reactorProjects", Collections.singletonList(project));
-
-        artifact = (DeployArtifactStub) project.getArtifact();
-
-        artifact.setFile(null);
-
-        assertNull(artifact.getFile());
+        setProjectArtifact(mavenProject, "jar");
+        mavenProject.getArtifact().setFile(null);
 
         try {
             mojo.execute();
@@ -475,27 +298,13 @@ public class DeployMojoTest extends AbstractMojoTestCase {
         }
     }
 
-    public void testDeployIfProjectFileIsNull() throws Exception {
-        File testPom = new File(getBasedir(), "target/test-classes/unit/basic-deploy-test/plugin-config.xml");
+    @Test
+    @InjectMojo(goal = "deploy")
+    void testDeployIfProjectFileIsNull(DeployMojo mojo) throws Exception {
+        mojo.setPluginContext(new ConcurrentHashMap<>());
 
-        mojo = (DeployMojo) lookupMojo("deploy", testPom);
-
-        openMocks = MockitoAnnotations.openMocks(this);
-
-        setVariableValueToObject(mojo, "session", session);
-
-        assertNotNull(mojo);
-
-        MavenProject project = (MavenProject) getVariableValueFromObject(mojo, "project");
-        project.setGroupId("org.apache.maven.test");
-        project.setArtifactId("maven-deploy-test");
-        project.setVersion("1.0-SNAPSHOT");
-
-        project.setFile(null);
-        assertNull(project.getFile());
-
-        setVariableValueToObject(mojo, "pluginContext", new ConcurrentHashMap<>());
-        setVariableValueToObject(mojo, "reactorProjects", Collections.singletonList(project));
+        setProjectArtifact(mavenProject, "jar");
+        mavenProject.setFile(null);
 
         try {
             mojo.execute();
@@ -506,42 +315,23 @@ public class DeployMojoTest extends AbstractMojoTestCase {
         }
     }
 
-    public void testDeployWithAttachedArtifacts() throws Exception {
-        File testPom = new File(
-                getBasedir(), "target/test-classes/unit/basic-deploy-with-attached-artifacts/" + "plugin-config.xml");
+    @Test
+    @InjectMojo(goal = "deploy")
+    void testDeployWithAttachedArtifacts(DeployMojo mojo) throws Exception {
+        mojo.setPluginContext(new ConcurrentHashMap<>());
 
-        mojo = (DeployMojo) lookupMojo("deploy", testPom);
+        setProjectArtifact(mavenProject, "jar");
 
-        openMocks = MockitoAnnotations.openMocks(this);
-
-        assertNotNull(mojo);
-
-        DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
-        repositorySession.setLocalRepositoryManager(
-                new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
-                        .newInstance(repositorySession, new LocalRepository(LOCAL_REPO)));
-        when(session.getRepositorySession()).thenReturn(repositorySession);
-
-        MavenProject project = (MavenProject) getVariableValueFromObject(mojo, "project");
-        project.setGroupId("org.apache.maven.test");
-        project.setArtifactId("maven-deploy-test");
-        project.setVersion("1.0-SNAPSHOT");
-
-        setVariableValueToObject(mojo, "pluginContext", new ConcurrentHashMap<>());
-        setVariableValueToObject(mojo, "reactorProjects", Collections.singletonList(project));
-
-        artifact = (DeployArtifactStub) project.getArtifact();
-
-        File file = new File(
-                getBasedir(),
-                "target/test-classes/unit/basic-deploy-with-attached-artifacts/target/"
-                        + "deploy-test-file-1.0-SNAPSHOT.jar");
-
-        artifact.setFile(file);
-
-        ArtifactRepositoryStub repo = getRepoStub(mojo);
-
-        repo.setAppendToUrl("basic-deploy-with-attached-artifacts");
+        mavenProjectHelper.attachArtifact(
+                mavenProject,
+                "jar",
+                "next1",
+                Files.createTempFile(tempDir, "test-artifact1", "jar").toFile());
+        mavenProjectHelper.attachArtifact(
+                mavenProject,
+                "jar",
+                "next2",
+                Files.createTempFile(tempDir, "test-artifact2", "jar").toFile());
 
         mojo.execute();
 
@@ -564,24 +354,19 @@ public class DeployMojoTest extends AbstractMojoTestCase {
         expectedFiles.add("maven-deploy-test-1.0-SNAPSHOT.pom");
         expectedFiles.add("maven-deploy-test-1.0-SNAPSHOT.pom.md5");
         expectedFiles.add("maven-deploy-test-1.0-SNAPSHOT.pom.sha1");
-        // as we are in SNAPSHOT the file is here twice
-        expectedFiles.add("maven-metadata.xml");
-        expectedFiles.add("maven-metadata.xml.md5");
-        expectedFiles.add("maven-metadata.xml.sha1");
-        expectedFiles.add("attached-artifact-test-0");
-        expectedFiles.add("1.0-SNAPSHOT");
-        expectedFiles.add("maven-metadata.xml");
-        expectedFiles.add("maven-metadata.xml.md5");
-        expectedFiles.add("maven-metadata.xml.sha1");
-        expectedFiles.add("attached-artifact-test-0-1.0-SNAPSHOT.jar");
-        expectedFiles.add("attached-artifact-test-0-1.0-SNAPSHOT.jar.md5");
-        expectedFiles.add("attached-artifact-test-0-1.0-SNAPSHOT.jar.sha1");
-        // as we are in SNAPSHOT the file is here twice
-        expectedFiles.add("maven-metadata.xml");
-        expectedFiles.add("maven-metadata.xml.md5");
-        expectedFiles.add("maven-metadata.xml.sha1");
 
-        remoteRepo = new File(remoteRepo, "basic-deploy-with-attached-artifacts");
+        expectedFiles.add("maven-deploy-test-1.0-SNAPSHOT-next1.jar");
+        expectedFiles.add("maven-deploy-test-1.0-SNAPSHOT-next1.jar.md5");
+        expectedFiles.add("maven-deploy-test-1.0-SNAPSHOT-next1.jar.sha1");
+
+        expectedFiles.add("maven-deploy-test-1.0-SNAPSHOT-next2.jar");
+        expectedFiles.add("maven-deploy-test-1.0-SNAPSHOT-next2.jar.md5");
+        expectedFiles.add("maven-deploy-test-1.0-SNAPSHOT-next2.jar.sha1");
+
+        // as we are in SNAPSHOT the file is here twice
+        expectedFiles.add("maven-metadata.xml");
+        expectedFiles.add("maven-metadata.xml.md5");
+        expectedFiles.add("maven-metadata.xml.sha1");
 
         File[] files = remoteRepo.listFiles();
 
@@ -594,26 +379,19 @@ public class DeployMojoTest extends AbstractMojoTestCase {
         assertEquals(0, getSizeOfExpectedFiles(fileList, expectedFiles));
     }
 
-    public void testNonPomDeployWithAttachedArtifactsOnly() throws Exception {
-        File testPom = new File(
-                getBasedir(), "target/test-classes/unit/basic-deploy-with-attached-artifacts/" + "plugin-config.xml");
+    @Test
+    @InjectMojo(goal = "deploy")
+    void testNonPomDeployWithAttachedArtifactsOnly(DeployMojo mojo) throws Exception {
+        mojo.setPluginContext(new ConcurrentHashMap<>());
 
-        mojo = (DeployMojo) lookupMojo("deploy", testPom);
+        setProjectArtifact(mavenProject, "jar");
+        mavenProjectHelper.attachArtifact(
+                mavenProject,
+                "jar",
+                "next1",
+                Files.createTempFile(tempDir, "test-artifact1", "jar").toFile());
 
-        openMocks = MockitoAnnotations.openMocks(this);
-
-        assertNotNull(mojo);
-
-        MavenProject project = (MavenProject) getVariableValueFromObject(mojo, "project");
-        project.setGroupId("org.apache.maven.test");
-        project.setArtifactId("maven-deploy-test");
-        project.setVersion("1.0-SNAPSHOT");
-
-        setVariableValueToObject(mojo, "pluginContext", new ConcurrentHashMap<>());
-        setVariableValueToObject(mojo, "reactorProjects", Collections.singletonList(project));
-
-        artifact = (DeployArtifactStub) project.getArtifact();
-        artifact.setFile(null);
+        mavenProject.getArtifact().setFile(null);
 
         try {
             mojo.execute();
@@ -627,188 +405,90 @@ public class DeployMojoTest extends AbstractMojoTestCase {
         }
     }
 
-    @Ignore("SCP is not part of Maven3 distribution. Aether handles transport extensions.")
-    public void basicDeployWithScpAsProtocol() throws Exception {
-        String originalUserHome = System.getProperty("user.home");
-
-        // FIX THE DAMN user.home BEFORE YOU DELETE IT!!!
-        File altHome = new File(getBasedir(), "target/ssh-user-home");
-        altHome.mkdirs();
-
-        System.out.println("Testing user.home value for .ssh dir: " + altHome.getCanonicalPath());
-
-        Properties props = System.getProperties();
-        props.setProperty("user.home", altHome.getCanonicalPath());
-
-        System.setProperties(props);
-
-        File testPom = new File(getBasedir(), "target/test-classes/unit/basic-deploy-scp/plugin-config.xml");
-
-        mojo = (DeployMojo) lookupMojo("deploy", testPom);
-
-        assertNotNull(mojo);
-
-        RepositorySystem repositorySystem = mock(RepositorySystem.class);
-
-        setVariableValueToObject(mojo, "repositorySystem", repositorySystem);
-
-        File file = new File(
-                getBasedir(),
-                "target/test-classes/unit/basic-deploy-scp/target/" + "deploy-test-file-1.0-SNAPSHOT.jar");
-
-        assertTrue(file.exists());
-
-        MavenProject project = (MavenProject) getVariableValueFromObject(mojo, "project");
-
-        setVariableValueToObject(mojo, "pluginContext", new ConcurrentHashMap<>());
-        setVariableValueToObject(mojo, "reactorProjects", Collections.singletonList(project));
-
-        artifact = (DeployArtifactStub) project.getArtifact();
-
-        artifact.setFile(file);
-
-        String altUserHome = System.getProperty("user.home");
-
-        if (altUserHome.equals(originalUserHome)) {
-            // this is *very* bad!
-            throw new IllegalStateException(
-                    "Setting 'user.home' system property to alternate value did NOT work. Aborting test.");
-        }
-
-        File sshFile = new File(altUserHome, ".ssh");
-
-        System.out.println("Testing .ssh dir: " + sshFile.getCanonicalPath());
-
-        // delete first the .ssh folder if existing before executing the mojo
-        if (sshFile.exists()) {
-            FileUtils.deleteDirectory(sshFile);
-        }
-
-        mojo.execute();
-
-        assertTrue(sshFile.exists());
-
-        FileUtils.deleteDirectory(sshFile);
-    }
-
-    public void testLegacyAltDeploymentRepositoryWithDefaultLayout() throws Exception {
-        mojo = new DeployMojo(null, null);
-
-        setVariableValueToObject(mojo, "project", project);
-        setVariableValueToObject(mojo, "session", session);
-        setVariableValueToObject(mojo, "altDeploymentRepository", "altDeploymentRepository::default::http://localhost");
-
-        project.setVersion("1.0-SNAPSHOT");
-
+    @Test
+    @InjectMojo(goal = "deploy")
+    void testLegacyAltDeploymentRepositoryWithDefaultLayout(DeployMojo mojo) throws Exception {
         assertEquals(
                 new RemoteRepository.Builder("altDeploymentRepository", "default", "http://localhost").build(),
                 mojo.getDeploymentRepository(
-                        project, null, null, "altDeploymentRepository::default::http://localhost"));
+                        mavenProject, null, null, "altDeploymentRepository::default::http://localhost"));
     }
 
-    public void testLegacyAltDeploymentRepositoryWithLegacyLayout() throws Exception {
-        mojo = new DeployMojo(null, null);
-
-        setVariableValueToObject(mojo, "project", project);
-        setVariableValueToObject(mojo, "session", session);
+    @Test
+    @InjectMojo(goal = "deploy")
+    void testLegacyAltDeploymentRepositoryWithLegacyLayout(DeployMojo mojo) {
         String altDeploymentRepository = "altDeploymentRepository::legacy::http://localhost";
-        setVariableValueToObject(mojo, "altDeploymentRepository", altDeploymentRepository);
 
-        project.setVersion("1.0-SNAPSHOT");
         try {
-            mojo.getDeploymentRepository(project, null, null, altDeploymentRepository);
+            mojo.getDeploymentRepository(mavenProject, null, null, altDeploymentRepository);
             fail("Should throw: Invalid legacy syntax and layout for repository.");
         } catch (MojoExecutionException e) {
             assertEquals(
-                    e.getMessage(),
                     "Invalid legacy syntax and layout for alternative repository: \"" + altDeploymentRepository
-                            + "\". Use \"altDeploymentRepository::http://localhost\" instead, and only default layout is supported.");
+                            + "\". Use \"altDeploymentRepository::http://localhost\" instead, and only default layout is supported.",
+                    e.getMessage());
         }
     }
 
-    public void testInsaneAltDeploymentRepository() throws Exception {
-        mojo = new DeployMojo(null, null);
-
-        setVariableValueToObject(mojo, "project", project);
-        setVariableValueToObject(mojo, "session", session);
+    @Test
+    @InjectMojo(goal = "deploy")
+    void testInsaneAltDeploymentRepository(DeployMojo mojo) {
         String altDeploymentRepository = "altDeploymentRepository::hey::wow::foo::http://localhost";
-        setVariableValueToObject(mojo, "altDeploymentRepository", altDeploymentRepository);
 
-        project.setVersion("1.0-SNAPSHOT");
         try {
-            mojo.getDeploymentRepository(project, null, null, altDeploymentRepository);
+            mojo.getDeploymentRepository(mavenProject, null, null, altDeploymentRepository);
             fail("Should throw: Invalid legacy syntax and layout for repository.");
         } catch (MojoExecutionException e) {
             assertEquals(
-                    e.getMessage(),
                     "Invalid legacy syntax and layout for alternative repository: \"" + altDeploymentRepository
-                            + "\". Use \"altDeploymentRepository::wow::foo::http://localhost\" instead, and only default layout is supported.");
+                            + "\". Use \"altDeploymentRepository::wow::foo::http://localhost\" instead, and only default layout is supported.",
+                    e.getMessage());
         }
     }
 
-    public void testDefaultScmSvnAltDeploymentRepository() throws Exception {
-        mojo = new DeployMojo(null, null);
-
-        setVariableValueToObject(mojo, "project", project);
-        setVariableValueToObject(mojo, "session", session);
-        setVariableValueToObject(
-                mojo, "altDeploymentRepository", "altDeploymentRepository::default::scm:svn:http://localhost");
-
-        project.setVersion("1.0-SNAPSHOT");
-
+    @Test
+    @InjectMojo(goal = "deploy")
+    void testDefaultScmSvnAltDeploymentRepository(DeployMojo mojo) throws Exception {
         assertEquals(
                 new RemoteRepository.Builder("altDeploymentRepository", "default", "scm:svn:http://localhost").build(),
                 mojo.getDeploymentRepository(
-                        project, null, null, "altDeploymentRepository::default::scm:svn:http://localhost"));
+                        mavenProject, null, null, "altDeploymentRepository::default::scm:svn:http://localhost"));
     }
 
-    public void testLegacyScmSvnAltDeploymentRepository() throws Exception {
-        mojo = new DeployMojo(null, null);
-
-        setVariableValueToObject(mojo, "project", project);
+    @Test
+    @InjectMojo(goal = "deploy")
+    void testLegacyScmSvnAltDeploymentRepository(DeployMojo mojo) {
         String altDeploymentRepository = "altDeploymentRepository::legacy::scm:svn:http://localhost";
-        setVariableValueToObject(mojo, "altDeploymentRepository", altDeploymentRepository);
 
-        project.setVersion("1.0-SNAPSHOT");
         try {
-            mojo.getDeploymentRepository(project, null, null, altDeploymentRepository);
+            mojo.getDeploymentRepository(mavenProject, null, null, altDeploymentRepository);
             fail("Should throw: Invalid legacy syntax and layout for repository.");
         } catch (MojoExecutionException e) {
             assertEquals(
-                    e.getMessage(),
                     "Invalid legacy syntax and layout for alternative repository: \"" + altDeploymentRepository
-                            + "\". Use \"altDeploymentRepository::scm:svn:http://localhost\" instead, and only default layout is supported.");
+                            + "\". Use \"altDeploymentRepository::scm:svn:http://localhost\" instead, and only default layout is supported.",
+                    e.getMessage());
         }
     }
 
-    public void testAltSnapshotDeploymentRepository() throws Exception {
-        mojo = new DeployMojo(null, null);
-
-        setVariableValueToObject(mojo, "project", project);
-        setVariableValueToObject(mojo, "session", session);
-        setVariableValueToObject(
-                mojo, "altSnapshotDeploymentRepository", "altSnapshotDeploymentRepository::http://localhost");
-
-        project.setVersion("1.0-SNAPSHOT");
-
+    @Test
+    @InjectMojo(goal = "deploy")
+    void testAltSnapshotDeploymentRepository(DeployMojo mojo) throws Exception {
         assertEquals(
                 new RemoteRepository.Builder("altSnapshotDeploymentRepository", "default", "http://localhost").build(),
-                mojo.getDeploymentRepository(project, "altSnapshotDeploymentRepository::http://localhost", null, null));
+                mojo.getDeploymentRepository(
+                        mavenProject, "altSnapshotDeploymentRepository::http://localhost", null, null));
     }
 
-    public void testAltReleaseDeploymentRepository() throws Exception {
-        mojo = new DeployMojo(null, null);
-
-        setVariableValueToObject(mojo, "project", project);
-        setVariableValueToObject(mojo, "session", session);
-        setVariableValueToObject(
-                mojo, "altReleaseDeploymentRepository", "altReleaseDeploymentRepository::http://localhost");
-
-        project.setVersion("1.0");
+    @Test
+    @InjectMojo(goal = "deploy")
+    void testAltReleaseDeploymentRepository(DeployMojo mojo) throws Exception {
+        mavenProject.setVersion("1.0");
 
         assertEquals(
                 new RemoteRepository.Builder("altReleaseDeploymentRepository", "default", "http://localhost").build(),
-                mojo.getDeploymentRepository(project, null, "altReleaseDeploymentRepository::http://localhost", null));
+                mojo.getDeploymentRepository(
+                        mavenProject, null, "altReleaseDeploymentRepository::http://localhost", null));
     }
 
     private void addFileToList(File file, List<String> fileList) {
@@ -837,8 +517,16 @@ public class DeployMojoTest extends AbstractMojoTestCase {
         return expectedFiles.size();
     }
 
-    private ArtifactRepositoryStub getRepoStub(Object mojo) throws Exception {
-        MavenProject project = (MavenProject) getVariableValueFromObject(mojo, "project");
-        return (ArtifactRepositoryStub) project.getDistributionManagementArtifactRepository();
+    private void setProjectArtifact(MavenProject mavenProject, String type) throws IOException {
+        DefaultArtifact artifact = new DefaultArtifact(
+                mavenProject.getGroupId(),
+                mavenProject.getArtifactId(),
+                mavenProject.getVersion(),
+                null,
+                type,
+                null,
+                artifactHandlerManager.getArtifactHandler(type));
+        artifact.setFile(Files.createTempFile(tempDir, "test-artifact", type).toFile());
+        mavenProject.setArtifact(artifact);
     }
 }
