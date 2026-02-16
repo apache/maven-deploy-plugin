@@ -30,10 +30,6 @@ import org.apache.maven.api.plugin.testing.InjectMojo;
 import org.apache.maven.api.plugin.testing.MojoTest;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Model;
-import org.eclipse.aether.DefaultRepositorySystemSession;
-import org.eclipse.aether.internal.impl.DefaultLocalPathComposer;
-import org.eclipse.aether.internal.impl.SimpleLocalRepositoryManagerFactory;
-import org.eclipse.aether.repository.LocalRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -43,12 +39,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.mockito.Mockito.when;
 
 /**
  * @author <a href="mailto:aramirez@apache.org">Allan Ramirez</a>
  */
-@MojoTest
+@MojoTest(realRepositorySession = true)
 class DeployFileMojoTest {
 
     private File remoteRepo;
@@ -57,15 +52,8 @@ class DeployFileMojoTest {
     private MavenSession session;
 
     @BeforeEach
-    void setUp() throws Exception {
-        DefaultRepositorySystemSession repositorySession = new DefaultRepositorySystemSession();
-        repositorySession.setLocalRepositoryManager(
-                new SimpleLocalRepositoryManagerFactory(new DefaultLocalPathComposer())
-                        .newInstance(repositorySession, new LocalRepository(getBasedir() + "/target/local-repo")));
-        when(session.getRepositorySession()).thenReturn(repositorySession);
-
+    void setUp() {
         remoteRepo = new File(getBasedir(), "target/remote-repo");
-
         if (!remoteRepo.exists()) {
             remoteRepo.mkdirs();
         }
@@ -73,7 +61,7 @@ class DeployFileMojoTest {
 
     @Test
     @InjectMojo(goal = "deploy-file")
-    void testDeployTestEnvironment(DeployFileMojo mojo) throws Exception {
+    void testDeployTestEnvironment(DeployFileMojo mojo) {
         assertNotNull(mojo);
     }
 
@@ -84,36 +72,22 @@ class DeployFileMojoTest {
 
         assertNotNull(mojo);
 
-        String groupId = (String) getVariableValueFromObject(mojo, "groupId");
-
-        String artifactId = (String) getVariableValueFromObject(mojo, "artifactId");
-
-        String version = (String) getVariableValueFromObject(mojo, "version");
-
-        String packaging = (String) getVariableValueFromObject(mojo, "packaging");
-
-        File file = (File) getVariableValueFromObject(mojo, "file");
-
-        String repositoryId = (String) getVariableValueFromObject(mojo, "repositoryId");
-
-        String url = (String) getVariableValueFromObject(mojo, "url");
-
-        String skip = (String) getVariableValueFromObject(mojo, "skip");
+        String groupId = getVariableValueFromObject(mojo, "groupId");
+        String artifactId = getVariableValueFromObject(mojo, "artifactId");
+        String version = getVariableValueFromObject(mojo, "version");
+        String packaging = getVariableValueFromObject(mojo, "packaging");
+        File file = getVariableValueFromObject(mojo, "file");
+        String repositoryId = getVariableValueFromObject(mojo, "repositoryId");
+        String url = getVariableValueFromObject(mojo, "url");
+        String skip = getVariableValueFromObject(mojo, "skip");
 
         assertEquals("org.apache.maven.test", groupId);
-
         assertEquals("maven-deploy-file-test", artifactId);
-
         assertEquals("1.0", version);
-
         assertEquals("jar", packaging);
-
         assertEquals("snapshots", skip);
-
         assertTrue(file.exists());
-
         assertEquals("deploy-test", repositoryId);
-
         assertEquals("file://" + getBasedir() + "/target/remote-repo/deploy-file-test", url);
 
         mojo.execute();
@@ -130,15 +104,10 @@ class DeployFileMojoTest {
         Model model = mojo.readModel(pom);
 
         assertEquals("4.0.0", model.getModelVersion());
-
         assertEquals(groupId, model.getGroupId());
-
         assertEquals(artifactId, model.getArtifactId());
-
         assertEquals(version, model.getVersion());
-
         assertEquals(packaging, model.getPackaging());
-
         assertEquals("POM was created from deploy:deploy-file", model.getDescription());
 
         // check the remote-repo
@@ -181,13 +150,10 @@ class DeployFileMojoTest {
 
         assertNotNull(mojo);
 
-        String classifier = (String) getVariableValueFromObject(mojo, "classifier");
-
-        String groupId = (String) getVariableValueFromObject(mojo, "groupId");
-
-        String artifactId = (String) getVariableValueFromObject(mojo, "artifactId");
-
-        String version = (String) getVariableValueFromObject(mojo, "version");
+        String classifier = getVariableValueFromObject(mojo, "classifier");
+        String groupId = getVariableValueFromObject(mojo, "groupId");
+        String artifactId = getVariableValueFromObject(mojo, "artifactId");
+        String version = getVariableValueFromObject(mojo, "version");
 
         assertEquals("bin", classifier);
 
@@ -223,16 +189,12 @@ class DeployFileMojoTest {
 
         assertNotNull(mojo);
 
-        String groupId = (String) getVariableValueFromObject(mojo, "groupId");
-
-        String artifactId = (String) getVariableValueFromObject(mojo, "artifactId");
-
-        String version = (String) getVariableValueFromObject(mojo, "version");
+        String groupId = getVariableValueFromObject(mojo, "groupId");
+        String artifactId = getVariableValueFromObject(mojo, "artifactId");
+        String version = getVariableValueFromObject(mojo, "version");
 
         assertEquals("org.apache.maven.test", groupId);
-
         assertEquals("maven-deploy-file-test", artifactId);
-
         assertEquals("1.0", version);
 
         mojo.execute();
@@ -253,13 +215,10 @@ class DeployFileMojoTest {
 
         assertNotNull(mojo);
 
-        String packaging = (String) getVariableValueFromObject(mojo, "packaging");
-
-        String groupId = (String) getVariableValueFromObject(mojo, "groupId");
-
-        String artifactId = (String) getVariableValueFromObject(mojo, "artifactId");
-
-        String version = (String) getVariableValueFromObject(mojo, "version");
+        String packaging = getVariableValueFromObject(mojo, "packaging");
+        String groupId = getVariableValueFromObject(mojo, "groupId");
+        String artifactId = getVariableValueFromObject(mojo, "artifactId");
+        String version = getVariableValueFromObject(mojo, "version");
 
         assertEquals("differentpackaging", packaging);
 
