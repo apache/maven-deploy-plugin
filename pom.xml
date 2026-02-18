@@ -71,7 +71,7 @@ under the License.
     <javaVersion>8</javaVersion>
     <mavenVersion>3.9.12</mavenVersion>
     <!-- Maven bound -->
-    <resolverVersion>1.9.26</resolverVersion>
+    <resolverVersion>2.0.15</resolverVersion>
     <!-- Maven bound -->
     <slf4jVersion>1.7.36</slf4jVersion>
 
