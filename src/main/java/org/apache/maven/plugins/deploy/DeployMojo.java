@@ -391,16 +391,17 @@ public class DeployMojo extends AbstractDeployMojo {
                             + "\" instead.");
                     repo = getRemoteRepository(id, url);
                 } else {
-                    throw new MojoExecutionException("Invalid legacy syntax and layout for alternative repository: \""
-                            + altDeploymentRepo + "\". Use \"" + id + "::" + url
-                            + "\" instead, and only default layout is supported.");
+                    String errorMsg = formatTwoPartErrorMessage(
+                            "Invalid legacy syntax and layout for alternative repository: \"" + id + "::" + url + "\".",
+                            "Use \"" + id + "::" + url + "\" instead, and only default layout is supported.");
+                    throw new MojoExecutionException(errorMsg);
                 }
             } else {
                 matcher = ALT_REPO_SYNTAX_PATTERN.matcher(altDeploymentRepo);
 
                 if (!matcher.matches()) {
-                    throw new MojoExecutionException("Invalid syntax for alternative repository: \"" + altDeploymentRepo
-                            + "\". Use \"id::url\".");
+                    throw new MojoExecutionException(formatErrorMessage("Invalid syntax for alternative repository: \""
+                            + altDeploymentRepo + "\". Use \"id::url\"."));
                 } else {
                     String id = matcher.group(1).trim();
                     String url = matcher.group(2).trim();
@@ -415,10 +416,9 @@ public class DeployMojo extends AbstractDeployMojo {
         }
 
         if (repo == null) {
-            String msg = "Deployment failed: repository element was not specified in the POM inside"
-                    + " distributionManagement element or in -DaltDeploymentRepository=id::url parameter";
-
-            throw new MojoExecutionException(msg);
+            throw new MojoExecutionException(
+                    formatErrorMessage("Deployment failed: repository element was not specified in the POM inside"
+                            + " distributionManagement element or in -DaltDeploymentRepository=id::url parameter"));
         }
 
         return repo;
