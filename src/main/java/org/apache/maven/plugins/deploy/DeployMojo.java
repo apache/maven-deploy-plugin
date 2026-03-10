@@ -337,19 +337,19 @@ public class DeployMojo extends AbstractDeployMojo {
                             + "\" instead.");
                     repo = createDeploymentArtifactRepository(id, url);
                 } else {
-                    String errorMsg = formatTwoPartErrorMessage(
+                    String longMessage = formatTwoPartErrorMessage(
                             "Invalid legacy syntax and layout for alternative repository: \"" + id + "::" + url + "\".",
                             "Use \"" + id + "::" + url + "\" instead, and only default layout is supported.");
-                    throw new MojoException(errorMsg);
+                    throw new MojoException(this, "Invalid legacy syntax and layout for repository.", longMessage);
                 }
             } else {
                 matcher = ALT_REPO_SYNTAX_PATTERN.matcher(altDeploymentRepo);
 
                 if (!matcher.matches()) {
-                    String errorMsg = formatTwoPartErrorMessage(
+                    String longMessage = formatTwoPartErrorMessage(
                             "Invalid syntax for alternative repository: \"" + altDeploymentRepo + "\".",
                             "Use \"id::url\".");
-                    throw new MojoException(errorMsg);
+                    throw new MojoException(this, "Invalid syntax for alternative repository.", longMessage);
                 } else {
                     String id = matcher.group(1).trim();
                     String url = matcher.group(2).trim();
