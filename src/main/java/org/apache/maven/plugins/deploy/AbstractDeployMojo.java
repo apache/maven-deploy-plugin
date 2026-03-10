@@ -99,4 +99,39 @@ public abstract class AbstractDeployMojo implements Mojo {
     protected Log getLog() {
         return logger;
     }
+
+    /**
+     * Formats error messages by adding line breaks for better readability.
+     * This method handles common error message patterns used throughout the plugin.
+     *
+     * @param message the original error message
+     * @return the formatted error message with line breaks
+     */
+    protected String formatErrorMessage(String message) {
+        if (message == null) {
+            return null;
+        }
+        // Add line breaks at key points for better readability
+        return message.replace("Failed to deploy artifacts: ", "Failed to deploy artifacts:\n    ")
+                .replace("): ", "):\n    ")
+                .replace("Deployment failed: ", "Deployment failed:\n    ")
+                .replace(". Use ", ".\n    Use ")
+                .replace(
+                        "Invalid legacy syntax and layout for alternative repository: ",
+                        "Invalid legacy syntax and layout for alternative repository: ")
+                .replace("Invalid syntax for alternative repository: ", "Invalid syntax for alternative repository: ");
+    }
+
+    /**
+     * Formats a two-part error message where both parts should appear on separate new lines.
+     * This is useful for error messages that have an explanation followed by usage instructions.
+     * The returned message starts with a newline so the first part appears on its own line.
+     *
+     * @param part1 the first part of the error message (will be on line 1)
+     * @param part2 the second part of the error message (will be on line 2 with indentation)
+     * @return the formatted error message with line breaks
+     */
+    protected String formatTwoPartErrorMessage(String part1, String part2) {
+        return "\n    " + part1 + "\n    " + part2;
+    }
 }
