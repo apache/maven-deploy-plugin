@@ -424,8 +424,8 @@ class DeployMojoTest {
             fail("Should throw: Invalid legacy syntax and layout for repository.");
         } catch (MojoExecutionException e) {
             assertEquals(
-                    "Invalid legacy syntax and layout for alternative repository: \"" + altDeploymentRepository
-                            + "\". Use \"altDeploymentRepository::http://localhost\" instead, and only default layout is supported.",
+                    "\n    Invalid legacy syntax and layout for alternative repository: \"altDeploymentRepository::http://localhost\".\n    "
+                            + "Use \"altDeploymentRepository::http://localhost\" instead, and only default layout is supported.",
                     e.getMessage());
         }
     }
@@ -440,8 +440,8 @@ class DeployMojoTest {
             fail("Should throw: Invalid legacy syntax and layout for repository.");
         } catch (MojoExecutionException e) {
             assertEquals(
-                    "Invalid legacy syntax and layout for alternative repository: \"" + altDeploymentRepository
-                            + "\". Use \"altDeploymentRepository::wow::foo::http://localhost\" instead, and only default layout is supported.",
+                    "\n    Invalid legacy syntax and layout for alternative repository: \"altDeploymentRepository::wow::foo::http://localhost\".\n    "
+                            + "Use \"altDeploymentRepository::wow::foo::http://localhost\" instead, and only default layout is supported.",
                     e.getMessage());
         }
     }
@@ -465,8 +465,8 @@ class DeployMojoTest {
             fail("Should throw: Invalid legacy syntax and layout for repository.");
         } catch (MojoExecutionException e) {
             assertEquals(
-                    "Invalid legacy syntax and layout for alternative repository: \"" + altDeploymentRepository
-                            + "\". Use \"altDeploymentRepository::scm:svn:http://localhost\" instead, and only default layout is supported.",
+                    "\n    Invalid legacy syntax and layout for alternative repository: \"altDeploymentRepository::scm:svn:http://localhost\".\n    "
+                            + "Use \"altDeploymentRepository::scm:svn:http://localhost\" instead, and only default layout is supported.",
                     e.getMessage());
         }
     }
