@@ -69,7 +69,7 @@ under the License.
 
   <properties>
     <javaVersion>8</javaVersion>
-    <mavenVersion>3.9.13</mavenVersion>
+    <mavenVersion>3.9.14</mavenVersion>
     <!-- Maven bound -->
     <resolverVersion>1.9.27</resolverVersion>
     <!-- Maven bound -->
