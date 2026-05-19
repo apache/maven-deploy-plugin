@@ -117,8 +117,9 @@ class DeployMojoPomPackagingTest {
         when(session.getArtifact(any()))
                 .thenAnswer(iom -> new org.apache.maven.impl.DefaultArtifact(
                         session, iom.getArgument(0, org.eclipse.aether.artifact.Artifact.class)));
-        when(session.createRemoteRepository(any())).thenAnswer(iom -> session.getService(RepositoryFactory.class)
-                .createRemote(iom.getArgument(0, Repository.class)));
+        when(session.createRemoteRepository(any()))
+                .thenAnswer(iom ->
+                        session.getService(RepositoryFactory.class).createRemote(iom.getArgument(0, Repository.class)));
         return session;
     }
 
