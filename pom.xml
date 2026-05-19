@@ -89,7 +89,6 @@ under the License.
     <slf4jVersion>2.0.17</slf4jVersion>
     <version.plexus-xml>4.0.3</version.plexus-xml>
     <version.maven-plugin-tools>4.0.0-beta-1</version.maven-plugin-tools>
-    <version.maven-invoker-plugin>3.7.0</version.maven-invoker-plugin>
 
     <!-- TODO remove property maven4x.site.path with next parent -->
     <maven4x.site.path>plugins-archives/${project.artifactId}-LATEST-4.x</maven4x.site.path>
@@ -237,7 +236,6 @@ under the License.
             <plugin>
               <groupId>org.apache.maven.plugins</groupId>
               <artifactId>maven-invoker-plugin</artifactId>
-              <version>3.9.1</version>
               <configuration>
                 <debug>true</debug>
                 <showErrors>true</showErrors>
