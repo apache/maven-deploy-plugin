@@ -17,6 +17,15 @@
  * under the License.
  */
 
-assert new File( basedir, "target/repo/org/apache/maven/its/mdeploy-170/configperproject/1.0/configperproject-1.0.pom" ).exists()
-assert new File( basedir, "module1/target/repo/org/apache/maven/its/mdeploy-170/module1/1.0/module1-1.0.pom" ).exists()
-assert !( new File( basedir, "module2/target/repo/org/apache/maven/its/mdeploy-170/module2/1.0/module2-1.0.pom" ).exists() )
+rootRepo = new File( basedir, "target/repo" )
+module1Repo = new File( basedir, "module1/target/repo" )
+module2Repo = new File( basedir, "module1/target/repo" )
+
+if (mavenVersion.startsWith('4.')) {
+    // Maven 4 deploys in the root target directory, as defined in the root POM
+    module1Repo = module2Repo = rootRepo
+}
+
+assert new File( rootRepo, "org/apache/maven/its/mdeploy-170/configperproject/1.0/configperproject-1.0.pom" ).exists()
+assert new File( module1Repo, "org/apache/maven/its/mdeploy-170/module1/1.0/module1-1.0.pom" ).exists()
+assert !( new File( module2Repo, "org/apache/maven/its/mdeploy-170/module2/1.0/module2-1.0.pom" ).exists() )
