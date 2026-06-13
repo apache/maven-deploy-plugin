@@ -28,7 +28,7 @@ under the License.
   <packaging>pom</packaging>
 
   <description>
-    Tests deployment at end only in modules.
+    Tests deployment at end only in modules. https://github.com/apache/maven-deploy-plugin/issues/374
   </description>
 
   <properties>
