@@ -105,6 +105,19 @@ under the License.
         <artifactId>guava</artifactId>
         <version>33.6.0-jre</version>
       </dependency>
+      <!--
+        maven-plugin-testing-harness 4.0.0-beta-4 transitively pins maven-xml to 4.0.0-rc-3
+        and pulls in maven-xml-impl 4.0.0-alpha-9 (an artifact ID that no longer exists
+        from rc-4 onward; the XmlService implementation moved into maven-xml itself).
+        Pin maven-xml to ${mavenVersion} so the right XmlService provider is on the
+        test classpath; otherwise Holder.<clinit> fails with
+        "No XmlService implementation found" and every unit test errors out.
+      -->
+      <dependency>
+        <groupId>org.apache.maven</groupId>
+        <artifactId>maven-xml</artifactId>
+        <version>${mavenVersion}</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
