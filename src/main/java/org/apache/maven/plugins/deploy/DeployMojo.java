@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.maven.api.Artifact;
 import org.apache.maven.api.MojoExecution;
@@ -145,6 +146,8 @@ public class DeployMojo extends AbstractDeployMojo {
         TO_BE_DEPLOYED
     }
 
+    private static final String PROJECTS_WITH_DEPLOY_KEY = DeployMojo.class.getName() + ".projectsWithDeploy";
+
     public DeployMojo() {}
 
     private void putState(State state) {
@@ -195,7 +198,27 @@ public class DeployMojo extends AbstractDeployMojo {
     }
 
     private boolean allProjectsMarked() {
-        return session.getProjects().stream().allMatch(p -> hasState(p) || !hasDeployExecution(p));
+        return getProjectsWithDeployExecution().stream().allMatch(this::hasState);
+    }
+
+    /**
+     * Returns the list of reactor projects that have a deploy execution, cached on first call.
+     * The list is invariant during a build and is stored in the first reactor project's plugin
+     * context to avoid recomputing it on every module invocation (O(N) total instead of O(N²)).
+     */
+    @SuppressWarnings("unchecked")
+    private List<Project> getProjectsWithDeployExecution() {
+        List<Project> allProjects = session.getProjects();
+        if (allProjects.isEmpty()) {
+            return List.of();
+        }
+        Map<String, Object> ctx = session.getPluginContext(allProjects.get(0));
+        List<Project> cached = (List<Project>) ctx.get(PROJECTS_WITH_DEPLOY_KEY);
+        if (cached == null) {
+            cached = allProjects.stream().filter(this::hasDeployExecution).collect(Collectors.toList());
+            ctx.put(PROJECTS_WITH_DEPLOY_KEY, cached);
+        }
+        return cached;
     }
 
     private boolean hasDeployExecution(Project p) {
