@@ -51,7 +51,7 @@ In order to deploy artifacts using SSH you must first specify the use of an SSH 
 </project>
 ```
 
-If you are deploying from Unix or have Cygwin installed you won&apos;t need to any additional configuration in your `settings.xml` file as everything will be taken from the environment\. But if you are on Windows and are using something like `plink` then you will need something like the following:
+If you are deploying from Unix or have Cygwin installed you won&apos;t need to any additional configuration in your `settings.xml` file as everything will be taken from the environment. But if you are on Windows and are using something like `plink` then you will need something like the following:
 
 ```unknown
 
@@ -73,7 +73,7 @@ If you are deploying from Unix or have Cygwin installed you won&apos;t need to a
 </settings>
 ```
 
-You should, of course, make sure that you can login into the specified SSH server by hand before attempting the deployment with Maven\. Once you have verified that everything is setup correctly you can now deploy your artifacts using Maven:
+You should, of course, make sure that you can login into the specified SSH server by hand before attempting the deployment with Maven. Once you have verified that everything is setup correctly you can now deploy your artifacts using Maven:
 
 ```unknown
 mvn deploy
@@ -105,5 +105,5 @@ Sometimes you may have permissions problems deploying and if so you can set the 
  </settings>
 ```
 
-**NOTE:** If you are using Putty it will expect the private key to be in the `PPK` format and not the standard format so make sure you use `puttygen` to convert your openssh format key to `PPK` format or generate another one\. Windows users can find the Putty tools on the [PuTTY Download Page](https://www.chiark.greenend.org.uk/~sgtatham/putty/latest.html)\.
+**NOTE:** If you are using Putty it will expect the private key to be in the `PPK` format and not the standard format so make sure you use `puttygen` to convert your openssh format key to `PPK` format or generate another one. Windows users can find the Putty tools on the [PuTTY Download Page](https://www.chiark.greenend.org.uk/~sgtatham/putty/latest.html).
 

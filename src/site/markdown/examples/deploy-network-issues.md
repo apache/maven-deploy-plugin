@@ -24,9 +24,9 @@ date: 2019-01-20
 
 # Deploying With Network Issues
 
-Sometimes, network quality from building machine to the remote repository is not perfect\. Of course, improving the network would be the best solution, but it is not always possible\.
+Sometimes, network quality from building machine to the remote repository is not perfect. Of course, improving the network would be the best solution, but it is not always possible.
 
-There are a few strategies to work around the network issue\.
+There are a few strategies to work around the network issue.
 
 ## Configuring Multiple Tries
 
@@ -56,7 +56,7 @@ When the network is really not consistent, a deeper strategy is to deploy in 2 s
 
 1\. `deploy` to a local directory during the build, for example `file:./target/staging-deploy`,
 
-2\. then copy from the local area to the target remote repository, retrying as much as necessary\.
+2\. then copy from the local area to the target remote repository, retrying as much as necessary.
 
 ### Deploying to a Local Directory
 
@@ -66,21 +66,21 @@ Deploying to a local directory can be done from command line, without changing P
 mvn deploy -DaltDeploymentRepository=local::file:./target/staging-deploy
 ```
 
-or for older 2\.x version of maven\-deploy\-plugin
+or for older 2\.x version of maven-deploy-plugin
 
 ```unknown
 mvn deploy -DaltDeploymentRepository=local::default::file:./target/staging-deploy
 ```
 
-Of course, you can configure the repository in your `pom.xml` if you want to go from a temporary strategy to the general strategy\.
+Of course, you can configure the repository in your `pom.xml` if you want to go from a temporary strategy to the general strategy.
 
 ### Copying from Local Directory to Target Remote Repository
 
-`wagon-maven-plugin`&apos;s [`merge-maven-repos` goal](https://www.mojohaus.org/wagon-maven-plugin/merge-maven-repos-mojo.html) provides a mechanism to copy from one remote repository to the other, while merging repository metadata\.
+`wagon-maven-plugin`&apos;s [`merge-maven-repos` goal](https://www.mojohaus.org/wagon-maven-plugin/merge-maven-repos-mojo.html) provides a mechanism to copy from one remote repository to the other, while merging repository metadata.
 
-`wagon-maven-plugin`&apos;s [`upload` goal](https://www.mojohaus.org/wagon-maven-plugin/upload-mojo.html) will do the same without taking care of repository metadata: use it if you have an empty repository as target, like a staging repository provided by a repository manager\.
+`wagon-maven-plugin`&apos;s [`upload` goal](https://www.mojohaus.org/wagon-maven-plugin/upload-mojo.html) will do the same without taking care of repository metadata: use it if you have an empty repository as target, like a staging repository provided by a repository manager.
 
-It can be invoked fully from command line \(renaming `-Dwagon.` with `wagon.targetId` when [Wagon Maven Plugin 2\.0\.1 will be released](https://github.com/mojohaus/wagon-maven-plugin/pull/26)\):
+It can be invoked fully from command line (renaming `-Dwagon.` with `wagon.targetId` when [Wagon Maven Plugin 2\.0\.1 will be released](https://github.com/mojohaus/wagon-maven-plugin/pull/26)):
 
 ```unknown
 mvn org.codehaus.mojo:wagon-maven-plugin:2.0.0:merge-maven-repos \
