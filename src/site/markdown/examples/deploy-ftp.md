@@ -66,7 +66,7 @@ Your `settings.xml` would contain a `server` element where the `id` of that elem
 </settings>
 ```
 
-You should, of course, make sure that you can login into the specified FTP server by hand before attempting the deployment with Maven\. Once you have verified that everything is setup correctly you can now deploy your artifacts using Maven:
+You should, of course, make sure that you can login into the specified FTP server by hand before attempting the deployment with Maven. Once you have verified that everything is setup correctly you can now deploy your artifacts using Maven:
 
 ```unknown
 mvn deploy

@@ -24,7 +24,7 @@ date: 2006-06-21
 
 # Disable the generation of pom
 
-By default, If no pom is specified during deployment of your 3rd party artifact, a generic pom will be generated which contains the minimum required elements needed for the pom\. In order to disable it, set the **generatePom** parameter to `false`\.
+By default, If no pom is specified during deployment of your 3rd party artifact, a generic pom will be generated which contains the minimum required elements needed for the pom. In order to disable it, set the **generatePom** parameter to `false`.
 
 ```unknown
 mvn ${project.groupId}:${project.artifactId}:${project.version}:deploy-file -Durl=file:///C:/m2-repo \
@@ -37,5 +37,5 @@ mvn ${project.groupId}:${project.artifactId}:${project.version}:deploy-file -Dur
                                                                             -DgeneratePom=false
 ```
 
-**Note**: By using the fully qualified path of a goal, you&apos;re ensured to be using the preferred version of the maven\-deploy\-plugin\. When using `mvn deploy:deploy-file` its version depends on its specification in the pom or the version of Apache Maven\.
+**Note**: By using the fully qualified path of a goal, you&apos;re ensured to be using the preferred version of the maven-deploy-plugin. When using `mvn deploy:deploy-file` its version depends on its specification in the pom or the version of Apache Maven.
 
