@@ -1,4 +1,6 @@
-<?xml version="1.0" encoding="UTF-8"?>
+---
+title: Frequently Asked Questions
+---
 
 <!--
 Licensed to the Apache Software Foundation (ASF) under one
@@ -19,73 +21,62 @@ specific language governing permissions and limitations
 under the License.
 -->
 
+<a id="top"></a>
 
-<faqs xmlns="http://maven.apache.org/FML/1.0.1"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/FML/1.0.1 http://maven.apache.org/xsd/fml-1.0.1.xsd"
-  id="FAQ" title="Frequently Asked Questions">
- <part id="General">
-   <faq id="question">
-     <question>I get an Unsupported Protocol Error when deploying a 3rd party jar. What should I do?</question>
-     <answer>
-       <p>
-         If you are using the <code>deploy:deploy-file</code> goal and encounter
-         this error:
-       </p>
-       <p>
-         <i>"Error deploying artifact: Unsupported Protocol: 'ftp': Cannot find
-         wagon which supports the requested protocol: ftp"</i>
-       </p>
-       <p>
-         Then you need to place the appropriate wagon provider in your
-         <code>%M2_HOME%/lib</code>. In this case the provider needed is ftp,
-         so we have to place the wagon-ftp jar in the lib directory of your
-         Maven 2 installation.
-       </p>
-       <p>
-         As an alternative to placing the wagon provider into the Maven distribution, you can also create a dummy
-         POM that declares the required wagon as an <code>&lt;extension&gt;</code> inside the current directory.
-       </p>
-       <p>
-         If the error description is something like this:
-       </p>
-       <p>
-         <i>"Error deploying artifact: Unsupported Protocol: 'ftp': Cannot find
-         wagon which supports the requested protocol: ftp
-         org/apache/commons/net/ftp/FTP"</i>
-       </p>
-       <p>
-         Then you need to place the commons-net jar in
-         <code>%M2_HOME%/lib</code>.
-       </p>
-     </answer>
-   </faq>
-     <faq id="skip">
-       <question>I don't want to deploy one of the artifacts in my multi-module build.  Can I skip deployment?</question>
-       <answer>
-         <p>
-           Yes, you can skip deployment of individual modules by configuring the Deploy Plugin as follows:
-         </p>
-         <source>
-<![CDATA[<plugin>
+# Frequently Asked Questions
+
+1. [I get an Unsupported Protocol Error when deploying a 3rd party jar. What should I do?](#question)
+1. [I don't want to deploy one of the artifacts in my multi-module build. Can I skip deployment?](#skip)
+1. [What does the message &quot;The packaging for this project did not assign a file to the build artifact&quot; mean when I run `deploy:deploy`?](#deploy_deploy)
+
+<a id="question"></a>
+
+### I get an Unsupported Protocol Error when deploying a 3rd party jar. What should I do?
+
+If you are using the `deploy:deploy-file` goal and encounter this error:
+
+*&quot;Error deploying artifact: Unsupported Protocol: &apos;ftp&apos;: Cannot find
+wagon which supports the requested protocol: ftp&quot;*
+
+Then you need to place the appropriate wagon provider in your `%M2_HOME%/lib`. In
+this case the provider needed is ftp, so we have to place the wagon-ftp jar in the
+lib directory of your Maven 2 installation.
+
+As an alternative to placing the wagon provider into the Maven distribution, you can
+also create a dummy POM that declares the required wagon as an `<extension>` inside
+the current directory.
+
+If the error description is something like this:
+
+*&quot;Error deploying artifact: Unsupported Protocol: &apos;ftp&apos;: Cannot find
+wagon which supports the requested protocol: ftp
+org/apache/commons/net/ftp/FTP&quot;*
+
+Then you need to place the commons-net jar in `%M2_HOME%/lib`.
+
+<a id="skip"></a>
+
+### I don't want to deploy one of the artifacts in my multi-module build. Can I skip deployment?
+
+Yes, you can skip deployment of individual modules by configuring the Deploy Plugin
+as follows:
+
+```xml
+<plugin>
   <groupId>org.apache.maven.plugins</groupId>
   <artifactId>maven-deploy-plugin</artifactId>
   <version>X.Y</version>
   <configuration>
     <skip>true</skip>
   </configuration>
-</plugin>]]></source>
-       </answer>
-     </faq>
-     <faq id="deploy_deploy">
-       <question>What does the message "The packaging for this project did not assign a file to the build artifact" mean when I run <code>deploy:deploy</code>?</question>
-       <answer>
-         <p>
-         During the packaging-phase all gathered and placed in context. 
-         With this mechanism Maven can ensure that the <code>maven-install-plugin</code> and <code>maven-deploy-plugin</code> are copying/uploading the same set of files.
-         So when you only execute <code>deploy:deploy</code>, then there are no files put in the context and there is nothing to deploy.
-         </p> 
-       </answer>
-     </faq>
- </part>
-</faqs>
+</plugin>
+```
+
+<a id="deploy_deploy"></a>
+
+### What does the message &quot;The packaging for this project did not assign a file to the build artifact&quot; mean when I run `deploy:deploy`?
+
+During the packaging-phase all gathered and placed in context. With this mechanism
+Maven can ensure that the `maven-install-plugin` and `maven-deploy-plugin` are
+copying/uploading the same set of files. So when you only execute `deploy:deploy`,
+then there are no files put in the context and there is nothing to deploy.
