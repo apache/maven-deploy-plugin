@@ -35,7 +35,9 @@ The Deploy Plugin has two basic functions\. In most project builds, the `deploy`
 
 In most cases, this mojo is invoked when you call the `deploy` phase of the default build lifecycle\.
 
-To enable this mojo to function, you must include a valid `<distributionManagement/>` section POM, which at the minimum provides a `<repository/>` defining the remote repository location for your artifact\. To separate snapshot artifacts from release artifacts, you can also specify a `<snapshotRepository/>` location\. Finally, to deploy a project website, you must specify a `<site/>` section here as well\. It&apos;s also important to note that this section can be inherited, allowing you to specify the deployment location one time for a set of related projects\.
+To enable this mojo to function, you must provide a remote repository location. The usual way is a `<distributionManagement/>` section in the POM, which at the minimum provides a `<repository/>`. To separate snapshot artifacts from release artifacts, you can also specify a `<snapshotRepository/>` location. Finally, to deploy a project website, you must specify a `<site/>` section here as well. It&apos;s also important to note that this section can be inherited, so you do not have to repeat it in every module.
+
+You do not have to edit this project&apos;s POM if the location already comes from a parent, or if you pass `-DaltDeploymentRepository=id::url` (and the matching snapshot / other artifact variants) on the command line. The `id` still has to match a `<server/>` entry in `settings.xml` when the repository needs authentication.
 
 If your repository is secured, you may also want to configure your `settings.xml` file to define corresponding `<server/>` entries which provides authentication information\. Server entries are matched to the different parts of the distributionManagement using their `<id/>` elements\. For example, your project may have a distributionManagement section similar to the following:
 
