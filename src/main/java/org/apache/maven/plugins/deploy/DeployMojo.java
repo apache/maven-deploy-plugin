@@ -213,14 +213,9 @@ public class DeployMojo extends AbstractDeployMojo {
             return List.of();
         }
         Map<String, Object> ctx = session.getPluginContext(allProjects.get(0));
-        synchronized (ctx) {
-            List<Project> cached = (List<Project>) ctx.get(PROJECTS_WITH_DEPLOY_KEY);
-            if (cached == null) {
-                cached = allProjects.stream().filter(this::hasDeployExecution).collect(Collectors.toList());
-                ctx.put(PROJECTS_WITH_DEPLOY_KEY, cached);
-            }
-            return cached;
-        }
+        return (List<Project>) ctx.computeIfAbsent(
+                PROJECTS_WITH_DEPLOY_KEY,
+                k -> allProjects.stream().filter(this::hasDeployExecution).collect(Collectors.toList()));
     }
 
     private boolean hasDeployExecution(Project p) {
