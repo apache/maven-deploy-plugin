@@ -24,7 +24,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
-        <version>@mavenEnforcerPluginVersion@</version>
+        <version>@version.maven-enforcer-plugin@</version>
         <executions>
           <execution>
             <id>enforce</id>

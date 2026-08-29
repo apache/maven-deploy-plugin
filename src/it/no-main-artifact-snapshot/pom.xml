@@ -44,7 +44,7 @@ under the License.
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>@mavenCompilerPluginVersion@</version>
+        <version>@version.maven-compiler-plugin@</version>
         <executions>
           <execution>
             <goals>
@@ -61,7 +61,7 @@ under the License.
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
-        <version>@mavenJarPluginVersion@</version>
+        <version>@version.maven-jar-plugin@</version>
         <configuration>
           <classifier>it</classifier>
         </configuration>
@@ -76,12 +76,12 @@ under the License.
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-install-plugin</artifactId>
-        <version>@mavenInstallPluginVersion@</version>
+        <version>@version.maven-install-plugin@</version>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-resources-plugin</artifactId>
-        <version>@mavenResourcesPluginVersion@</version>
+        <version>@version.maven-resources-plugin@</version>
         <executions>
           <execution>
             <goals>

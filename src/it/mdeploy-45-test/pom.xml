@@ -52,7 +52,7 @@ under the License.
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-resources-plugin</artifactId>
-        <version>@mavenResourcesPluginVersion@</version>
+        <version>@version.maven-resources-plugin@</version>
         <executions>
           <execution>
             <goals>
@@ -64,7 +64,7 @@ under the License.
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-war-plugin</artifactId>
-        <version>@mavenWarPluginVersion@</version>
+        <version>@version.maven-war-plugin@</version>
         <configuration>
           <!-- this will cause an error  -->
           <classifier>${mdp45.artifact.classifier}</classifier>

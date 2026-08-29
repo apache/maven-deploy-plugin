@@ -43,7 +43,7 @@ under the License.
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>@mavenCompilerPluginVersion@</version>
+        <version>@version.maven-compiler-plugin@</version>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -53,22 +53,22 @@ under the License.
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-install-plugin</artifactId>
-        <version>@mavenInstallPluginVersion@</version>
+        <version>@version.maven-install-plugin@</version>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
-        <version>@mavenJarPluginVersion@</version>
+        <version>@version.maven-jar-plugin@</version>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-resources-plugin</artifactId>
-        <version>@mavenResourcesPluginVersion@</version>
+        <version>@version.maven-resources-plugin@</version>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
-        <version>@mavenSourcePluginVersion@</version>
+        <version>@version.maven-source-plugin@</version>
         <configuration>
           <forceCreation>true</forceCreation>
         </configuration>
@@ -84,7 +84,7 @@ under the License.
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>@mavenSurefirePluginVersion@</version>
+        <version>@version.maven-surefire@</version>
       </plugin>
     </plugins>
   </build>

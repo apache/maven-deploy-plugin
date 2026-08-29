@@ -52,7 +52,7 @@ under the License.
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-install-plugin</artifactId>
-        <version>@mavenInstallPluginVersion@</version>
+        <version>@version.maven-install-plugin@</version>
       </plugin>
     </plugins>
   </build>
