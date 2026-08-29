@@ -47,7 +47,7 @@ under the License.
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
-        <version>@mavenSourcePluginVersion@</version>
+        <version>@version.maven-source-plugin@</version>
         <executions>
           <execution>
             <id>attach-sources</id>
@@ -60,7 +60,7 @@ under the License.
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
-        <version>@mavenJavadocPluginVersion@</version>
+        <version>@version.maven-javadoc-plugin@</version>
         <executions>
           <execution>
             <id>attach-javadoc</id>

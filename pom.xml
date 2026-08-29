@@ -72,28 +72,18 @@ under the License.
     <mavenVersion>4.0.0-rc-6</mavenVersion>
 
     <guiceVersion>7.0.0</guiceVersion>
-    <mavenAntrunPluginVersion>${version.maven-antrun-plugin}</mavenAntrunPluginVersion>
-    <mavenCompilerPluginVersion>${version.maven-compiler-plugin}</mavenCompilerPluginVersion>
-    <mavenEnforcerPluginVersion>${version.maven-enforcer-plugin}</mavenEnforcerPluginVersion>
-    <mavenInstallPluginVersion>${version.maven-install-plugin}</mavenInstallPluginVersion>
-    <mavenJarPluginVersion>${version.maven-jar-plugin}</mavenJarPluginVersion>
-    <mavenJavadocPluginVersion>${version.maven-javadoc-plugin}</mavenJavadocPluginVersion>
-    <mavenPluginToolsVersion>${version.maven-plugin-tools}</mavenPluginToolsVersion>
-    <mavenResourcesPluginVersion>${version.maven-resources-plugin}</mavenResourcesPluginVersion>
-    <mavenSourcePluginVersion>${version.maven-source-plugin}</mavenSourcePluginVersion>
-    <mavenSurefirePluginVersion>${version.maven-surefire}</mavenSurefirePluginVersion>
-    <mavenWarPluginVersion>${version.maven-war-plugin}</mavenWarPluginVersion>
     <mavenPluginTestingVersion>4.0.0-beta-4</mavenPluginTestingVersion>
     <mavenResolverVersion>2.0.22</mavenResolverVersion>
     <mockitoVersion>5.23.0</mockitoVersion>
     <slf4jVersion>2.0.18</slf4jVersion>
     <version.plexus-xml>4.0.3</version.plexus-xml>
-    <version.maven-plugin-tools>4.0.0-beta-1</version.maven-plugin-tools>
+    <version.maven-plugin-tools>4.0.0-beta-2</version.maven-plugin-tools>
 
-    <!-- TODO remove property maven4x.site.path with next parent -->
-    <maven4x.site.path>plugins-archives/${project.artifactId}-LATEST-4.x</maven4x.site.path>
+    <!-- The minimal Maven version that can build this plugin. The same as in prerequisites -->
+    <minimalMavenBuildVersion>${mavenVersion}</minimalMavenBuildVersion>
+
     <!-- 4.x publish -->
-    <maven.site.path>${maven4x.site.path}</maven.site.path>
+    <maven.site.path.suffix>LATEST-4.x</maven.site.path.suffix>
 
     <project.build.outputTimestamp>2025-02-23T17:09:58Z</project.build.outputTimestamp>
   </properties>
