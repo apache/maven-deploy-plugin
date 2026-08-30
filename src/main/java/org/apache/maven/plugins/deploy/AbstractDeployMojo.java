@@ -101,27 +101,8 @@ public abstract class AbstractDeployMojo extends AbstractMojo {
      * Creates resolver {@link RemoteRepository} equipped with needed whistles and bells.
      */
     protected RemoteRepository getRemoteRepository(final String repositoryId, final String url) {
-        // TODO: RepositorySystem#newDeploymentRepository does this very same thing!
         RemoteRepository result = new RemoteRepository.Builder(repositoryId, "default", url).build();
-
-        if (result.getAuthentication() == null || result.getProxy() == null) {
-            RemoteRepository.Builder builder = new RemoteRepository.Builder(result);
-
-            if (result.getAuthentication() == null) {
-                builder.setAuthentication(session.getRepositorySession()
-                        .getAuthenticationSelector()
-                        .getAuthentication(result));
-            }
-
-            if (result.getProxy() == null) {
-                builder.setProxy(
-                        session.getRepositorySession().getProxySelector().getProxy(result));
-            }
-
-            result = builder.build();
-        }
-
-        return result;
+        return repositorySystem.newDeploymentRepository(session.getRepositorySession(), result);
     }
 
     // I'm not sure if retries will work with deploying on client level ...
