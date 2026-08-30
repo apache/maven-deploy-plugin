@@ -21,12 +21,13 @@ package org.apache.maven.plugins.deploy;
 import javax.inject.Inject;
 
 import java.io.File;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.maven.RepositoryUtils;
 import org.apache.maven.artifact.ArtifactUtils;
@@ -166,6 +167,8 @@ public class DeployMojo extends AbstractDeployMojo {
     private static final String DEPLOY_ALT_DEPLOYMENT_REPOSITORY =
             DeployMojo.class.getName() + ".altDeploymentRepository";
 
+    private static final String PROJECTS_WITH_DEPLOY_KEY = DeployMojo.class.getName() + ".projectsWithDeploy";
+
     private void putState(State state) {
         getPluginContext().put(DEPLOY_PROCESSED_MARKER, state.name());
     }
@@ -264,6 +267,22 @@ public class DeployMojo extends AbstractDeployMojo {
         }
     }
 
+    /**
+     * Returns the list of reactor projects that have a deploy execution, cached on first call.
+     * The list is invariant during a build and is stored in the first reactor project's plugin
+     * context to avoid recomputing it on every module invocation (O(N) total instead of O(N²)).
+     */
+    @SuppressWarnings("unchecked")
+    private List<MavenProject> getProjectsWithDeployExecution() {
+        if (reactorProjects.isEmpty()) {
+            return Collections.emptyList();
+        }
+        Map<String, Object> pluginContext = session.getPluginContext(pluginDescriptor, reactorProjects.get(0));
+        return (List<MavenProject>) pluginContext.computeIfAbsent(
+                PROJECTS_WITH_DEPLOY_KEY,
+                k -> reactorProjects.stream().filter(this::hasDeployExecution).collect(Collectors.toList()));
+    }
+
     private boolean allProjectsMarked(List<MavenProject> allProjectsUsingPlugin) {
         for (MavenProject reactorProject : allProjectsUsingPlugin) {
             if (!hasState(reactorProject)) {
@@ -274,13 +293,11 @@ public class DeployMojo extends AbstractDeployMojo {
     }
 
     private List<MavenProject> getAllProjectsUsingPlugin() {
-        ArrayList<MavenProject> result = new ArrayList<>();
-        for (MavenProject reactorProject : reactorProjects) {
-            if (hasExecution(reactorProject.getPlugin("org.apache.maven.plugins:maven-deploy-plugin"))) {
-                result.add(reactorProject);
-            }
-        }
-        return result;
+        return getProjectsWithDeployExecution();
+    }
+
+    private boolean hasDeployExecution(MavenProject project) {
+        return hasExecution(project.getPlugin("org.apache.maven.plugins:maven-deploy-plugin"));
     }
 
     private boolean hasExecution(Plugin plugin) {
