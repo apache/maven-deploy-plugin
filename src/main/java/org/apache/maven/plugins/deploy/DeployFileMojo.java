@@ -388,9 +388,9 @@ public class DeployFileMojo extends AbstractDeployMojo {
                         throw new MojoException("The 'types' entry '" + type + "' is not valid:"
                                 + " uses invalid characters or is empty.");
                     }
-                    if (classifierEntry.isEmpty() || !isValidClassifier(classifierEntry)) {
+                    if (!isValidClassifier(classifierEntry)) {
                         throw new MojoException("The 'classifiers' entry '" + classifierEntry + "' is not valid:"
-                                + " uses invalid characters or is empty.");
+                                + " uses invalid characters.");
                     }
 
                     ProducedArtifact deployable = session.createProducedArtifact(
