@@ -399,10 +399,15 @@ public class DeployMojo extends AbstractDeployMojo {
                         && dm.getSnapshotRepository() != null
                         && isNotEmpty(dm.getSnapshotRepository().getId())
                         && isNotEmpty(dm.getSnapshotRepository().getUrl())) {
+                    validateTransportSecurity(
+                            dm.getSnapshotRepository().getId(),
+                            dm.getSnapshotRepository().getUrl());
                     repo = session.createRemoteRepository(dm.getSnapshotRepository());
                 } else if (dm.getRepository() != null
                         && isNotEmpty(dm.getRepository().getId())
                         && isNotEmpty(dm.getRepository().getUrl())) {
+                    validateTransportSecurity(
+                            dm.getRepository().getId(), dm.getRepository().getUrl());
                     repo = session.createRemoteRepository(dm.getRepository());
                 }
             }

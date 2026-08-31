@@ -391,6 +391,43 @@ class DeployMojoTest {
         assertEquals("https://elsewhere.example/repo", repository.getUrl());
     }
 
+    @Test
+    @InjectMojo(goal = "deploy")
+    void insecureHttpAltDeploymentRepositoryRefused(DeployMojo mojo) throws Exception {
+        setVariableValueToObject(mojo, "altDeploymentRepository", "insecure-repo::http://insecure.example/repo");
+
+        MojoException e = assertThrows(MojoException.class, () -> mojo.getDeploymentRepository(false));
+        assertTrue(e.getMessage().contains("insecure (cleartext) URL"), e.getMessage());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    void insecureFtpAltDeploymentRepositoryRefused(DeployMojo mojo) throws Exception {
+        setVariableValueToObject(mojo, "altDeploymentRepository", "insecure-repo::ftp://insecure.example/repo");
+
+        MojoException e = assertThrows(MojoException.class, () -> mojo.getDeploymentRepository(false));
+        assertTrue(e.getMessage().contains("insecure (cleartext) URL"), e.getMessage());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    void insecureAltDeploymentRepositoryOptOut(DeployMojo mojo) throws Exception {
+        session.getUserProperties().put(AbstractDeployMojo.ALLOW_INSECURE_URL_PROPERTY, "true");
+        setVariableValueToObject(mojo, "altDeploymentRepository", "insecure-repo::http://insecure.example/repo");
+
+        RemoteRepository repository = mojo.getDeploymentRepository(false);
+        assertEquals("http://insecure.example/repo", repository.getUrl());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    void loopbackHttpAltDeploymentRepositoryAccepted(DeployMojo mojo) throws Exception {
+        setVariableValueToObject(mojo, "altDeploymentRepository", "local-repo::http://127.0.0.1:8081/repo");
+
+        RemoteRepository repository = mojo.getDeploymentRepository(false);
+        assertEquals("http://127.0.0.1:8081/repo", repository.getUrl());
+    }
+
     private ArtifactDeployerRequest execute(DeployMojo mojo) {
         ArgumentCaptor<ArtifactDeployerRequest> requestCaptor = ArgumentCaptor.forClass(ArtifactDeployerRequest.class);
         doNothing().when(artifactDeployer).deploy(requestCaptor.capture());

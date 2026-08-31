@@ -51,6 +51,12 @@ public abstract class AbstractDeployMojo implements Mojo {
      */
     static final String ALLOW_CREDENTIAL_REUSE_PROPERTY = "maven.deploy.allowCredentialReuse";
 
+    /**
+     * User property (not settable from the POM) that allows deploying to cleartext (http/ftp)
+     * URLs. Loopback hosts are always exempt from the cleartext check.
+     */
+    static final String ALLOW_INSECURE_URL_PROPERTY = "maven.deploy.allowInsecureUrl";
+
     @Inject
     protected Log logger;
 
@@ -105,7 +111,73 @@ public abstract class AbstractDeployMojo implements Mojo {
      * Creates resolver {@link RemoteRepository} equipped with needed whistles and bells.
      */
     protected RemoteRepository createDeploymentArtifactRepository(String id, String url) {
+        validateTransportSecurity(id, url);
         return getSession().createRemoteRepository(id, url);
+    }
+
+    /**
+     * Refuses cleartext deployment transports: with an {@code http://} or {@code ftp://} deployment
+     * URL, the HTTP Basic (or FTP) credentials resolved for {@code id} and all deployed artifacts
+     * would cross the network unencrypted. Loopback hosts are exempt (local mock/test repositories);
+     * everything else requires an explicit {@code -D}{@value #ALLOW_INSECURE_URL_PROPERTY}{@code =true}
+     * opt-out. Maven core's {@code external:http:*} mirror blocking covers dependency
+     * <em>resolution</em> only; this is the deployment-side counterpart.
+     *
+     * @param id the repository id (used in diagnostics)
+     * @param url the deployment URL
+     * @throws MojoException when the URL is cleartext, non-loopback, and not explicitly allowed
+     */
+    protected void validateTransportSecurity(String id, String url) throws MojoException {
+        if (url == null || !isInsecureDeploymentUrl(url)) {
+            return;
+        }
+        Map<String, String> userProperties = session.getUserProperties();
+        if (userProperties != null && Boolean.parseBoolean(userProperties.get(ALLOW_INSECURE_URL_PROPERTY))) {
+            getLog().warn("Deploying to insecure (cleartext) URL " + url + " for repository id '" + id
+                    + "' because -D" + ALLOW_INSECURE_URL_PROPERTY
+                    + "=true is set: credentials and artifacts will cross the network unencrypted");
+            return;
+        }
+        throw new MojoException("Refusing to deploy to insecure (cleartext) URL " + url + " for repository id '" + id
+                + "': credentials and artifacts would cross the network unencrypted. Use an https:// endpoint,"
+                + " or re-run with -D" + ALLOW_INSECURE_URL_PROPERTY
+                + "=true to accept the risk (loopback hosts are exempt from this check).");
+    }
+
+    /**
+     * Returns {@code true} for cleartext ({@code http}/{@code ftp}) URLs targeting a non-loopback host.
+     */
+    static boolean isInsecureDeploymentUrl(String url) {
+        int colon = url.indexOf(':');
+        if (colon <= 0) {
+            return false;
+        }
+        String scheme = url.substring(0, colon).toLowerCase(java.util.Locale.ROOT);
+        if (!"http".equals(scheme) && !"ftp".equals(scheme)) {
+            return false;
+        }
+        return !isLoopbackHost(hostOf(url));
+    }
+
+    private static String hostOf(String url) {
+        try {
+            return java.net.URI.create(url).getHost();
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    static boolean isLoopbackHost(String host) {
+        if (host == null || host.isEmpty()) {
+            return false;
+        }
+        if (host.startsWith("[") && host.endsWith("]")) {
+            host = host.substring(1, host.length() - 1);
+        }
+        return "localhost".equalsIgnoreCase(host)
+                || host.startsWith("127.")
+                || "::1".equals(host)
+                || "0:0:0:0:0:0:0:1".equals(host);
     }
 
     /**
