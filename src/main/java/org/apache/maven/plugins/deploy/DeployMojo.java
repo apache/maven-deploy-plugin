@@ -238,8 +238,11 @@ public class DeployMojo extends AbstractDeployMojo {
             warnIfAffectedPackagingAndMaven(project.getPackaging().id());
 
             if (!deployAtEnd) {
-                getLog().info("Deploying deploy for " + project.getGroupId() + ":" + project.getArtifactId() + ":"
-                        + project.getVersion() + " at end");
+                // this is the immediate-deploy branch: it must not claim the deploy happens "at
+                // end" - the deploy log is the operator's audit trail for what was deferred vs
+                // published immediately (the correct deferring message is in the else branch)
+                getLog().info("Deploying " + project.getGroupId() + ":" + project.getArtifactId() + ":"
+                        + project.getVersion());
                 deploy(createDeployerRequest());
                 synchronized (DEPLOY_AT_END_LOCK) {
                     putState(State.DEPLOYED);
