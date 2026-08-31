@@ -32,9 +32,8 @@ As a repository contains more than JAR files (POMs, the metadata, MD5 and SHA1 h
 
 To work, the deployment will require:
 
-- information about the repository: its location, the transport method used to access it (FTP, SCP, SFTP\.\.\.) and the optional user specific required account information
+- information about the repository: its location and the optional user specific required account information; prefer `https://` URLs - the default Maven Resolver transport supports HTTP(S) and file URLs, while other protocols (FTP, SCP, SFTP\.\.\.) need the wagon transport plus a matching build extension
 - information about the artifact(s): the group, artifact, version, packaging, classifier\.\.\.
-- a deployer: a method to actually perform the deployment. This can be implemented as a wagon transport (making it cross-platform), or use a system specific method.
 
 The information will be taken from the implied (or specified) pom and from the command line. The settings.xml file may also be parsed to retrieve user credentials.
 

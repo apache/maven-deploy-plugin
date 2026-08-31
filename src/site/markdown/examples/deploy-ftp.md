@@ -26,6 +26,14 @@ under the License.
 
 # Deployment of artifacts with FTP
 
+**FTP is a cleartext protocol: credentials and artifacts cross the network unencrypted, and
+anyone on the path can capture the deployment credential. Prefer deploying over HTTPS to a
+repository manager.** The plugin refuses `ftp://` (and `http://`) deployment URLs to
+non-loopback hosts by default; deploying over FTP requires an explicit
+`-Dmaven.deploy.allowInsecureUrl=true` opt-out. Note also that the default Maven Resolver
+transport does not support FTP at all: you must switch to the wagon transport
+(`-Dmaven.resolver.transport=wagon`) in addition to declaring the extension below.
+
 In order to deploy artifacts using FTP you must first specify the use of an FTP server in the **distributionManagement** element of your POM as well as specifying an `extension` in your `build` element which will pull in the FTP artifacts required to deploy with FTP:
 
 ```unknown
@@ -52,7 +60,7 @@ In order to deploy artifacts using FTP you must first specify the use of an FTP 
 </project>
 ```
 
-Your `settings.xml` would contain a `server` element where the `id` of that element matches `id` of the FTP repository specified in the POM above:
+Your `settings.xml` would contain a `server` element where the `id` of that element matches `id` of the FTP repository specified in the POM above. Store the password in [encrypted form](https://maven.apache.org/guides/mini/guide-encryption.html) rather than as clear text:
 
 ```unknown
 <settings>
@@ -60,8 +68,8 @@ Your `settings.xml` would contain a `server` element where the `id` of that elem
   <servers>
     <server>
       <id>ftp-repository</id>
-      <username>user</username>
-      <password>pass</password>
+      <username>my-user</username>
+      <password>{encrypted-password}</password>
     </server>
   </servers>
   ...

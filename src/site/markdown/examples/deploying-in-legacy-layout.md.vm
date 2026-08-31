@@ -47,15 +47,11 @@ under the License.
          |---metadata
     ```
 
-    In able to deploy an artifact in a legacy layout of repository, set the **repositoryLayout** parameter to `legacy` value.
+**Legacy layout support was removed in version 3.0.0 of this plugin.** There is no
+`repositoryLayout` parameter in the 3.x/4.x lines: Maven 3 and later only support the
+default (Maven 2) repository layout, and a `-DrepositoryLayout=legacy` flag on the command
+line is silently ignored by Maven (it does not select a legacy layout).
 
-    ```unknown
-    mvn ${project.groupId}:${project.artifactId}:${project.version}:deploy-file -Durl=file:///C:/m2-repo \
-                                                                                -DrepositoryId=some.id \
-                                                                                -Dfile=your-artifact-1.0.jar \
-                                                                                -DpomFile=your-pom.xml \
-                                                                                -DrepositoryLayout=legacy
-    ```
-
-    **Note**: By using the fully qualified path of a goal, you&apos;re ensured to be using the preferred version of the maven-deploy-plugin. When using `mvn deploy:deploy-file` its version depends on its specification in the pom or the version of Apache Maven.
+To deploy into a Maven 1 (legacy) layout repository, use maven-deploy-plugin 2.x with Maven 2,
+or convert the repository to the default layout with a repository manager.
 
