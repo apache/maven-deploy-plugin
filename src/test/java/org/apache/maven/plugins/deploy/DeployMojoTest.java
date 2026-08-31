@@ -550,6 +550,25 @@ class DeployMojoTest {
         assertEquals("releases", repository.getId());
     }
 
+    @Test
+    @InjectMojo(goal = "deploy")
+    void emptyIdAltDeploymentRepositoryRefused(DeployMojo mojo) throws Exception {
+        setVariableValueToObject(mojo, "altDeploymentRepository", " ::https://repo.example/releases");
+
+        MojoException e = assertThrows(MojoException.class, () -> mojo.getDeploymentRepository(false));
+        assertEquals("Invalid syntax for repository.", e.getMessage());
+        assertTrue(e.getLongMessage().contains("non-empty"), e.getLongMessage());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    void ambiguousLegacyAltDeploymentRepositoryRefused(DeployMojo mojo) throws Exception {
+        setVariableValueToObject(mojo, "altDeploymentRepository", "a::default::b::c");
+
+        MojoException e = assertThrows(MojoException.class, () -> mojo.getDeploymentRepository(false));
+        assertEquals("Ambiguous syntax for alternative repository.", e.getMessage());
+    }
+
     private ArtifactDeployerRequest execute(DeployMojo mojo) {
         ArgumentCaptor<ArtifactDeployerRequest> requestCaptor = ArgumentCaptor.forClass(ArtifactDeployerRequest.class);
         doNothing().when(artifactDeployer).deploy(requestCaptor.capture());

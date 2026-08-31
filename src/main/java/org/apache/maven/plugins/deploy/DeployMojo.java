@@ -462,8 +462,19 @@ public class DeployMojo extends AbstractDeployMojo {
                 String url = matcher.group(3).trim();
 
                 if ("default".equals(layout)) {
+                    if (url.contains("::")) {
+                        // "a::default::b::c" would otherwise be accepted with url "b::c": refuse
+                        // instead of guessing which of the two possible parses was intended
+                        throw new MojoException(
+                                altDeploymentRepo,
+                                "Ambiguous syntax for alternative repository.",
+                                "Ambiguous alternative repository: the value parses as legacy \"" + id + "::" + layout
+                                        + "::" + url + "\" but its URL part still contains \"::\"."
+                                        + " Use \"id::url\" with a URL that does not contain \"::\".");
+                    }
                     getLog().warn("Using legacy syntax for alternative repository. " + "Use \"" + id + "::" + url
                             + "\" instead.");
+                    requireNonEmptyIdAndUrl(altDeploymentRepo, id, url);
                     repo = createAltDeploymentRepository(id, url);
                 } else {
                     throw new MojoException(
@@ -484,6 +495,7 @@ public class DeployMojo extends AbstractDeployMojo {
                     String id = matcher.group(1).trim();
                     String url = matcher.group(2).trim();
 
+                    requireNonEmptyIdAndUrl(altDeploymentRepo, id, url);
                     repo = createAltDeploymentRepository(id, url);
                 }
             }
@@ -530,6 +542,20 @@ public class DeployMojo extends AbstractDeployMojo {
         }
 
         return repo;
+    }
+
+    /**
+     * An alternative repository whose id or url trims to empty cannot bind credentials or be
+     * deployed to meaningfully; refuse instead of continuing with a blank id (whose credential
+     * lookup would fail server-side) or a blank URL.
+     */
+    private static void requireNonEmptyIdAndUrl(String altDeploymentRepo, String id, String url) {
+        if (id.isEmpty() || url.isEmpty()) {
+            throw new MojoException(
+                    altDeploymentRepo,
+                    "Invalid syntax for repository.",
+                    "Invalid syntax for alternative repository: id and url must be non-empty. Use \"id::url\".");
+        }
     }
 
     /**
