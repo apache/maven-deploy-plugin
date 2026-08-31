@@ -487,10 +487,10 @@ public class DeployMojo extends AbstractDeployMojo {
         if (repo == null) {
             DistributionManagement dm = project.getModel().getDistributionManagement();
             if (dm != null) {
-                if (isSnapshot
-                        && dm.getSnapshotRepository() != null
+                boolean snapshotRepositoryUsable = dm.getSnapshotRepository() != null
                         && isNotEmpty(dm.getSnapshotRepository().getId())
-                        && isNotEmpty(dm.getSnapshotRepository().getUrl())) {
+                        && isNotEmpty(dm.getSnapshotRepository().getUrl());
+                if (isSnapshot && snapshotRepositoryUsable) {
                     validateTransportSecurity(
                             dm.getSnapshotRepository().getId(),
                             dm.getSnapshotRepository().getUrl());
@@ -498,6 +498,16 @@ public class DeployMojo extends AbstractDeployMojo {
                 } else if (dm.getRepository() != null
                         && isNotEmpty(dm.getRepository().getId())
                         && isNotEmpty(dm.getRepository().getUrl())) {
+                    if (isSnapshot && dm.getSnapshotRepository() != null) {
+                        // a declared-but-unusable snapshotRepository is a config error; falling
+                        // back silently would route snapshots to a repository with a different
+                        // audience, retention policy and credentials
+                        getLog().warn("distributionManagement declares a <snapshotRepository> whose id or url is"
+                                + " empty; falling back to the release <repository> '"
+                                + dm.getRepository().getId() + "' ("
+                                + dm.getRepository().getUrl()
+                                + ") for this snapshot deployment");
+                    }
                     validateTransportSecurity(
                             dm.getRepository().getId(), dm.getRepository().getUrl());
                     repo = session.createRemoteRepository(dm.getRepository());

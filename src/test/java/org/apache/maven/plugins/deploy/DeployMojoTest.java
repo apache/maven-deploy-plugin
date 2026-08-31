@@ -510,6 +510,26 @@ class DeployMojoTest {
         assertNotNull(execute(mojo));
     }
 
+    @Test
+    @InjectMojo(goal = "deploy")
+    void snapshotDeployFallsBackToReleaseRepositoryWhenSnapshotRepositoryUnusable(DeployMojo mojo) throws Exception {
+        ProjectStub project = (ProjectStub) getVariableValueFromObject(mojo, "project");
+        project.setModel(project.getModel()
+                .withDistributionManagement(org.apache.maven.api.model.DistributionManagement.newBuilder()
+                        .snapshotRepository(org.apache.maven.api.model.DeploymentRepository.newBuilder()
+                                .id("snapshots")
+                                .url("") // declared but unusable, e.g. a property interpolating empty
+                                .build())
+                        .repository(org.apache.maven.api.model.DeploymentRepository.newBuilder()
+                                .id("releases")
+                                .url("https://releases.example/repo")
+                                .build())
+                        .build()));
+
+        RemoteRepository repository = mojo.getDeploymentRepository(true);
+        assertEquals("releases", repository.getId());
+    }
+
     private ArtifactDeployerRequest execute(DeployMojo mojo) {
         ArgumentCaptor<ArtifactDeployerRequest> requestCaptor = ArgumentCaptor.forClass(ArtifactDeployerRequest.class);
         doNothing().when(artifactDeployer).deploy(requestCaptor.capture());
