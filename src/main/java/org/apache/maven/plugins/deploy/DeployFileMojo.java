@@ -194,6 +194,21 @@ public class DeployFileMojo extends AbstractDeployMojo {
     @Parameter(property = "maven.deploy.file.skip", defaultValue = "false")
     private String skip = Boolean.FALSE.toString();
 
+    /**
+     * Optional containment directory for all artifact-content paths ({@code file}, {@code files},
+     * {@code sources}, {@code javadoc}, {@code pomFile}): when set, each of those paths must resolve
+     * inside this directory (symlinks are resolved before the comparison) or the build fails.
+     * <p>
+     * Intended for CI/automation that fills deploy-file parameters from pipeline variables: without
+     * containment, any file readable by the build (for example {@code ~/.m2/settings.xml} passed as a
+     * side artifact) can be published to the deployment URL in one invocation. Disabled (no
+     * containment) by default; point it at the project or workspace directory in automated pipelines.
+     *
+     * @since 4.0.0
+     */
+    @Parameter(property = "maven.deploy.file.containedIn")
+    private Path containedIn;
+
     void initProperties() throws MojoException {
         Path deployedPom;
         if (pomFile != null) {
@@ -258,6 +273,13 @@ public class DeployFileMojo extends AbstractDeployMojo {
             getLog().error(message);
             throw new MojoException(message);
         }
+
+        // containment applies to the operator-supplied paths, before any of them is read;
+        // the temporary POM later extracted from the (already contained) jar is exempt
+        checkContained(file, "file");
+        checkContained(pomFile, "pomFile");
+        checkContained(sources, "sources");
+        checkContained(javadoc, "javadoc");
 
         initProperties();
 
@@ -392,6 +414,7 @@ public class DeployFileMojo extends AbstractDeployMojo {
                     file = Paths.get(files.substring(fi, nfi));
                 }
                 if (Files.isRegularFile(file)) {
+                    checkContained(file, "files");
                     String extension = getExtension(file);
                     String type = types.substring(ti, nti).trim();
                     String classifierEntry = classifiers.substring(ci, nci).trim();
@@ -456,6 +479,37 @@ public class DeployFileMojo extends AbstractDeployMojo {
                     artifactManager.setPath(pomArtifact, null);
                 }
             }
+        }
+    }
+
+    /**
+     * Enforces the optional {@link #containedIn} containment directory for an artifact-content path.
+     */
+    private void checkContained(Path path, String parameterName) throws MojoException {
+        if (containedIn == null || path == null) {
+            return;
+        }
+        if (!isContainedIn(path, containedIn)) {
+            throw new MojoException("Parameter '" + parameterName + "' resolves to "
+                    + path.toAbsolutePath().normalize() + ", which is outside the containment directory "
+                    + containedIn.toAbsolutePath().normalize() + " configured with maven.deploy.file.containedIn");
+        }
+    }
+
+    /**
+     * Returns {@code true} when {@code path} resolves inside {@code root}, resolving symlinks where
+     * the paths exist so a link pointing outside the containment directory does not pass.
+     */
+    static boolean isContainedIn(Path path, Path root) {
+        return realOrNormalized(path).startsWith(realOrNormalized(root));
+    }
+
+    private static Path realOrNormalized(Path path) {
+        Path absolute = path.toAbsolutePath().normalize();
+        try {
+            return absolute.toRealPath();
+        } catch (IOException e) {
+            return absolute;
         }
     }
 

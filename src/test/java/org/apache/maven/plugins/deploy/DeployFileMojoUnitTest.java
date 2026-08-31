@@ -18,6 +18,8 @@
  */
 package org.apache.maven.plugins.deploy;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -166,6 +168,17 @@ class DeployFileMojoUnitTest {
         assertEquals(
                 "https://repo.example/releases", AbstractDeployMojo.redactUrlUserInfo("https://repo.example/releases"));
         assertEquals("file:///tmp/repo", AbstractDeployMojo.redactUrlUserInfo("file:///tmp/repo"));
+    }
+
+    @Test
+    void containmentDirectoryIsEnforced() throws IOException {
+        Path root = Files.createTempDirectory("deploy-file-containment");
+        Path inside = Files.createFile(root.resolve("artifact.jar"));
+
+        assertTrue(DeployFileMojo.isContainedIn(inside, root));
+        assertTrue(DeployFileMojo.isContainedIn(root.resolve("sub/other.jar"), root));
+        assertFalse(DeployFileMojo.isContainedIn(root.resolve("../escaped.jar"), root));
+        assertFalse(DeployFileMojo.isContainedIn(Paths.get("/etc/passwd"), root));
     }
 
     private void setMojoModel(
