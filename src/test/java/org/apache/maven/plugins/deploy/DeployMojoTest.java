@@ -530,6 +530,26 @@ class DeployMojoTest {
         assertEquals("releases", repository.getId());
     }
 
+    @Test
+    @InjectMojo(goal = "deploy")
+    void policyMismatchWarnsButDoesNotFail(DeployMojo mojo) throws Exception {
+        ProjectStub project = (ProjectStub) getVariableValueFromObject(mojo, "project");
+        project.setModel(project.getModel()
+                .withDistributionManagement(org.apache.maven.api.model.DistributionManagement.newBuilder()
+                        .repository(org.apache.maven.api.model.DeploymentRepository.newBuilder()
+                                .id("releases")
+                                .url("https://releases.example/repo")
+                                .releases(org.apache.maven.api.model.RepositoryPolicy.newBuilder()
+                                        .enabled("false")
+                                        .build())
+                                .build())
+                        .build()));
+
+        // enforcement stays server-side: the mismatch is warned about, not refused
+        RemoteRepository repository = mojo.getDeploymentRepository(false);
+        assertEquals("releases", repository.getId());
+    }
+
     private ArtifactDeployerRequest execute(DeployMojo mojo) {
         ArgumentCaptor<ArtifactDeployerRequest> requestCaptor = ArgumentCaptor.forClass(ArtifactDeployerRequest.class);
         doNothing().when(artifactDeployer).deploy(requestCaptor.capture());

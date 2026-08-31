@@ -112,6 +112,10 @@ public class DeployMojo extends AbstractDeployMojo {
      * When the id matches a <code>settings.xml</code> server entry and the URL differs from every URL this build
      * associates with that id, the deployment is refused unless
      * <code>-Dmaven.deploy.allowCredentialReuse=true</code> is given on the command line.
+     * <p>
+     * <b>Policy note:</b> unlike a repository declared in <code>distributionManagement</code>, an alternative
+     * repository is built from just <code>id::url</code> and therefore carries API-default release/snapshot
+     * policies and serves both artifact kinds; release/snapshot acceptance is enforced by the server only.
      */
     @Parameter(property = "altDeploymentRepository")
     private String altDeploymentRepository;
@@ -494,6 +498,7 @@ public class DeployMojo extends AbstractDeployMojo {
                     validateTransportSecurity(
                             dm.getSnapshotRepository().getId(),
                             dm.getSnapshotRepository().getUrl());
+                    warnIfPolicyMismatch(dm.getSnapshotRepository(), isSnapshot);
                     repo = session.createRemoteRepository(dm.getSnapshotRepository());
                 } else if (dm.getRepository() != null
                         && isNotEmpty(dm.getRepository().getId())
@@ -510,6 +515,7 @@ public class DeployMojo extends AbstractDeployMojo {
                     }
                     validateTransportSecurity(
                             dm.getRepository().getId(), dm.getRepository().getUrl());
+                    warnIfPolicyMismatch(dm.getRepository(), isSnapshot);
                     repo = session.createRemoteRepository(dm.getRepository());
                 }
             }
@@ -585,6 +591,23 @@ public class DeployMojo extends AbstractDeployMojo {
             }
         }
         return urls;
+    }
+
+    /**
+     * Client-side release/snapshot policy sanity check: warns when the artifact kind being deployed
+     * is explicitly disabled on the selected repository's declared policy. Enforcement stays
+     * server-side (the resolver does not consult target policies when deploying); this only makes
+     * the mismatch visible before the upload starts.
+     */
+    private void warnIfPolicyMismatch(org.apache.maven.api.model.DeploymentRepository repository, boolean isSnapshot) {
+        org.apache.maven.api.model.RepositoryPolicy policy =
+                isSnapshot ? repository.getSnapshots() : repository.getReleases();
+        if (policy != null && !policy.isEnabled()) {
+            getLog().warn("Deployment repository '" + repository.getId() + "' declares <"
+                    + (isSnapshot ? "snapshots" : "releases") + "><enabled>false</enabled>, but a "
+                    + (isSnapshot ? "snapshot" : "release")
+                    + " artifact is being deployed to it; the server is expected to reject this upload");
+        }
     }
 
     private boolean isValidPath(Artifact a) {
