@@ -228,6 +228,18 @@ class DeployFileMojoUnitTest {
         Mockito.verify(mojo.logger).warn(Mockito.contains("Could not read a POM from"));
     }
 
+    @Test
+    void selfDeployGuardComparesLocationsNotSpellings() throws Exception {
+        Path dir = java.nio.file.Files.createTempDirectory("deploy-file-test");
+        Path real = java.nio.file.Files.createFile(dir.resolve("artifact.jar"));
+
+        assertTrue(DeployFileMojo.isSameLocation(real, real));
+        assertTrue(DeployFileMojo.isSameLocation(real, dir.resolve("sub/../artifact.jar")));
+        Path link = java.nio.file.Files.createSymbolicLink(dir.resolve("link.jar"), real);
+        assertTrue(DeployFileMojo.isSameLocation(link, real));
+        assertFalse(DeployFileMojo.isSameLocation(real, dir.resolve("other.jar")));
+    }
+
     private static Path createJar(String name, String... entries) throws java.io.IOException {
         Path dir = java.nio.file.Files.createTempDirectory("deploy-file-test");
         Path jar = dir.resolve(name);

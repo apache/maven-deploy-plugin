@@ -357,7 +357,7 @@ public class DeployFileMojo extends AbstractDeployMojo {
         ProducedArtifact artifact = session.createProducedArtifact(
                 groupId, artifactId, version, classifier, isFilePom ? "pom" : getExtension(file), packaging);
 
-        if (file.equals(getLocalRepositoryFile(artifact))) {
+        if (isSameLocation(file, getLocalRepositoryFile(artifact))) {
             throw new MojoException("Cannot deploy artifact from the local repository: " + file);
         }
 
@@ -553,6 +553,16 @@ public class DeployFileMojo extends AbstractDeployMojo {
      */
     private Path getLocalRepositoryFile(Artifact artifact) {
         return session.getPathForLocalArtifact(artifact);
+    }
+
+    /**
+     * Compares two paths as locations rather than spellings: a textual {@code Path.equals} lets a
+     * relative path, a symlink, or any non-canonical spelling of the same file slip past the
+     * local-repository self-deploy guard (an anti-footgun against local-repo metadata corruption,
+     * not a security boundary - but it should at least hold against trivial re-spellings).
+     */
+    static boolean isSameLocation(Path a, Path b) {
+        return realOrNormalized(a).equals(realOrNormalized(b));
     }
 
     /**
