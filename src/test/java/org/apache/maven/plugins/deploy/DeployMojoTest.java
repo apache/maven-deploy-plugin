@@ -433,10 +433,26 @@ class DeployMojoTest {
     @Test
     @InjectMojo(goal = "deploy")
     void deployAtEndBatchIsNotRedeployedOnReentry(DeployMojo mojo) throws Exception {
+        // Set up mojoExecution with a proper plugin model so hasDeployExecution() can look up
+        // the deploy plugin key. This is needed because the cache optimization (PROJECTS_WITH_DEPLOY_KEY)
+        // calls mojoExecution.getPlugin().getModel().getKey() to find the current plugin in each project's
+        // build plugins map.
+        org.apache.maven.api.model.Plugin pluginModel = org.apache.maven.api.model.Plugin.newBuilder()
+                .groupId("org.apache.maven.plugins")
+                .artifactId("maven-deploy-plugin")
+                .build();
+        org.apache.maven.api.Plugin mojoPlugin = org.mockito.Mockito.mock(org.apache.maven.api.Plugin.class);
+        org.apache.maven.api.MojoExecution mojoExec =
+                org.mockito.Mockito.mock(org.apache.maven.api.MojoExecution.class);
+        org.mockito.Mockito.doReturn(mojoPlugin).when(mojoExec).getPlugin();
+        org.mockito.Mockito.doReturn(pluginModel).when(mojoPlugin).getModel();
+        setVariableValueToObject(mojo, "mojoExecution", mojoExec);
+
         Project project = (Project) getVariableValueFromObject(mojo, "project");
         artifactManager.setPath(
                 project.getMainArtifact().get(),
                 Paths.get(getBasedir(), "target/test-classes/unit/maven-deploy-test-1.0-SNAPSHOT.jar"));
+
         // give the session a persistent plugin context and a real reactor project list
         Map<Project, Map<String, Object>> contexts = new HashMap<>();
         when(session.getPluginContext(any(Project.class)))
