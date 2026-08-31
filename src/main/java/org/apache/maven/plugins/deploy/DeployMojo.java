@@ -299,7 +299,18 @@ public class DeployMojo extends AbstractDeployMojo {
             artifactManager.setPath(project.getPomArtifact(), project.getPomPath());
         }
 
+        if (!isValidId(project.getGroupId())
+                || !isValidId(project.getArtifactId())
+                || !isValidVersion(project.getVersion())) {
+            throw new MojoException("The project coordinates " + project.getGroupId() + ":" + project.getArtifactId()
+                    + ":" + project.getVersion() + " are not valid: they use invalid characters.");
+        }
+
         for (Artifact deployable : deployables) {
+            if (!isValidClassifier(deployable.getClassifier())) {
+                throw new MojoException("The classifier of attached artifact " + deployable
+                        + " is not valid: uses invalid characters.");
+            }
             if (!isValidPath(deployable)) {
                 if (deployable == project.getMainArtifact().orElse(null)) {
                     if (attachedArtifacts.isEmpty()) {

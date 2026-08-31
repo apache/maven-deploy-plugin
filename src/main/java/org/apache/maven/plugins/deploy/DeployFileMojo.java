@@ -57,7 +57,6 @@ import org.apache.maven.api.services.xml.XmlReaderException;
 @SuppressWarnings("unused")
 public class DeployFileMojo extends AbstractDeployMojo {
     private static final String TAR = "tar.";
-    private static final String ILLEGAL_VERSION_CHARS = "\\/:\"<>|?*[](){},";
 
     /**
      * GroupId of the artifact to be deployed. Retrieved from POM file if specified.
@@ -284,6 +283,14 @@ public class DeployFileMojo extends AbstractDeployMojo {
             throw new MojoException("The artifact information is not valid: uses invalid characters.");
         }
 
+        if (!isValidTypeOrExtension(packaging)) {
+            throw new MojoException("The packaging is not valid: uses invalid characters.");
+        }
+
+        if (!isValidClassifier(classifier)) {
+            throw new MojoException("The classifier is not valid: uses invalid characters.");
+        }
+
         failIfOffline();
         warnIfAffectedPackagingAndMaven(packaging);
 
@@ -375,12 +382,22 @@ public class DeployFileMojo extends AbstractDeployMojo {
                 if (Files.isRegularFile(file)) {
                     String extension = getExtension(file);
                     String type = types.substring(ti, nti).trim();
+                    String classifierEntry = classifiers.substring(ci, nci).trim();
+
+                    if (!isValidTypeOrExtension(type)) {
+                        throw new MojoException("The 'types' entry '" + type + "' is not valid:"
+                                + " uses invalid characters or is empty.");
+                    }
+                    if (classifierEntry.isEmpty() || !isValidClassifier(classifierEntry)) {
+                        throw new MojoException("The 'classifiers' entry '" + classifierEntry + "' is not valid:"
+                                + " uses invalid characters or is empty.");
+                    }
 
                     ProducedArtifact deployable = session.createProducedArtifact(
                             artifact.getGroupId(),
                             artifact.getArtifactId(),
                             artifact.getVersion().toString(),
-                            classifiers.substring(ci, nci).trim(),
+                            classifierEntry,
                             extension,
                             type);
                     artifactManager.setPath(deployable, file);
@@ -591,41 +608,5 @@ public class DeployFileMojo extends AbstractDeployMojo {
             return filename.regionMatches(lastDot + 1 - TAR.length(), TAR, 0, TAR.length()) ? TAR + ext : ext;
         }
         return "";
-    }
-
-    /**
-     * Returns {@code true} if passed in string is "valid Maven ID" (groupId or artifactId).
-     */
-    private boolean isValidId(String id) {
-        if (id == null) {
-            return false;
-        }
-        for (int i = 0; i < id.length(); i++) {
-            char c = id.charAt(i);
-            if (!(c >= 'a' && c <= 'z'
-                    || c >= 'A' && c <= 'Z'
-                    || c >= '0' && c <= '9'
-                    || c == '-'
-                    || c == '_'
-                    || c == '.')) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /**
-     * Returns {@code true} if passed in string is "valid Maven (simple. non range, expression, etc) version".
-     */
-    private boolean isValidVersion(String version) {
-        if (version == null) {
-            return false;
-        }
-        for (int i = version.length() - 1; i >= 0; i--) {
-            if (ILLEGAL_VERSION_CHARS.indexOf(version.charAt(i)) >= 0) {
-                return false;
-            }
-        }
-        return true;
     }
 }

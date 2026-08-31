@@ -180,6 +180,97 @@ public abstract class AbstractDeployMojo implements Mojo {
                 || "0:0:0:0:0:0:0:1".equals(host);
     }
 
+    static final String ILLEGAL_VERSION_CHARS = "\\/:\"<>|?*[](){},";
+
+    /**
+     * Returns {@code true} if passed in string is "valid Maven ID" (groupId or artifactId): only
+     * {@code [a-zA-Z0-9._-]} characters, and no empty dot-separated segment (which rejects values
+     * that are entirely dots such as {@code ".."} - a whole repository-layout path segment - as
+     * well as leading/trailing/consecutive dots).
+     */
+    static boolean isValidId(String id) {
+        if (id == null || id.isEmpty()) {
+            return false;
+        }
+        for (int i = 0; i < id.length(); i++) {
+            char c = id.charAt(i);
+            if (!(c >= 'a' && c <= 'z'
+                    || c >= 'A' && c <= 'Z'
+                    || c >= '0' && c <= '9'
+                    || c == '-'
+                    || c == '_'
+                    || c == '.')) {
+                return false;
+            }
+        }
+        for (String segment : id.split("\\.", -1)) {
+            if (segment.isEmpty()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Returns {@code true} if passed in string is "valid Maven (simple, non range, expression, etc.)
+     * version": no path/separator-dangerous characters, no whitespace or control characters, and not
+     * composed entirely of dots (a version is used verbatim as a whole repository-layout path
+     * segment, so {@code ".."} must not pass).
+     */
+    static boolean isValidVersion(String version) {
+        if (version == null || version.isEmpty()) {
+            return false;
+        }
+        boolean seenNonDot = false;
+        for (int i = version.length() - 1; i >= 0; i--) {
+            char c = version.charAt(i);
+            if (ILLEGAL_VERSION_CHARS.indexOf(c) >= 0 || Character.isWhitespace(c) || Character.isISOControl(c)) {
+                return false;
+            }
+            if (c != '.') {
+                seenNonDot = true;
+            }
+        }
+        return seenNonDot;
+    }
+
+    /**
+     * Returns {@code true} if the passed classifier is absent, empty, or layout-safe: the classifier
+     * is embedded verbatim in the repository-layout file name
+     * ({@code artifactId-version-classifier.extension}), so it must use the same character allowlist
+     * as ids and must not be composed entirely of dots.
+     */
+    static boolean isValidClassifier(String classifier) {
+        if (classifier == null || classifier.isEmpty()) {
+            return true;
+        }
+        boolean seenNonDot = false;
+        for (int i = 0; i < classifier.length(); i++) {
+            char c = classifier.charAt(i);
+            if (!(c >= 'a' && c <= 'z'
+                    || c >= 'A' && c <= 'Z'
+                    || c >= '0' && c <= '9'
+                    || c == '-'
+                    || c == '_'
+                    || c == '.')) {
+                return false;
+            }
+            if (c != '.') {
+                seenNonDot = true;
+            }
+        }
+        return seenNonDot;
+    }
+
+    /**
+     * Returns {@code true} if the passed artifact type / extension / packaging is layout-safe:
+     * non-empty, id character allowlist, not composed entirely of dots (the extension is appended
+     * to the repository-layout file name).
+     */
+    static boolean isValidTypeOrExtension(String type) {
+        return type != null && !type.isEmpty() && isValidClassifier(type);
+    }
+
     /**
      * Guards the repository id&#8594;URL credential binding: Maven resolves the credentials for a
      * deployment repository purely by matching its id against a {@code <server>} entry in
