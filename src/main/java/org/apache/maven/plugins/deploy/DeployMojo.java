@@ -64,9 +64,24 @@ public class DeployMojo extends AbstractDeployMojo {
     private MojoExecution mojoExecution;
 
     /**
-     * Whether every project should be deployed during its own deploy-phase or at the end of the multimodule build. If
-     * set to {@code true} and the build fails, none of the reactor projects is deployed.
-     * <strong>(experimental)</strong>
+     * Whether every project should be deployed during its own deploy-phase or at the end of the multimodule build.
+     * When set to {@code true}, the deploy requests of all projects with a bound deploy execution are collected and
+     * executed together once the last such project has reached its deploy phase, which reduces the chance of
+     * publishing artifacts from a build that subsequently fails.
+     * <p>
+     * <strong>This is not an atomic, all-or-nothing guarantee.</strong> In particular:
+     * <ul>
+     *     <li>The batch fires when the last project <em>with a deploy execution</em> reaches its deploy phase.
+     *     Reactor projects built after that point (for example trailing modules that skip or do not bind the
+     *     deploy goal, such as integration-test aggregators) can still fail <em>after</em> all artifacts have
+     *     been published.</li>
+     *     <li>When the batch spans several repositories or retry configurations, the resulting requests are
+     *     deployed sequentially: a failure part-way through leaves the repositories already deployed to
+     *     published, with no rollback. The build log reports which repositories had already been deployed
+     *     when this happens.</li>
+     *     <li>Projects configured with {@code deployAtEnd=false} deploy immediately during their own deploy
+     *     phase and cannot be recalled by a later build failure.</li>
+     * </ul>
      *
      * @since 2.8
      */
@@ -313,7 +328,23 @@ public class DeployMojo extends AbstractDeployMojo {
         }
         // Deploy
         if (!requests.isEmpty()) {
-            requests.forEach(this::deploy);
+            // Requests are deployed sequentially and there is no rollback: if one fails, make the
+            // partial-publication state explicit instead of only surfacing the failing module.
+            List<String> deployedRepositoryIds = new ArrayList<>();
+            for (ArtifactDeployerRequest request : requests) {
+                try {
+                    deploy(request);
+                } catch (RuntimeException e) {
+                    if (!deployedRepositoryIds.isEmpty()) {
+                        getLog().error("Deploy-at-end batch failed after " + deployedRepositoryIds.size() + " of "
+                                + requests.size() + " deploy request(s) had already completed. Artifacts already"
+                                + " published to repository id(s) " + String.join(", ", deployedRepositoryIds)
+                                + " remain published: there is no rollback.");
+                    }
+                    throw e;
+                }
+                deployedRepositoryIds.add(request.getRepository().getId());
+            }
         } else {
             getLog().info("No actual deploy requests");
         }
