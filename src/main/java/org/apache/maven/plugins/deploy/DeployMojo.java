@@ -159,6 +159,19 @@ public class DeployMojo extends AbstractDeployMojo {
 
     private static final String PROJECTS_WITH_DEPLOY_KEY = DeployMojo.class.getName() + ".projectsWithDeploy";
 
+    /**
+     * Serializes the deploy-at-end mark-then-check-then-fire sequence across reactor threads.
+     * With {@code -T}, two reactor leaves can reach their deploy phase concurrently, both record
+     * their state, both see {@link #allProjectsMarked()} true, and both fire
+     * {@link #deployAllAtOnce()} - double-publishing every batched module (MDEPLOY-169 ships
+     * {@code -T2} + deployAtEnd as a supported configuration). All state reads/writes and the
+     * batch trigger below take this monitor, so exactly one thread fires the batch; the loser
+     * then observes the {@code DEPLOYED} states written by the winner and no-ops. This is a
+     * constant lock object, not mutable static state; the batch state itself stays in the
+     * per-project session plugin contexts.
+     */
+    private static final Object DEPLOY_AT_END_LOCK = new Object();
+
     public DeployMojo() {}
 
     private void putState(State state) {
@@ -182,19 +195,23 @@ public class DeployMojo extends AbstractDeployMojo {
     }
 
     public void execute() {
-        if (getState(project) == State.DEPLOYED) {
-            // Terminal state: the project was already deployed in this session, either individually
-            // or as part of an earlier deploy-at-end batch. Re-entering (a second bound deploy
-            // execution, or a direct deploy:deploy invocation) must not publish it a second time.
-            getLog().info("Skipping deploy for " + project.getGroupId() + ":" + project.getArtifactId() + ":"
-                    + project.getVersion() + ": it has already been deployed in this session");
-            return;
+        synchronized (DEPLOY_AT_END_LOCK) {
+            if (getState(project) == State.DEPLOYED) {
+                // Terminal state: the project was already deployed in this session, either individually
+                // or as part of an earlier deploy-at-end batch. Re-entering (a second bound deploy
+                // execution, or a direct deploy:deploy invocation) must not publish it a second time.
+                getLog().info("Skipping deploy for " + project.getGroupId() + ":" + project.getArtifactId() + ":"
+                        + project.getVersion() + ": it has already been deployed in this session");
+                return;
+            }
         }
         if (Boolean.parseBoolean(skip)
                 || ("releases".equals(skip) && !session.isVersionSnapshot(project.getVersion()))
                 || ("snapshots".equals(skip) && session.isVersionSnapshot(project.getVersion()))) {
             getLog().info("Skipping artifact deployment");
-            putState(State.SKIPPED);
+            synchronized (DEPLOY_AT_END_LOCK) {
+                putState(State.SKIPPED);
+            }
         } else {
             failIfOffline();
             warnIfAffectedPackagingAndMaven(project.getPackaging().id());
@@ -203,20 +220,31 @@ public class DeployMojo extends AbstractDeployMojo {
                 getLog().info("Deploying deploy for " + project.getGroupId() + ":" + project.getArtifactId() + ":"
                         + project.getVersion() + " at end");
                 deploy(createDeployerRequest());
-                putState(State.DEPLOYED);
+                synchronized (DEPLOY_AT_END_LOCK) {
+                    putState(State.DEPLOYED);
+                }
             } else {
-                // compute the request
-                putState(State.TO_BE_DEPLOYED);
-                putState(createDeployerRequest());
-                if (!allProjectsMarked()) {
-                    getLog().info("Deferring deploy for " + project.getGroupId() + ":" + project.getArtifactId() + ":"
-                            + project.getVersion() + " at end");
+                // compute the request outside the lock; only the state mark-and-check is serialized
+                ArtifactDeployerRequest request = createDeployerRequest();
+                synchronized (DEPLOY_AT_END_LOCK) {
+                    putState(State.TO_BE_DEPLOYED);
+                    putState(request);
+                    if (!allProjectsMarked()) {
+                        getLog().info("Deferring deploy for " + project.getGroupId() + ":" + project.getArtifactId()
+                                + ":" + project.getVersion() + " at end");
+                    }
                 }
             }
         }
 
-        if (allProjectsMarked()) {
-            deployAllAtOnce();
+        synchronized (DEPLOY_AT_END_LOCK) {
+            // check-then-act must be atomic: without the lock two -T threads can both observe
+            // allProjectsMarked() == true and both fire the batch. Holding the lock across
+            // deployAllAtOnce() is intentional - a concurrent second trigger waits, then finds
+            // every batched project already DEPLOYED and no-ops.
+            if (allProjectsMarked()) {
+                deployAllAtOnce();
+            }
         }
     }
 
