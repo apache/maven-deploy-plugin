@@ -18,6 +18,10 @@
  */
 package org.apache.maven.plugins.deploy;
 
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.Map;
+
 import org.apache.maven.api.RemoteRepository;
 import org.apache.maven.api.Session;
 import org.apache.maven.api.Version;
@@ -26,6 +30,11 @@ import org.apache.maven.api.plugin.Log;
 import org.apache.maven.api.plugin.Mojo;
 import org.apache.maven.api.plugin.MojoException;
 import org.apache.maven.api.plugin.annotations.Parameter;
+import org.apache.maven.api.settings.Mirror;
+import org.apache.maven.api.settings.Profile;
+import org.apache.maven.api.settings.Repository;
+import org.apache.maven.api.settings.Server;
+import org.apache.maven.api.settings.Settings;
 
 /**
  * Abstract class for Deploy mojo's.
@@ -34,6 +43,19 @@ public abstract class AbstractDeployMojo implements Mojo {
     private static final String AFFECTED_MAVEN_PACKAGING = "maven-plugin";
 
     private static final String FIXED_MAVEN_VERSION = "3.9.0";
+
+    /**
+     * User property (not settable from the POM, only via {@code -D} on the command line or in
+     * {@code MAVEN_OPTS}/{@code .mvn/maven.config}) that disables the repository id&#8594;URL
+     * credential-binding check performed before a credentials-bearing deployment repository is used.
+     */
+    static final String ALLOW_CREDENTIAL_REUSE_PROPERTY = "maven.deploy.allowCredentialReuse";
+
+    /**
+     * User property (not settable from the POM) that allows deploying to cleartext (http/ftp)
+     * URLs. Loopback hosts are always exempt from the cleartext check.
+     */
+    static final String ALLOW_INSECURE_URL_PROPERTY = "maven.deploy.allowInsecureUrl";
 
     @Inject
     protected Log logger;
@@ -89,7 +111,321 @@ public abstract class AbstractDeployMojo implements Mojo {
      * Creates resolver {@link RemoteRepository} equipped with needed whistles and bells.
      */
     protected RemoteRepository createDeploymentArtifactRepository(String id, String url) {
+        validateTransportSecurity(id, url);
         return getSession().createRemoteRepository(id, url);
+    }
+
+    /**
+     * Refuses cleartext deployment transports: with an {@code http://} or {@code ftp://} deployment
+     * URL, the HTTP Basic (or FTP) credentials resolved for {@code id} and all deployed artifacts
+     * would cross the network unencrypted. Loopback hosts are exempt (local mock/test repositories);
+     * everything else requires an explicit {@code -D}{@value #ALLOW_INSECURE_URL_PROPERTY}{@code =true}
+     * opt-out. Maven core's {@code external:http:*} mirror blocking covers dependency
+     * <em>resolution</em> only; this is the deployment-side counterpart.
+     *
+     * @param id the repository id (used in diagnostics)
+     * @param url the deployment URL
+     * @throws MojoException when the URL is cleartext, non-loopback, and not explicitly allowed
+     */
+    protected void validateTransportSecurity(String id, String url) throws MojoException {
+        if (url == null || !isInsecureDeploymentUrl(url)) {
+            return;
+        }
+        Map<String, String> userProperties = session.getUserProperties();
+        if (userProperties != null && Boolean.parseBoolean(userProperties.get(ALLOW_INSECURE_URL_PROPERTY))) {
+            getLog().warn("Deploying to insecure (cleartext) URL " + url + " for repository id '" + id
+                    + "' because -D" + ALLOW_INSECURE_URL_PROPERTY
+                    + "=true is set: credentials and artifacts will cross the network unencrypted");
+            return;
+        }
+        throw new MojoException("Refusing to deploy to insecure (cleartext) URL " + url + " for repository id '" + id
+                + "': credentials and artifacts would cross the network unencrypted. Use an https:// endpoint,"
+                + " or re-run with -D" + ALLOW_INSECURE_URL_PROPERTY
+                + "=true to accept the risk (loopback hosts are exempt from this check).");
+    }
+
+    /**
+     * Returns {@code true} for cleartext ({@code http}/{@code ftp}) URLs targeting a non-loopback host.
+     */
+    static boolean isInsecureDeploymentUrl(String url) {
+        int colon = url.indexOf(':');
+        if (colon <= 0) {
+            return false;
+        }
+        String scheme = url.substring(0, colon).toLowerCase(java.util.Locale.ROOT);
+        if (!"http".equals(scheme) && !"ftp".equals(scheme)) {
+            return false;
+        }
+        return !isLoopbackHost(hostOf(url));
+    }
+
+    private static String hostOf(String url) {
+        try {
+            return java.net.URI.create(url).getHost();
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    static boolean isLoopbackHost(String host) {
+        if (host == null || host.isEmpty()) {
+            return false;
+        }
+        if (host.startsWith("[") && host.endsWith("]")) {
+            host = host.substring(1, host.length() - 1);
+        }
+        return "localhost".equalsIgnoreCase(host)
+                || host.startsWith("127.")
+                || "::1".equals(host)
+                || "0:0:0:0:0:0:0:1".equals(host);
+    }
+
+    static final String ILLEGAL_VERSION_CHARS = "\\/:\"<>|?*[](){},";
+
+    /**
+     * Returns {@code true} if passed in string is "valid Maven ID" (groupId or artifactId): only
+     * {@code [a-zA-Z0-9._-]} characters, and no empty dot-separated segment (which rejects values
+     * that are entirely dots such as {@code ".."} - a whole repository-layout path segment - as
+     * well as leading/trailing/consecutive dots).
+     */
+    static boolean isValidId(String id) {
+        if (id == null || id.isEmpty()) {
+            return false;
+        }
+        for (int i = 0; i < id.length(); i++) {
+            char c = id.charAt(i);
+            if (!(c >= 'a' && c <= 'z'
+                    || c >= 'A' && c <= 'Z'
+                    || c >= '0' && c <= '9'
+                    || c == '-'
+                    || c == '_'
+                    || c == '.')) {
+                return false;
+            }
+        }
+        for (String segment : id.split("\\.", -1)) {
+            if (segment.isEmpty()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Returns {@code true} if passed in string is "valid Maven (simple, non range, expression, etc.)
+     * version": no path/separator-dangerous characters, no whitespace or control characters, and not
+     * composed entirely of dots (a version is used verbatim as a whole repository-layout path
+     * segment, so {@code ".."} must not pass).
+     */
+    static boolean isValidVersion(String version) {
+        if (version == null || version.isEmpty()) {
+            return false;
+        }
+        boolean seenNonDot = false;
+        for (int i = version.length() - 1; i >= 0; i--) {
+            char c = version.charAt(i);
+            if (ILLEGAL_VERSION_CHARS.indexOf(c) >= 0 || Character.isWhitespace(c) || Character.isISOControl(c)) {
+                return false;
+            }
+            if (c != '.') {
+                seenNonDot = true;
+            }
+        }
+        return seenNonDot;
+    }
+
+    /**
+     * Returns {@code true} if the passed classifier is absent, empty, or layout-safe: the classifier
+     * is embedded verbatim in the repository-layout file name
+     * ({@code artifactId-version-classifier.extension}), so it must use the same character allowlist
+     * as ids and must not be composed entirely of dots.
+     */
+    static boolean isValidClassifier(String classifier) {
+        if (classifier == null || classifier.isEmpty()) {
+            return true;
+        }
+        boolean seenNonDot = false;
+        for (int i = 0; i < classifier.length(); i++) {
+            char c = classifier.charAt(i);
+            if (!(c >= 'a' && c <= 'z'
+                    || c >= 'A' && c <= 'Z'
+                    || c >= '0' && c <= '9'
+                    || c == '-'
+                    || c == '_'
+                    || c == '.')) {
+                return false;
+            }
+            if (c != '.') {
+                seenNonDot = true;
+            }
+        }
+        return seenNonDot;
+    }
+
+    /**
+     * Returns {@code true} if the passed artifact type / extension / packaging is layout-safe:
+     * non-empty, id character allowlist, not composed entirely of dots (the extension is appended
+     * to the repository-layout file name).
+     */
+    static boolean isValidTypeOrExtension(String type) {
+        return type != null && !type.isEmpty() && isValidClassifier(type);
+    }
+
+    /**
+     * Guards the repository id&#8594;URL credential binding: Maven resolves the credentials for a
+     * deployment repository purely by matching its id against a {@code <server>} entry in
+     * {@code settings.xml}, so any component that pairs a known server id with a <em>new</em> URL
+     * re-targets those credentials. Equivalent to
+     * {@link #validateCredentialBinding(String, String, boolean) validateCredentialBinding(id, url, true)}:
+     * this overload is for values that are command-line-supplied by nature (deploy-file's
+     * {@code repositoryId}/{@code url} are plain {@code -D} parameters typed by the operator), so
+     * the no-URL-on-record case warns instead of refusing.
+     *
+     * @param id the repository id the deployment would bind credentials for
+     * @param url the URL the deployment would send those credentials to
+     * @throws MojoException when the binding re-targets known credentials to an unknown URL
+     */
+    protected void validateCredentialBinding(String id, String url) throws MojoException {
+        validateCredentialBinding(id, url, true);
+    }
+
+    /**
+     * Guards the repository id&#8594;URL credential binding, weighing the <em>provenance</em> of the
+     * binding. When the given id matches a {@code settings.xml} server entry (so credentials are at
+     * stake), two cases are distinguished:
+     * <ul>
+     *   <li><b>URLs on record for the id</b> (mirrors, profile repositories, and &mdash; for the
+     *   deploy goal &mdash; the project's {@code distributionManagement}): the given URL must match
+     *   one of them; otherwise the deployment is refused, naming both URLs &mdash; regardless of
+     *   provenance.</li>
+     *   <li><b>No URL on record for the id</b>: the binding cannot be cross-checked, which is the
+     *   mainline redirection shape (credentials stored for an id such as {@code ossrh} that
+     *   settings.xml binds to no URL). A value the operator typed on the command line
+     *   ({@code fromUserProperty}) proceeds with a WARN naming the URL the credentials will be sent
+     *   to; a POM-sourced value (pom property or plugin configuration &mdash; attacker-writable in
+     *   the malicious-POM model) is refused.</li>
+     * </ul>
+     * Every refusal can be overridden with {@code -D}{@value #ALLOW_CREDENTIAL_REUSE_PROPERTY}{@code =true}
+     * (a user property: it cannot be set from a POM).
+     *
+     * @param id the repository id the deployment would bind credentials for
+     * @param url the URL the deployment would send those credentials to
+     * @param fromUserProperty whether the id/url pair was supplied on the command line
+     *        ({@code -D} session user property) rather than from the POM or plugin configuration
+     * @throws MojoException when the binding re-targets known credentials to an unknown URL, or when
+     *         a POM-sourced binding pairs stored credentials with a URL this build knows nothing about
+     */
+    protected void validateCredentialBinding(String id, String url, boolean fromUserProperty) throws MojoException {
+        if (id == null || id.isEmpty() || url == null || url.isEmpty()) {
+            return;
+        }
+        Settings settings = session.getSettings();
+        if (settings == null) {
+            return;
+        }
+        boolean idHasCredentials = false;
+        for (Server server : settings.getServers()) {
+            if (id.equals(server.getId())) {
+                idHasCredentials = true;
+                break;
+            }
+        }
+        if (!idHasCredentials) {
+            return;
+        }
+        Collection<String> knownUrls = getKnownRepositoryUrls(id);
+        if (knownUrls.isEmpty()) {
+            // The server id carries credentials but no URL is on record for it in this build.
+            // This must not pass silently: it is the mainline redirection shape. Provenance decides:
+            // an operator-typed (-D) value proceeds with a warning, a POM-sourced value is refused.
+            if (fromUserProperty) {
+                getLog().warn("Repository id '" + id + "' has credentials stored in settings.xml but no URL is on"
+                        + " record for that id in this build; those credentials will be sent to " + url);
+                return;
+            }
+            if (isCredentialReuseAllowed()) {
+                getLog().warn("Repository id '" + id + "' has credentials stored in settings.xml but no URL is on"
+                        + " record for that id in this build, and the repository was configured from the POM;"
+                        + " sending those credentials to " + url + " because -D"
+                        + ALLOW_CREDENTIAL_REUSE_PROPERTY + "=true is set");
+                return;
+            }
+            throw new MojoException(
+                    "Refusing to deploy: repository id '" + id + "' matches a settings.xml server entry (stored"
+                            + " credentials), no URL is on record for that id in this build, and the alternative"
+                            + " repository was configured from the POM rather than the command line. The deployment"
+                            + " would send those credentials to " + url + ". If this is intentional, supply the"
+                            + " repository on the command line (-D user property), or re-run with -D"
+                            + ALLOW_CREDENTIAL_REUSE_PROPERTY + "=true (user property; it cannot be set from a POM).");
+        }
+        String requested = normalizeRepositoryUrl(url);
+        for (String known : knownUrls) {
+            if (requested.equals(normalizeRepositoryUrl(known))) {
+                return;
+            }
+        }
+        String knownList = String.join(", ", knownUrls);
+        if (isCredentialReuseAllowed()) {
+            getLog().warn("Repository id '" + id + "' binds settings.xml credentials that are on record for "
+                    + knownList + " but the deployment targets " + url + "; proceeding because -D"
+                    + ALLOW_CREDENTIAL_REUSE_PROPERTY + "=true is set");
+            return;
+        }
+        throw new MojoException(
+                "Refusing to deploy: repository id '" + id + "' matches a settings.xml server entry whose"
+                        + " credentials are on record for " + knownList + ", but the deployment would send them to "
+                        + url + ". If this redirection is intentional, re-run with -D"
+                        + ALLOW_CREDENTIAL_REUSE_PROPERTY + "=true (user property; it cannot be set from a POM).");
+    }
+
+    /**
+     * Collects the URLs this build already associates with the given repository id: mirror entries
+     * and profile repositories from {@code settings.xml}. Subclasses add further sources (the
+     * deploy goal adds the project's {@code distributionManagement}).
+     * <p>
+     * <b>Trust note:</b> sources read from the project model (such as {@code distributionManagement})
+     * are attacker-controlled in the malicious-POM model and are therefore <em>advisory</em>: they can
+     * only widen the accepted set for the mismatch check, never authorize a binding by their absence
+     * &mdash; the empty-record case is handled by provenance in
+     * {@link #validateCredentialBinding(String, String, boolean)}. Settings.xml-sourced entries
+     * (mirrors, profiles) are operator-controlled.
+     */
+    protected Collection<String> getKnownRepositoryUrls(String id) {
+        Collection<String> urls = new LinkedHashSet<>();
+        Settings settings = session.getSettings();
+        if (settings != null) {
+            for (Mirror mirror : settings.getMirrors()) {
+                if (id.equals(mirror.getId()) && mirror.getUrl() != null) {
+                    urls.add(mirror.getUrl());
+                }
+            }
+            for (Profile profile : settings.getProfiles()) {
+                for (Repository repository : profile.getRepositories()) {
+                    if (id.equals(repository.getId()) && repository.getUrl() != null) {
+                        urls.add(repository.getUrl());
+                    }
+                }
+                for (Repository repository : profile.getPluginRepositories()) {
+                    if (id.equals(repository.getId()) && repository.getUrl() != null) {
+                        urls.add(repository.getUrl());
+                    }
+                }
+            }
+        }
+        return urls;
+    }
+
+    private boolean isCredentialReuseAllowed() {
+        Map<String, String> userProperties = session.getUserProperties();
+        return userProperties != null && Boolean.parseBoolean(userProperties.get(ALLOW_CREDENTIAL_REUSE_PROPERTY));
+    }
+
+    static String normalizeRepositoryUrl(String url) {
+        String normalized = url.trim();
+        while (normalized.endsWith("/")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        return normalized;
     }
 
     protected Session getSession() {

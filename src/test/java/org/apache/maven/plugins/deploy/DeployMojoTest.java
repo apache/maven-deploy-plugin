@@ -22,7 +22,9 @@ import java.io.File;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.apache.maven.api.Artifact;
@@ -46,6 +48,9 @@ import org.apache.maven.api.services.ArtifactDeployerRequest;
 import org.apache.maven.api.services.ArtifactManager;
 import org.apache.maven.api.services.ProjectManager;
 import org.apache.maven.api.services.RepositoryFactory;
+import org.apache.maven.api.settings.Mirror;
+import org.apache.maven.api.settings.Server;
+import org.apache.maven.api.settings.Settings;
 import org.apache.maven.impl.InternalSession;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -266,6 +271,204 @@ class DeployMojoTest {
         RemoteRepository repository = mojo.getDeploymentRepository(false);
         assertEquals("altReleaseDeploymentRepository", repository.getId());
         assertEquals("http://localhost", repository.getUrl());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    void altDeploymentRepositoryRefusedWhenCredentialsBoundToOtherUrl(DeployMojo mojo) throws Exception {
+        when(session.getSettings())
+                .thenReturn(Settings.newBuilder()
+                        .servers(List.of(Server.newBuilder().id("remote-repo").build()))
+                        .mirrors(List.of(Mirror.newBuilder()
+                                .id("remote-repo")
+                                .url("https://good.example/repo")
+                                .build()))
+                        .build());
+        setVariableValueToObject(mojo, "altDeploymentRepository", "remote-repo::https://evil.example/repo");
+
+        MojoException e = assertThrows(MojoException.class, () -> mojo.getDeploymentRepository(false));
+        assertTrue(e.getMessage().contains("Refusing to deploy"), e.getMessage());
+        assertTrue(e.getMessage().contains("https://evil.example/repo"), e.getMessage());
+        assertTrue(e.getMessage().contains("https://good.example/repo"), e.getMessage());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    void altDeploymentRepositoryAcceptedWhenUrlKnownForId(DeployMojo mojo) throws Exception {
+        when(session.getSettings())
+                .thenReturn(Settings.newBuilder()
+                        .servers(List.of(Server.newBuilder().id("remote-repo").build()))
+                        .build());
+        // the project's own distributionManagement URL for "remote-repo" is a known binding
+        String dmUrl = Paths.get(getBasedir()).toUri().toString();
+        setVariableValueToObject(mojo, "altDeploymentRepository", "remote-repo::" + dmUrl);
+
+        RemoteRepository repository = mojo.getDeploymentRepository(false);
+        assertEquals("remote-repo", repository.getId());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    void altDeploymentRepositoryCredentialReuseOptOut(DeployMojo mojo) throws Exception {
+        when(session.getSettings())
+                .thenReturn(Settings.newBuilder()
+                        .servers(List.of(Server.newBuilder().id("remote-repo").build()))
+                        .mirrors(List.of(Mirror.newBuilder()
+                                .id("remote-repo")
+                                .url("https://good.example/repo")
+                                .build()))
+                        .build());
+        session.getUserProperties().put(AbstractDeployMojo.ALLOW_CREDENTIAL_REUSE_PROPERTY, "true");
+        setVariableValueToObject(mojo, "altDeploymentRepository", "remote-repo::https://evil.example/repo");
+
+        RemoteRepository repository = mojo.getDeploymentRepository(false);
+        assertEquals("https://evil.example/repo", repository.getUrl());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    void pomSourcedAltRepositoryRefusedWhenNoUrlOnRecordForCredentialedId(DeployMojo mojo) throws Exception {
+        // the mainline attack shape: settings.xml stores credentials for "ossrh" but binds no URL
+        // to that id anywhere (no mirror, no profile repository, and the project's
+        // distributionManagement uses a different id), and a POM-bindable parameter pairs the id
+        // with an attacker URL. The parameter is set without a matching -D user property, which is
+        // exactly what a pom <properties> entry or plugin <configuration> produces.
+        when(session.getSettings())
+                .thenReturn(Settings.newBuilder()
+                        .servers(List.of(Server.newBuilder().id("ossrh").build()))
+                        .build());
+        setVariableValueToObject(mojo, "altDeploymentRepository", "ossrh::https://evil.example/repo");
+
+        MojoException e = assertThrows(MojoException.class, () -> mojo.getDeploymentRepository(false));
+        assertTrue(e.getMessage().contains("Refusing to deploy"), e.getMessage());
+        assertTrue(e.getMessage().contains("'ossrh'"), e.getMessage());
+        assertTrue(e.getMessage().contains("https://evil.example/repo"), e.getMessage());
+        assertTrue(e.getMessage().contains("configured from the POM"), e.getMessage());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    void cliSourcedAltRepositoryWarnsButProceedsWhenNoUrlOnRecordForCredentialedId(DeployMojo mojo) throws Exception {
+        // same empty-record shape, but the operator typed the pair on the command line: the value
+        // is present as a session user property and matches the parameter value, so the binding
+        // proceeds (with a warning naming the target URL) - fully failing closed here would break
+        // legitimate -DaltDeploymentRepository workflows against ids that settings.xml only stores
+        // credentials for
+        when(session.getSettings())
+                .thenReturn(Settings.newBuilder()
+                        .servers(List.of(Server.newBuilder().id("ossrh").build()))
+                        .build());
+        session.getUserProperties().put("altDeploymentRepository", "ossrh::https://elsewhere.example/repo");
+        setVariableValueToObject(mojo, "altDeploymentRepository", "ossrh::https://elsewhere.example/repo");
+
+        RemoteRepository repository = mojo.getDeploymentRepository(false);
+        assertEquals("ossrh", repository.getId());
+        assertEquals("https://elsewhere.example/repo", repository.getUrl());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    void pomSourcedAltRepositoryEmptyRecordRefusalHasKnobOverride(DeployMojo mojo) throws Exception {
+        when(session.getSettings())
+                .thenReturn(Settings.newBuilder()
+                        .servers(List.of(Server.newBuilder().id("ossrh").build()))
+                        .build());
+        session.getUserProperties().put(AbstractDeployMojo.ALLOW_CREDENTIAL_REUSE_PROPERTY, "true");
+        setVariableValueToObject(mojo, "altDeploymentRepository", "ossrh::https://evil.example/repo");
+
+        RemoteRepository repository = mojo.getDeploymentRepository(false);
+        assertEquals("https://evil.example/repo", repository.getUrl());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    void altDeploymentRepositoryAcceptedWhenIdHasNoCredentials(DeployMojo mojo) throws Exception {
+        when(session.getSettings())
+                .thenReturn(Settings.newBuilder()
+                        .servers(List.of(Server.newBuilder().id("other-server").build()))
+                        .build());
+        setVariableValueToObject(mojo, "altDeploymentRepository", "no-creds-repo::https://elsewhere.example/repo");
+
+        RemoteRepository repository = mojo.getDeploymentRepository(false);
+        assertEquals("https://elsewhere.example/repo", repository.getUrl());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    void insecureHttpAltDeploymentRepositoryRefused(DeployMojo mojo) throws Exception {
+        setVariableValueToObject(mojo, "altDeploymentRepository", "insecure-repo::http://insecure.example/repo");
+
+        MojoException e = assertThrows(MojoException.class, () -> mojo.getDeploymentRepository(false));
+        assertTrue(e.getMessage().contains("insecure (cleartext) URL"), e.getMessage());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    void insecureFtpAltDeploymentRepositoryRefused(DeployMojo mojo) throws Exception {
+        setVariableValueToObject(mojo, "altDeploymentRepository", "insecure-repo::ftp://insecure.example/repo");
+
+        MojoException e = assertThrows(MojoException.class, () -> mojo.getDeploymentRepository(false));
+        assertTrue(e.getMessage().contains("insecure (cleartext) URL"), e.getMessage());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    void insecureAltDeploymentRepositoryOptOut(DeployMojo mojo) throws Exception {
+        session.getUserProperties().put(AbstractDeployMojo.ALLOW_INSECURE_URL_PROPERTY, "true");
+        setVariableValueToObject(mojo, "altDeploymentRepository", "insecure-repo::http://insecure.example/repo");
+
+        RemoteRepository repository = mojo.getDeploymentRepository(false);
+        assertEquals("http://insecure.example/repo", repository.getUrl());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    void loopbackHttpAltDeploymentRepositoryAccepted(DeployMojo mojo) throws Exception {
+        setVariableValueToObject(mojo, "altDeploymentRepository", "local-repo::http://127.0.0.1:8081/repo");
+
+        RemoteRepository repository = mojo.getDeploymentRepository(false);
+        assertEquals("http://127.0.0.1:8081/repo", repository.getUrl());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    void deployAtEndBatchIsNotRedeployedOnReentry(DeployMojo mojo) throws Exception {
+        // Set up mojoExecution with a proper plugin model so hasDeployExecution() can look up
+        // the deploy plugin key. This is needed because the cache optimization (PROJECTS_WITH_DEPLOY_KEY)
+        // calls mojoExecution.getPlugin().getModel().getKey() to find the current plugin in each project's
+        // build plugins map.
+        org.apache.maven.api.model.Plugin pluginModel = org.apache.maven.api.model.Plugin.newBuilder()
+                .groupId("org.apache.maven.plugins")
+                .artifactId("maven-deploy-plugin")
+                .build();
+        org.apache.maven.api.Plugin mojoPlugin = org.mockito.Mockito.mock(org.apache.maven.api.Plugin.class);
+        org.apache.maven.api.MojoExecution mojoExec =
+                org.mockito.Mockito.mock(org.apache.maven.api.MojoExecution.class);
+        org.mockito.Mockito.doReturn(mojoPlugin).when(mojoExec).getPlugin();
+        org.mockito.Mockito.doReturn(pluginModel).when(mojoPlugin).getModel();
+        setVariableValueToObject(mojo, "mojoExecution", mojoExec);
+
+        Project project = (Project) getVariableValueFromObject(mojo, "project");
+        artifactManager.setPath(
+                project.getMainArtifact().get(),
+                Paths.get(getBasedir(), "target/test-classes/unit/maven-deploy-test-1.0-SNAPSHOT.jar"));
+
+        // give the session a persistent plugin context and a real reactor project list
+        Map<Project, Map<String, Object>> contexts = new HashMap<>();
+        when(session.getPluginContext(any(Project.class)))
+                .thenAnswer(iom -> contexts.computeIfAbsent(iom.getArgument(0, Project.class), p -> new HashMap<>()));
+        when(session.getProjects()).thenReturn(List.of(project));
+
+        ArgumentCaptor<ArtifactDeployerRequest> captor = ArgumentCaptor.forClass(ArtifactDeployerRequest.class);
+        doNothing().when(artifactDeployer).deploy(captor.capture());
+
+        // deployAtEnd defaults to true: the single-project batch fires within the first execution
+        mojo.execute();
+        assertEquals(1, captor.getAllValues().size(), "batch must fire exactly once");
+
+        // re-entry (second bound deploy execution, or direct deploy:deploy) must be a no-op
+        mojo.execute();
+        assertEquals(1, captor.getAllValues().size(), "re-entry must not re-deploy the batch");
     }
 
     private ArtifactDeployerRequest execute(DeployMojo mojo) {
