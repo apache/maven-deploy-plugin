@@ -147,7 +147,8 @@ public class DeployMojo extends AbstractDeployMojo {
      *     <li><code>true</code>: will skip as usual</li>
      *     <li><code>releases</code>: will skip if current version of the project is a release</li>
      *     <li><code>snapshots</code>: will skip if current version of the project is a snapshot</li>
-     *     <li>any other values will be considered as <code>false</code></li>
+     *     <li>values are matched case-insensitively; any other value fails the build (fail-closed:
+     *     a typo in a publish-suppression control must not silently publish)</li>
      * </ul>
      * @since 2.4
      */
@@ -220,9 +221,10 @@ public class DeployMojo extends AbstractDeployMojo {
                 return;
             }
         }
-        if (Boolean.parseBoolean(skip)
-                || ("releases".equals(skip) && !session.isVersionSnapshot(project.getVersion()))
-                || ("snapshots".equals(skip) && session.isVersionSnapshot(project.getVersion()))) {
+        SkipMode skipMode = parseSkipMode(skip, "maven.deploy.skip");
+        if (skipMode == SkipMode.ALL
+                || (skipMode == SkipMode.RELEASES && !session.isVersionSnapshot(project.getVersion()))
+                || (skipMode == SkipMode.SNAPSHOTS && session.isVersionSnapshot(project.getVersion()))) {
             getLog().info("Skipping artifact deployment");
             synchronized (DEPLOY_AT_END_LOCK) {
                 putState(State.SKIPPED);

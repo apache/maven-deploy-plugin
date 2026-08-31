@@ -108,6 +108,40 @@ public abstract class AbstractDeployMojo implements Mojo {
     }
 
     /**
+     * Recognized values of the {@code skip} tri-state shared by both mojos.
+     */
+    enum SkipMode {
+        NONE,
+        ALL,
+        RELEASES,
+        SNAPSHOTS
+    }
+
+    /**
+     * Parses the {@code skip} tri-state <em>fail-closed</em>: {@code skip} is a publish-suppression
+     * control, so an unrecognized value (a typo such as {@code ture} or {@code release}) must fail
+     * the build instead of silently publishing. Values are matched case-insensitively.
+     */
+    static SkipMode parseSkipMode(String value, String parameterName) throws MojoException {
+        if (value == null || value.isEmpty() || "false".equalsIgnoreCase(value)) {
+            return SkipMode.NONE;
+        }
+        if ("true".equalsIgnoreCase(value)) {
+            return SkipMode.ALL;
+        }
+        if ("releases".equalsIgnoreCase(value)) {
+            return SkipMode.RELEASES;
+        }
+        if ("snapshots".equalsIgnoreCase(value)) {
+            return SkipMode.SNAPSHOTS;
+        }
+        throw new MojoException("Unrecognized value '" + value + "' for " + parameterName
+                + ": supported values are true, false, releases and snapshots."
+                + " Refusing to deploy on an unrecognized value: a typo in a publish-suppression"
+                + " control must not silently publish.");
+    }
+
+    /**
      * Creates resolver {@link RemoteRepository} equipped with needed whistles and bells.
      */
     protected RemoteRepository createDeploymentArtifactRepository(String id, String url) {
