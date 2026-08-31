@@ -454,6 +454,19 @@ public abstract class AbstractDeployMojo implements Mojo {
         return userProperties != null && Boolean.parseBoolean(userProperties.get(ALLOW_CREDENTIAL_REUSE_PROPERTY));
     }
 
+    /**
+     * Masks URL-embedded userinfo ({@code scheme://user:token@host/...}) before a repository
+     * string is logged: build logs are routinely archived and shared, and the deploy log line
+     * must be safe to keep while remaining useful as the audit signal for where artifacts and
+     * credentials were sent.
+     */
+    static String redactUrlUserInfo(String value) {
+        if (value == null) {
+            return null;
+        }
+        return value.replaceAll("://[^/@\\s]+@", "://***@");
+    }
+
     static String normalizeRepositoryUrl(String url) {
         String normalized = url.trim();
         while (normalized.endsWith("/")) {

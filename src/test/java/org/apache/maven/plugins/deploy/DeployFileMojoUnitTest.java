@@ -155,6 +155,19 @@ class DeployFileMojoUnitTest {
         assertTrue(AbstractDeployMojo.isValidTypeOrExtension("maven-plugin"));
     }
 
+    @Test
+    void urlUserInfoIsRedactedForLogging() {
+        assertEquals(
+                "https://***@repo.example/releases",
+                AbstractDeployMojo.redactUrlUserInfo("https://user:s3cr3t@repo.example/releases"));
+        assertEquals(
+                "my-repo::https://***@repo.example/releases",
+                AbstractDeployMojo.redactUrlUserInfo("my-repo::https://ci-bot:tok3n@repo.example/releases"));
+        assertEquals(
+                "https://repo.example/releases", AbstractDeployMojo.redactUrlUserInfo("https://repo.example/releases"));
+        assertEquals("file:///tmp/repo", AbstractDeployMojo.redactUrlUserInfo("file:///tmp/repo"));
+    }
+
     private void setMojoModel(
             MockDeployFileMojo mojo, String group, String artifact, String version, String packaging, Parent parent) {
         mojo.model = Model.newBuilder()

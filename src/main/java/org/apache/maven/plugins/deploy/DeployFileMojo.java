@@ -438,7 +438,9 @@ public class DeployFileMojo extends AbstractDeployMojo {
                     .retryFailedDeploymentCount(Math.max(1, Math.min(10, getRetryFailedDeploymentCount())))
                     .build();
 
-            getLog().info("Deploying artifacts " + deployables + " to repository " + deploymentRepository);
+            getLog().info("Deploying artifacts " + deployables + " to repository "
+                    + deploymentRepository.getId() + " ("
+                    + redactUrlUserInfo(deploymentRepository.getUrl()) + ")");
             ArtifactDeployer artifactDeployer = session.getService(ArtifactDeployer.class);
             artifactDeployer.deploy(deployRequest);
         } catch (ArtifactDeployerException e) {

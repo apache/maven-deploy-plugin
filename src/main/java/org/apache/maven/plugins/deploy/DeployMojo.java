@@ -365,7 +365,8 @@ public class DeployMojo extends AbstractDeployMojo {
     private void deploy(ArtifactDeployerRequest request) {
         try {
             getLog().info("Deploying artifacts " + request.getArtifacts().toString() + " to repository "
-                    + request.getRepository());
+                    + request.getRepository().getId() + " ("
+                    + redactUrlUserInfo(request.getRepository().getUrl()) + ")");
             getArtifactDeployer().deploy(request);
         } catch (MojoException e) {
             throw e;
@@ -451,7 +452,7 @@ public class DeployMojo extends AbstractDeployMojo {
         }
 
         if (altDeploymentRepo != null) {
-            getLog().info("Using alternate deployment repository " + altDeploymentRepo);
+            getLog().info("Using alternate deployment repository " + redactUrlUserInfo(altDeploymentRepo));
 
             Matcher matcher = ALT_LEGACY_REPO_SYNTAX_PATTERN.matcher(altDeploymentRepo);
 
