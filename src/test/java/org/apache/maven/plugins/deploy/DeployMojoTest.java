@@ -22,7 +22,9 @@ import java.io.File;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.apache.maven.api.Artifact;
@@ -426,6 +428,31 @@ class DeployMojoTest {
 
         RemoteRepository repository = mojo.getDeploymentRepository(false);
         assertEquals("http://127.0.0.1:8081/repo", repository.getUrl());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    void deployAtEndBatchIsNotRedeployedOnReentry(DeployMojo mojo) throws Exception {
+        Project project = (Project) getVariableValueFromObject(mojo, "project");
+        artifactManager.setPath(
+                project.getMainArtifact().get(),
+                Paths.get(getBasedir(), "target/test-classes/unit/maven-deploy-test-1.0-SNAPSHOT.jar"));
+        // give the session a persistent plugin context and a real reactor project list
+        Map<Project, Map<String, Object>> contexts = new HashMap<>();
+        when(session.getPluginContext(any(Project.class)))
+                .thenAnswer(iom -> contexts.computeIfAbsent(iom.getArgument(0, Project.class), p -> new HashMap<>()));
+        when(session.getProjects()).thenReturn(List.of(project));
+
+        ArgumentCaptor<ArtifactDeployerRequest> captor = ArgumentCaptor.forClass(ArtifactDeployerRequest.class);
+        doNothing().when(artifactDeployer).deploy(captor.capture());
+
+        // deployAtEnd defaults to true: the single-project batch fires within the first execution
+        mojo.execute();
+        assertEquals(1, captor.getAllValues().size(), "batch must fire exactly once");
+
+        // re-entry (second bound deploy execution, or direct deploy:deploy) must be a no-op
+        mojo.execute();
+        assertEquals(1, captor.getAllValues().size(), "re-entry must not re-deploy the batch");
     }
 
     private ArtifactDeployerRequest execute(DeployMojo mojo) {

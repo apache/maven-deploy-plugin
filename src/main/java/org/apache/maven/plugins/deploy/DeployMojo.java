@@ -162,6 +162,10 @@ public class DeployMojo extends AbstractDeployMojo {
     public DeployMojo() {}
 
     private void putState(State state) {
+        putState(project, state);
+    }
+
+    private void putState(Project project, State state) {
         session.getPluginContext(project).put(State.class.getName(), state);
     }
 
@@ -178,6 +182,14 @@ public class DeployMojo extends AbstractDeployMojo {
     }
 
     public void execute() {
+        if (getState(project) == State.DEPLOYED) {
+            // Terminal state: the project was already deployed in this session, either individually
+            // or as part of an earlier deploy-at-end batch. Re-entering (a second bound deploy
+            // execution, or a direct deploy:deploy invocation) must not publish it a second time.
+            getLog().info("Skipping deploy for " + project.getGroupId() + ":" + project.getArtifactId() + ":"
+                    + project.getVersion() + ": it has already been deployed in this session");
+            return;
+        }
         if (Boolean.parseBoolean(skip)
                 || ("releases".equals(skip) && !session.isVersionSnapshot(project.getVersion()))
                 || ("snapshots".equals(skip) && session.isVersionSnapshot(project.getVersion()))) {
@@ -244,6 +256,7 @@ public class DeployMojo extends AbstractDeployMojo {
 
     private void deployAllAtOnce() {
         Map<RemoteRepository, Map<Integer, List<ProducedArtifact>>> flattenedRequests = new LinkedHashMap<>();
+        List<Project> batchedProjects = new ArrayList<>();
         // flatten requests, grouping by remote repository and number of retries
         for (Project reactorProject : session.getProjects()) {
             State state = getState(reactorProject);
@@ -254,6 +267,7 @@ public class DeployMojo extends AbstractDeployMojo {
                         .computeIfAbsent(request.getRepository(), r -> new LinkedHashMap<>())
                         .computeIfAbsent(request.getRetryFailedDeploymentCount(), i -> new ArrayList<>())
                         .addAll(request.getArtifacts());
+                batchedProjects.add(reactorProject);
             }
         }
         // Re-group all requests
@@ -274,6 +288,12 @@ public class DeployMojo extends AbstractDeployMojo {
             requests.forEach(this::deploy);
         } else {
             getLog().info("No actual deploy requests");
+        }
+        // Mark every batched project DEPLOYED so a re-triggered batch (second bound deploy
+        // execution, or a direct deploy:deploy invocation walking the reactor) cannot publish
+        // the same artifacts a second time. Only reached when all requests deployed successfully.
+        for (Project reactorProject : batchedProjects) {
+            putState(reactorProject, State.DEPLOYED);
         }
     }
 
