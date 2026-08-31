@@ -86,6 +86,17 @@ public class DeployMojo extends AbstractDeployMojo {
      * <b>Note:</b> In version 2.x, the format was <code>id::<i>layout</i>::url</code> where <code><i>layout</i></code>
      * could be <code>default</code> (ie. Maven 2) or <code>legacy</code> (ie. Maven 1), but since 3.0.0 the layout part
      * has been removed because Maven 3 only supports Maven 2 repository layout.
+     * <p>
+     * <b>Security note:</b> the credentials looked up in <code>settings.xml</code> are selected purely by the
+     * <code>id</code> part, so this parameter can point credentials kept for one server at a different URL.
+     * The provenance of the value matters: when the id matches a <code>settings.xml</code> server entry (stored
+     * credentials) and <em>no</em> URL is on record for that id in this build, a value set from the POM (a pom
+     * property or plugin configuration) is refused, while a value supplied on the command line
+     * (<code>-DaltDeploymentRepository=...</code>) proceeds with a warning naming the URL the credentials will
+     * be sent to.
+     * When the id matches a <code>settings.xml</code> server entry and the URL differs from every URL this build
+     * associates with that id, the deployment is refused unless
+     * <code>-Dmaven.deploy.allowCredentialReuse=true</code> is given on the command line.
      */
     @Parameter(property = "altDeploymentRepository")
     private String altDeploymentRepository;
@@ -334,10 +345,13 @@ public class DeployMojo extends AbstractDeployMojo {
         String altDeploymentRepo;
         if (isSnapshot && altSnapshotDeploymentRepository != null) {
             altDeploymentRepo = altSnapshotDeploymentRepository;
+            altRepositoryFromUserProperty = isFromUserProperty("altSnapshotDeploymentRepository", altDeploymentRepo);
         } else if (!isSnapshot && altReleaseDeploymentRepository != null) {
             altDeploymentRepo = altReleaseDeploymentRepository;
+            altRepositoryFromUserProperty = isFromUserProperty("altReleaseDeploymentRepository", altDeploymentRepo);
         } else {
             altDeploymentRepo = altDeploymentRepository;
+            altRepositoryFromUserProperty = isFromUserProperty("altDeploymentRepository", altDeploymentRepo);
         }
 
         if (altDeploymentRepo != null) {
@@ -353,7 +367,7 @@ public class DeployMojo extends AbstractDeployMojo {
                 if ("default".equals(layout)) {
                     getLog().warn("Using legacy syntax for alternative repository. " + "Use \"" + id + "::" + url
                             + "\" instead.");
-                    repo = createDeploymentArtifactRepository(id, url);
+                    repo = createAltDeploymentRepository(id, url);
                 } else {
                     throw new MojoException(
                             altDeploymentRepo,
@@ -373,7 +387,7 @@ public class DeployMojo extends AbstractDeployMojo {
                     String id = matcher.group(1).trim();
                     String url = matcher.group(2).trim();
 
-                    repo = createDeploymentArtifactRepository(id, url);
+                    repo = createAltDeploymentRepository(id, url);
                 }
             }
         }
@@ -402,6 +416,68 @@ public class DeployMojo extends AbstractDeployMojo {
         }
 
         return repo;
+    }
+
+    /**
+     * Creates the repository for an alternative deployment target: warns when it overrides the
+     * project's declared {@code distributionManagement} (naming the server id whose settings.xml
+     * credentials will be used) and guards the credential binding with the provenance of the
+     * alternative-repository value (see {@link #validateCredentialBinding(String, String, boolean)}):
+     * a mismatch against the URLs on record for the id is refused regardless of provenance, and a
+     * credentials-bearing id with no URL on record is refused when the value came from the POM but
+     * proceeds with a warning when the operator typed it on the command line.
+     */
+    private RemoteRepository createAltDeploymentRepository(String id, String url) {
+        DistributionManagement dm = project.getModel().getDistributionManagement();
+        if (dm != null && (dm.getRepository() != null || dm.getSnapshotRepository() != null)) {
+            getLog().warn("Alternative deployment repository overrides the distributionManagement declared by"
+                    + " the project: credentials of server id '" + id
+                    + "' from settings.xml (if any) will be used for " + url);
+        }
+        validateCredentialBinding(id, url, altRepositoryFromUserProperty);
+        return createDeploymentArtifactRepository(id, url);
+    }
+
+    /**
+     * Whether the alternative-repository value selected by {@link #getDeploymentRepository(boolean)}
+     * was supplied as a {@code -D} session user property (operator-typed on the command line) rather
+     * than resolved from the POM (a pom property or plugin configuration). POM-sourced values are
+     * attacker-writable in the malicious-POM model, so they get the fail-closed treatment in
+     * {@link #validateCredentialBinding(String, String, boolean)}.
+     */
+    private boolean altRepositoryFromUserProperty;
+
+    /**
+     * Returns {@code true} when the given user property is present in the session <em>and</em>
+     * carries the value actually in use: Maven lets an explicit {@code <configuration>} entry in the
+     * POM win over a {@code -D} property of the same name, so presence of the property alone does
+     * not prove the value's provenance.
+     */
+    private boolean isFromUserProperty(String propertyName, String value) {
+        if (value == null) {
+            return false;
+        }
+        java.util.Map<String, String> userProperties = session.getUserProperties();
+        return userProperties != null && value.equals(userProperties.get(propertyName));
+    }
+
+    @Override
+    protected java.util.Collection<String> getKnownRepositoryUrls(String id) {
+        java.util.Collection<String> urls = super.getKnownRepositoryUrls(id);
+        DistributionManagement dm = project.getModel().getDistributionManagement();
+        if (dm != null) {
+            if (dm.getRepository() != null
+                    && id.equals(dm.getRepository().getId())
+                    && isNotEmpty(dm.getRepository().getUrl())) {
+                urls.add(dm.getRepository().getUrl());
+            }
+            if (dm.getSnapshotRepository() != null
+                    && id.equals(dm.getSnapshotRepository().getId())
+                    && isNotEmpty(dm.getSnapshotRepository().getUrl())) {
+                urls.add(dm.getSnapshotRepository().getUrl());
+            }
+        }
+        return urls;
     }
 
     private boolean isValidPath(Artifact a) {

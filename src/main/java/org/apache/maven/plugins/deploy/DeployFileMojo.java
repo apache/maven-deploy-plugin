@@ -117,6 +117,16 @@ public class DeployFileMojo extends AbstractDeployMojo {
     /**
      * Server Id to map on the &lt;id&gt; under &lt;server&gt; section of settings.xml In most cases, this parameter
      * will be required for authentication.
+     * <p>
+     * <b>Security note:</b> the credentials looked up in <code>settings.xml</code> are selected purely by this id,
+     * so a mismatched id/url pair can point credentials kept for one server at a different URL. When this id
+     * matches a <code>settings.xml</code> server entry and the URL differs from every URL this build associates
+     * with the id, the deployment is refused unless <code>-Dmaven.deploy.allowCredentialReuse=true</code> is given
+     * on the command line. When no URL at all is on record for such an id, the deployment proceeds with a warning
+     * naming the URL the credentials will be sent to: deploy-file's parameters are command-line-supplied by
+     * nature, so the operator typing the pair is treated as the authorization that a POM cannot forge.
+     * Also note the default value <code>remote-repository</code>: if a server entry with that
+     * generic id exists in <code>settings.xml</code>, its credentials are used whenever this parameter is omitted.
      */
     @Parameter(property = "repositoryId", defaultValue = "remote-repository", required = true)
     private String repositoryId;
@@ -249,6 +259,7 @@ public class DeployFileMojo extends AbstractDeployMojo {
 
         initProperties();
 
+        validateCredentialBinding(repositoryId, url.replace(File.separator, "/"));
         RemoteRepository deploymentRepository =
                 createDeploymentArtifactRepository(repositoryId, url.replace(File.separator, "/"));
 
