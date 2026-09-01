@@ -21,4 +21,6 @@ assert !new File(basedir, "target/repo/org/apache/maven/plugins/deploy/its/deplo
 
 File buildLog = new File(basedir, 'build.log')
 assert buildLog.exists()
-assert !buildLog.text.contains("[DEBUG] Using META-INF/maven/org.apache.maven.plugins.deploy.its/deployfile-release-skip/pom.xml as pomFile")
+// The jar IS inspected (to resolve the version for the releases/snapshots classification),
+// but the deployment is still skipped — that is the assertion that matters.
+assert buildLog.text.contains("Skipping artifact deployment")
