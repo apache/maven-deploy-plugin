@@ -70,8 +70,16 @@ public class DeployMojo extends AbstractDeployMojo {
     private PluginDescriptor pluginDescriptor;
 
     /**
-     * Whether every project should be deployed during its own deploy-phase or at the end of the multimodule build. If
-     * set to {@code true} and the build fails, none of the reactor projects is deployed.
+     * Whether every project should be deployed during its own deploy-phase or at the end of the multimodule build.
+     * <p>
+     * <b>Important:</b> {@code deployAtEnd} defers deployment, it does <em>not</em> make the whole batch
+     * atomic. If a mid-batch failure occurs some repositories may have already received artifacts.
+     * Repositories that were fully published <em>before</em> the failure remain published; there is no
+     * automatic rollback.
+     * <ul>
+     *     <li>Projects configured with {@code deployAtEnd=false} deploy immediately during their own deploy
+     *     phase and cannot be recalled by a later build failure.</li>
+     * </ul>
      *
      * @since 2.8
      */
@@ -126,7 +134,8 @@ public class DeployMojo extends AbstractDeployMojo {
      *     <li><code>true</code>: will skip as usual</li>
      *     <li><code>releases</code>: will skip if current version of the project is a release</li>
      *     <li><code>snapshots</code>: will skip if current version of the project is a snapshot</li>
-     *     <li>any other values will be considered as <code>false</code></li>
+     *     <li>values are matched case-insensitively; any other value fails the build (fail-closed:
+     *     a typo in a publish-suppression control must not silently publish)</li>
      * </ul>
      * @since 2.4
      */
@@ -150,10 +159,27 @@ public class DeployMojo extends AbstractDeployMojo {
         super(runtimeInformation, repositorySystem);
     }
 
+    /**
+     * Monitor for deployAtEnd state operations. All check-then-fire sequences on per-project
+     * state ({@code putState}, {@code allProjectsMarked}, deploy-batch trigger) must hold this
+     * lock so that exactly one thread fires the batch under {@code -T}.
+     */
+    private static final Object DEPLOY_AT_END_LOCK = new Object();
+
     private enum State {
         SKIPPED,
         DEPLOYED,
         TO_BE_DEPLOYED
+    }
+
+    /**
+     * Recognised values for the {@code skip} parameter. Parsed once, fail-closed on unknown input.
+     */
+    enum SkipMode {
+        NONE,
+        ALL,
+        RELEASES,
+        SNAPSHOTS
     }
 
     private static final String DEPLOY_PROCESSED_MARKER = DeployMojo.class.getName() + ".processed";
@@ -194,10 +220,11 @@ public class DeployMojo extends AbstractDeployMojo {
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
+        SkipMode skipMode = parseSkipMode(skip, "maven.deploy.skip");
         State state;
-        if (Boolean.parseBoolean(skip)
-                || ("releases".equals(skip) && !ArtifactUtils.isSnapshot(project.getVersion()))
-                || ("snapshots".equals(skip) && ArtifactUtils.isSnapshot(project.getVersion()))) {
+        if (skipMode == SkipMode.ALL
+                || (skipMode == SkipMode.RELEASES && !ArtifactUtils.isSnapshot(project.getVersion()))
+                || (skipMode == SkipMode.SNAPSHOTS && ArtifactUtils.isSnapshot(project.getVersion()))) {
             getLog().info("Skipping artifact deployment");
             state = State.SKIPPED;
         } else {
@@ -225,26 +252,35 @@ public class DeployMojo extends AbstractDeployMojo {
             }
         }
 
-        putState(state);
+        synchronized (DEPLOY_AT_END_LOCK) {
+            putState(state);
 
-        List<MavenProject> allProjectsUsingPlugin = getAllProjectsUsingPlugin();
+            List<MavenProject> allProjectsUsingPlugin = getAllProjectsUsingPlugin();
 
-        if (allProjectsMarked(allProjectsUsingPlugin)) {
-            deployAllAtOnce(allProjectsUsingPlugin);
-        } else if (state == State.TO_BE_DEPLOYED) {
-            getLog().info("Deferring deploy for " + project.getGroupId() + ":" + project.getArtifactId() + ":"
-                    + project.getVersion() + " at end");
+            if (allProjectsMarked(allProjectsUsingPlugin)) {
+                deployAllAtOnce(allProjectsUsingPlugin);
+            } else if (state == State.TO_BE_DEPLOYED) {
+                getLog().info("Deferring deploy for " + project.getGroupId() + ":" + project.getArtifactId() + ":"
+                        + project.getVersion() + " at end");
+            }
         }
     }
 
     private void deployAllAtOnce(List<MavenProject> allProjectsUsingPlugin) throws MojoExecutionException {
         Map<RemoteRepository, DeployRequest> requests = new LinkedHashMap<>();
 
-        // collect all arifacts from all modules to deploy
+        // collect all artifacts from all modules to deploy
         // requests are grouped by used remote repository
         for (MavenProject reactorProject : allProjectsUsingPlugin) {
             Map<String, Object> pluginContext = session.getPluginContext(pluginDescriptor, reactorProject);
             State state = getState(pluginContext);
+            if (state == State.DEPLOYED) {
+                // already deployed (e.g. by a parallel thread under -T or by a previous
+                // reactor pass) — do not re-deploy
+                getLog().info("Skipping already-deployed " + reactorProject.getGroupId() + ":"
+                        + reactorProject.getArtifactId() + ":" + reactorProject.getVersion());
+                continue;
+            }
             if (state == State.TO_BE_DEPLOYED) {
 
                 RemoteRepository deploymentRepository = getDeploymentRepository(
@@ -264,6 +300,14 @@ public class DeployMojo extends AbstractDeployMojo {
         // finally execute all deployments request, lets resolver to optimize deployment
         for (DeployRequest request : requests.values()) {
             deploy(request);
+        }
+        // mark all deployed projects to prevent re-deploy on reactor re-entry
+        for (MavenProject reactorProject : allProjectsUsingPlugin) {
+            Map<String, Object> pluginContext = session.getPluginContext(pluginDescriptor, reactorProject);
+            State state = getState(pluginContext);
+            if (state == State.TO_BE_DEPLOYED) {
+                pluginContext.put(DEPLOY_PROCESSED_MARKER, State.DEPLOYED.name());
+            }
         }
     }
 
@@ -389,12 +433,21 @@ public class DeployMojo extends AbstractDeployMojo {
             altDeploymentRepo = altSnapshotDeploymentRepository;
         } else if (!ArtifactUtils.isSnapshot(project.getVersion()) && altReleaseDeploymentRepository != null) {
             altDeploymentRepo = altReleaseDeploymentRepository;
+        } else if (!ArtifactUtils.isSnapshot(project.getVersion())
+                && altSnapshotDeploymentRepository != null
+                && altDeploymentRepository == null) {
+            // f008: release project, only snapshotRepo configured, no fallback → warn
+            getLog().warn("Project " + project.getArtifactId()
+                    + " is a release but only altSnapshotDeploymentRepository is configured ("
+                    + redactUrlUserInfo(altSnapshotDeploymentRepository) + "); it will not be used."
+                    + " Configure altReleaseDeploymentRepository or altDeploymentRepository.");
+            altDeploymentRepo = null;
         } else {
             altDeploymentRepo = altDeploymentRepository;
         }
 
         if (altDeploymentRepo != null) {
-            getLog().info("Using alternate deployment repository " + altDeploymentRepo);
+            getLog().info("Using alternate deployment repository " + redactUrlUserInfo(altDeploymentRepo));
 
             Matcher matcher = ALT_LEGACY_REPO_SYNTAX_PATTERN.matcher(altDeploymentRepo);
 
@@ -403,24 +456,35 @@ public class DeployMojo extends AbstractDeployMojo {
                 String layout = matcher.group(2).trim();
                 String url = matcher.group(3).trim();
 
+                if (id.isEmpty() || url.isEmpty()) {
+                    throw new MojoExecutionException("Invalid alternative repository: id and url must not be empty"
+                            + " in \"" + redactUrlUserInfo(altDeploymentRepo) + "\". Use \"id::url\".");
+                }
+
                 if ("default".equals(layout)) {
                     getLog().warn("Using legacy syntax for alternative repository. " + "Use \"" + id + "::" + url
                             + "\" instead.");
                     repo = getRemoteRepository(id, url);
                 } else {
                     throw new MojoExecutionException("Invalid legacy syntax and layout for alternative repository: \""
-                            + altDeploymentRepo + "\". Use \"" + id + "::" + url
+                            + redactUrlUserInfo(altDeploymentRepo) + "\". Use \"" + id + "::" + url
                             + "\" instead, and only default layout is supported.");
                 }
             } else {
                 matcher = ALT_REPO_SYNTAX_PATTERN.matcher(altDeploymentRepo);
 
                 if (!matcher.matches()) {
-                    throw new MojoExecutionException("Invalid syntax for alternative repository: \"" + altDeploymentRepo
+                    throw new MojoExecutionException("Invalid syntax for alternative repository: \""
+                            + redactUrlUserInfo(altDeploymentRepo)
                             + "\". Use \"id::url\".");
                 } else {
                     String id = matcher.group(1).trim();
                     String url = matcher.group(2).trim();
+
+                    if (id.isEmpty() || url.isEmpty()) {
+                        throw new MojoExecutionException("Invalid alternative repository: id and url must not be empty"
+                                + " in \"" + redactUrlUserInfo(altDeploymentRepo) + "\". Use \"id::url\".");
+                    }
 
                     repo = getRemoteRepository(id, url);
                 }
@@ -439,5 +503,40 @@ public class DeployMojo extends AbstractDeployMojo {
         }
 
         return repo;
+    }
+
+    /**
+     * Parses the {@code skip} parameter into a {@link SkipMode}, fail-closed: unrecognised values are refused
+     * rather than silently treated as "false" (which would deploy when the operator intended to suppress).
+     */
+    static SkipMode parseSkipMode(String skip, String propertyName) throws MojoExecutionException {
+        if (skip == null) {
+            return SkipMode.NONE;
+        }
+        String v = skip.trim();
+        if (v.isEmpty() || "false".equalsIgnoreCase(v)) {
+            return SkipMode.NONE;
+        }
+        if ("true".equalsIgnoreCase(v)) {
+            return SkipMode.ALL;
+        }
+        if ("releases".equalsIgnoreCase(v)) {
+            return SkipMode.RELEASES;
+        }
+        if ("snapshots".equalsIgnoreCase(v)) {
+            return SkipMode.SNAPSHOTS;
+        }
+        throw new MojoExecutionException("Unrecognized value '" + v + "' for " + propertyName
+                + ". Accepted values: true, false, releases, snapshots.");
+    }
+
+    /**
+     * Replaces any {@code userinfo@} section in URLs embedded in the string with {@code ***@}.
+     */
+    static String redactUrlUserInfo(String text) {
+        if (text == null) {
+            return null;
+        }
+        return text.replaceAll("(://)[^/@]+@", "$1***@");
     }
 }
