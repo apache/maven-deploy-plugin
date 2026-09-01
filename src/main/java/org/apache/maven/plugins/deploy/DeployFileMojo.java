@@ -194,8 +194,12 @@ public class DeployFileMojo extends AbstractDeployMojo {
      *     <li><code>true</code>: will skip as usual</li>
      *     <li><code>releases</code>: will skip if current version of the project is a release</li>
      *     <li><code>snapshots</code>: will skip if current version of the project is a snapshot</li>
-     *     <li>any other values will be considered as <code>false</code></li>
+     *     <li>values are matched case-insensitively; any other value fails the build (fail-closed:
+     *     a typo in a publish-suppression control must not silently publish)</li>
      * </ul>
+     * The <code>releases</code>/<code>snapshots</code> variants are evaluated after the artifact
+     * coordinates are known, so a version supplied only via <code>pomFile</code> (or the jar's
+     * embedded POM) is classified correctly.
      * @since 3.1.0
      */
     @Parameter(property = "maven.deploy.file.skip", defaultValue = "false")
@@ -253,9 +257,8 @@ public class DeployFileMojo extends AbstractDeployMojo {
     @Override
     @SuppressWarnings("MethodLength")
     public void execute() throws MojoExecutionException, MojoFailureException {
-        if (Boolean.parseBoolean(skip)
-                || ("releases".equals(skip) && !ArtifactUtils.isSnapshot(version))
-                || ("snapshots".equals(skip) && ArtifactUtils.isSnapshot(version))) {
+        DeployMojo.SkipMode skipMode = DeployMojo.parseSkipMode(skip, "maven.deploy.file.skip");
+        if (skipMode == DeployMojo.SkipMode.ALL) {
             log.info("Skipping artifact deployment");
             return;
         }
@@ -265,6 +268,15 @@ public class DeployFileMojo extends AbstractDeployMojo {
         }
 
         initProperties();
+
+        // the releases/snapshots skip variants classify the version, so they are evaluated only
+        // after the version is known - including a version supplied via pomFile or the jar's
+        // embedded POM (previously they classified a possibly-null version)
+        if ((skipMode == DeployMojo.SkipMode.RELEASES && !ArtifactUtils.isSnapshot(version))
+                || (skipMode == DeployMojo.SkipMode.SNAPSHOTS && ArtifactUtils.isSnapshot(version))) {
+            log.info("Skipping artifact deployment");
+            return;
+        }
 
         RemoteRepository remoteRepository = getRemoteRepository(repositoryId, url);
 
