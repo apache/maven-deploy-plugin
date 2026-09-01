@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.maven.api.Artifact;
 import org.apache.maven.api.ProducedArtifact;
@@ -209,6 +210,12 @@ public class DeployFileMojo extends AbstractDeployMojo {
     @Parameter(property = "maven.deploy.file.containedIn")
     private Path containedIn;
 
+    /**
+     * Whether {@link #pomFile} points at a temporary POM extracted from the artifact's jar (as
+     * opposed to an operator-supplied file): extracted POMs must be deleted after the deployment.
+     */
+    private boolean pomFromJar;
+
     void initProperties() throws MojoException {
         Path deployedPom;
         if (pomFile != null) {
@@ -218,6 +225,7 @@ public class DeployFileMojo extends AbstractDeployMojo {
             deployedPom = readingPomFromJarFile();
             if (deployedPom != null) {
                 pomFile = deployedPom;
+                pomFromJar = true;
             }
         }
 
@@ -230,10 +238,19 @@ public class DeployFileMojo extends AbstractDeployMojo {
         Pattern pomEntry = Pattern.compile("META-INF/maven/.*/pom\\.xml");
         try {
             try (JarFile jarFile = new JarFile(file.toFile())) {
-                JarEntry entry = jarFile.stream()
+                List<JarEntry> entries = jarFile.stream()
                         .filter(e -> pomEntry.matcher(e.getName()).matches())
-                        .findFirst()
-                        .orElse(null);
+                        .collect(Collectors.toList());
+                if (entries.size() > 1) {
+                    // a shaded/multi-POM jar's author would otherwise choose which embedded POM
+                    // fills in the missing coordinates (first match wins): require explicitness
+                    getLog().warn("Found " + entries.size() + " POMs in " + file.getFileName() + " ("
+                            + entries.stream().map(JarEntry::getName).collect(Collectors.joining(", "))
+                            + "); none will be used to derive coordinates. Specify pomFile or explicit"
+                            + " groupId/artifactId/version/packaging.");
+                    return null;
+                }
+                JarEntry entry = entries.isEmpty() ? null : entries.get(0);
                 if (entry != null) {
                     getLog().debug("Using " + entry.getName() + " as pomFile");
 
@@ -241,6 +258,10 @@ public class DeployFileMojo extends AbstractDeployMojo {
                         String base = file.getFileName().toString();
                         if (base.indexOf('.') > 0) {
                             base = base.substring(0, base.lastIndexOf('.'));
+                        }
+                        while (base.length() < 3) {
+                            // File.createTempFile rejects prefixes shorter than 3 characters
+                            base = base + "_";
                         }
                         Path pomFile = File.createTempFile(base, ".pom").toPath();
 
@@ -255,7 +276,9 @@ public class DeployFileMojo extends AbstractDeployMojo {
                 }
             }
         } catch (IOException e) {
-            // ignore, artifact not packaged by Maven
+            // a corrupt (or hostile) jar must not silently degrade coordinate derivation
+            getLog().warn("Could not read a POM from " + file.getFileName() + ": " + e.getMessage()
+                    + "; coordinates will not be derived from the artifact");
         }
         return null;
     }
@@ -334,7 +357,7 @@ public class DeployFileMojo extends AbstractDeployMojo {
         ProducedArtifact artifact = session.createProducedArtifact(
                 groupId, artifactId, version, classifier, isFilePom ? "pom" : getExtension(file), packaging);
 
-        if (file.equals(getLocalRepositoryFile(artifact))) {
+        if (isSameLocation(file, getLocalRepositoryFile(artifact))) {
             throw new MojoException("Cannot deploy artifact from the local repository: " + file);
         }
 
@@ -469,7 +492,7 @@ public class DeployFileMojo extends AbstractDeployMojo {
         } catch (ArtifactDeployerException e) {
             throw new MojoException(e.getMessage(), e);
         } finally {
-            if (pomFile == null && deployedPom != null) {
+            if ((pomFile == null || pomFromJar) && deployedPom != null) {
                 try {
                     Files.deleteIfExists(deployedPom);
                 } catch (IOException e) {
@@ -530,6 +553,16 @@ public class DeployFileMojo extends AbstractDeployMojo {
      */
     private Path getLocalRepositoryFile(Artifact artifact) {
         return session.getPathForLocalArtifact(artifact);
+    }
+
+    /**
+     * Compares two paths as locations rather than spellings: a textual {@code Path.equals} lets a
+     * relative path, a symlink, or any non-canonical spelling of the same file slip past the
+     * local-repository self-deploy guard (an anti-footgun against local-repo metadata corruption,
+     * not a security boundary - but it should at least hold against trivial re-spellings).
+     */
+    static boolean isSameLocation(Path a, Path b) {
+        return realOrNormalized(a).equals(realOrNormalized(b));
     }
 
     /**
