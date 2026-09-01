@@ -509,6 +509,17 @@ public class DeployFileMojo extends AbstractDeployMojo {
         try {
             return absolute.toRealPath();
         } catch (IOException e) {
+            // Path does not exist — resolve the closest existing ancestor so that platform
+            // symlinks are honoured (e.g. macOS /var → /private/var), then re-append the
+            // non-existent suffix.
+            Path parent = absolute.getParent();
+            while (parent != null) {
+                try {
+                    return parent.toRealPath().resolve(parent.relativize(absolute));
+                } catch (IOException ignored) {
+                    parent = parent.getParent();
+                }
+            }
             return absolute;
         }
     }
