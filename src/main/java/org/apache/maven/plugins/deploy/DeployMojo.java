@@ -112,6 +112,10 @@ public class DeployMojo extends AbstractDeployMojo {
      * When the id matches a <code>settings.xml</code> server entry and the URL differs from every URL this build
      * associates with that id, the deployment is refused unless
      * <code>-Dmaven.deploy.allowCredentialReuse=true</code> is given on the command line.
+     * <p>
+     * <b>Policy note:</b> unlike a repository declared in <code>distributionManagement</code>, an alternative
+     * repository is built from just <code>id::url</code> and therefore carries API-default release/snapshot
+     * policies and serves both artifact kinds; release/snapshot acceptance is enforced by the server only.
      */
     @Parameter(property = "altDeploymentRepository")
     private String altDeploymentRepository;
@@ -147,7 +151,8 @@ public class DeployMojo extends AbstractDeployMojo {
      *     <li><code>true</code>: will skip as usual</li>
      *     <li><code>releases</code>: will skip if current version of the project is a release</li>
      *     <li><code>snapshots</code>: will skip if current version of the project is a snapshot</li>
-     *     <li>any other values will be considered as <code>false</code></li>
+     *     <li>values are matched case-insensitively; any other value fails the build (fail-closed:
+     *     a typo in a publish-suppression control must not silently publish)</li>
      * </ul>
      * @since 2.4
      */
@@ -220,9 +225,10 @@ public class DeployMojo extends AbstractDeployMojo {
                 return;
             }
         }
-        if (Boolean.parseBoolean(skip)
-                || ("releases".equals(skip) && !session.isVersionSnapshot(project.getVersion()))
-                || ("snapshots".equals(skip) && session.isVersionSnapshot(project.getVersion()))) {
+        SkipMode skipMode = parseSkipMode(skip, "maven.deploy.skip");
+        if (skipMode == SkipMode.ALL
+                || (skipMode == SkipMode.RELEASES && !session.isVersionSnapshot(project.getVersion()))
+                || (skipMode == SkipMode.SNAPSHOTS && session.isVersionSnapshot(project.getVersion()))) {
             getLog().info("Skipping artifact deployment");
             synchronized (DEPLOY_AT_END_LOCK) {
                 putState(State.SKIPPED);
@@ -359,7 +365,8 @@ public class DeployMojo extends AbstractDeployMojo {
     private void deploy(ArtifactDeployerRequest request) {
         try {
             getLog().info("Deploying artifacts " + request.getArtifacts().toString() + " to repository "
-                    + request.getRepository());
+                    + request.getRepository().getId() + " ("
+                    + redactUrlUserInfo(request.getRepository().getUrl()) + ")");
             getArtifactDeployer().deploy(request);
         } catch (MojoException e) {
             throw e;
@@ -445,7 +452,7 @@ public class DeployMojo extends AbstractDeployMojo {
         }
 
         if (altDeploymentRepo != null) {
-            getLog().info("Using alternate deployment repository " + altDeploymentRepo);
+            getLog().info("Using alternate deployment repository " + redactUrlUserInfo(altDeploymentRepo));
 
             Matcher matcher = ALT_LEGACY_REPO_SYNTAX_PATTERN.matcher(altDeploymentRepo);
 
@@ -455,8 +462,19 @@ public class DeployMojo extends AbstractDeployMojo {
                 String url = matcher.group(3).trim();
 
                 if ("default".equals(layout)) {
+                    if (url.contains("::")) {
+                        // "a::default::b::c" would otherwise be accepted with url "b::c": refuse
+                        // instead of guessing which of the two possible parses was intended
+                        throw new MojoException(
+                                altDeploymentRepo,
+                                "Ambiguous syntax for alternative repository.",
+                                "Ambiguous alternative repository: the value parses as legacy \"" + id + "::" + layout
+                                        + "::" + url + "\" but its URL part still contains \"::\"."
+                                        + " Use \"id::url\" with a URL that does not contain \"::\".");
+                    }
                     getLog().warn("Using legacy syntax for alternative repository. " + "Use \"" + id + "::" + url
                             + "\" instead.");
+                    requireNonEmptyIdAndUrl(altDeploymentRepo, id, url);
                     repo = createAltDeploymentRepository(id, url);
                 } else {
                     throw new MojoException(
@@ -477,6 +495,7 @@ public class DeployMojo extends AbstractDeployMojo {
                     String id = matcher.group(1).trim();
                     String url = matcher.group(2).trim();
 
+                    requireNonEmptyIdAndUrl(altDeploymentRepo, id, url);
                     repo = createAltDeploymentRepository(id, url);
                 }
             }
@@ -485,19 +504,31 @@ public class DeployMojo extends AbstractDeployMojo {
         if (repo == null) {
             DistributionManagement dm = project.getModel().getDistributionManagement();
             if (dm != null) {
-                if (isSnapshot
-                        && dm.getSnapshotRepository() != null
+                boolean snapshotRepositoryUsable = dm.getSnapshotRepository() != null
                         && isNotEmpty(dm.getSnapshotRepository().getId())
-                        && isNotEmpty(dm.getSnapshotRepository().getUrl())) {
+                        && isNotEmpty(dm.getSnapshotRepository().getUrl());
+                if (isSnapshot && snapshotRepositoryUsable) {
                     validateTransportSecurity(
                             dm.getSnapshotRepository().getId(),
                             dm.getSnapshotRepository().getUrl());
+                    warnIfPolicyMismatch(dm.getSnapshotRepository(), isSnapshot);
                     repo = session.createRemoteRepository(dm.getSnapshotRepository());
                 } else if (dm.getRepository() != null
                         && isNotEmpty(dm.getRepository().getId())
                         && isNotEmpty(dm.getRepository().getUrl())) {
+                    if (isSnapshot && dm.getSnapshotRepository() != null) {
+                        // a declared-but-unusable snapshotRepository is a config error; falling
+                        // back silently would route snapshots to a repository with a different
+                        // audience, retention policy and credentials
+                        getLog().warn("distributionManagement declares a <snapshotRepository> whose id or url is"
+                                + " empty; falling back to the release <repository> '"
+                                + dm.getRepository().getId() + "' ("
+                                + dm.getRepository().getUrl()
+                                + ") for this snapshot deployment");
+                    }
                     validateTransportSecurity(
                             dm.getRepository().getId(), dm.getRepository().getUrl());
+                    warnIfPolicyMismatch(dm.getRepository(), isSnapshot);
                     repo = session.createRemoteRepository(dm.getRepository());
                 }
             }
@@ -511,6 +542,20 @@ public class DeployMojo extends AbstractDeployMojo {
         }
 
         return repo;
+    }
+
+    /**
+     * An alternative repository whose id or url trims to empty cannot bind credentials or be
+     * deployed to meaningfully; refuse instead of continuing with a blank id (whose credential
+     * lookup would fail server-side) or a blank URL.
+     */
+    private static void requireNonEmptyIdAndUrl(String altDeploymentRepo, String id, String url) {
+        if (id.isEmpty() || url.isEmpty()) {
+            throw new MojoException(
+                    altDeploymentRepo,
+                    "Invalid syntax for repository.",
+                    "Invalid syntax for alternative repository: id and url must be non-empty. Use \"id::url\".");
+        }
     }
 
     /**
@@ -573,6 +618,23 @@ public class DeployMojo extends AbstractDeployMojo {
             }
         }
         return urls;
+    }
+
+    /**
+     * Client-side release/snapshot policy sanity check: warns when the artifact kind being deployed
+     * is explicitly disabled on the selected repository's declared policy. Enforcement stays
+     * server-side (the resolver does not consult target policies when deploying); this only makes
+     * the mismatch visible before the upload starts.
+     */
+    private void warnIfPolicyMismatch(org.apache.maven.api.model.DeploymentRepository repository, boolean isSnapshot) {
+        org.apache.maven.api.model.RepositoryPolicy policy =
+                isSnapshot ? repository.getSnapshots() : repository.getReleases();
+        if (policy != null && !policy.isEnabled()) {
+            getLog().warn("Deployment repository '" + repository.getId() + "' declares <"
+                    + (isSnapshot ? "snapshots" : "releases") + "><enabled>false</enabled>, but a "
+                    + (isSnapshot ? "snapshot" : "release")
+                    + " artifact is being deployed to it; the server is expected to reject this upload");
+        }
     }
 
     private boolean isValidPath(Artifact a) {

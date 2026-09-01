@@ -183,12 +183,31 @@ public class DeployFileMojo extends AbstractDeployMojo {
      *     <li><code>true</code>: will skip as usual</li>
      *     <li><code>releases</code>: will skip if current version of the project is a release</li>
      *     <li><code>snapshots</code>: will skip if current version of the project is a snapshot</li>
-     *     <li>any other values will be considered as <code>false</code></li>
+     *     <li>values are matched case-insensitively; any other value fails the build (fail-closed:
+     *     a typo in a publish-suppression control must not silently publish)</li>
      * </ul>
+     * The <code>releases</code>/<code>snapshots</code> variants are evaluated after the artifact
+     * coordinates are known, so a version supplied only via <code>pomFile</code> (or the jar's
+     * embedded POM) is classified correctly.
      * @since 3.1.0
      */
     @Parameter(property = "maven.deploy.file.skip", defaultValue = "false")
     private String skip = Boolean.FALSE.toString();
+
+    /**
+     * Optional containment directory for all artifact-content paths ({@code file}, {@code files},
+     * {@code sources}, {@code javadoc}, {@code pomFile}): when set, each of those paths must resolve
+     * inside this directory (symlinks are resolved before the comparison) or the build fails.
+     * <p>
+     * Intended for CI/automation that fills deploy-file parameters from pipeline variables: without
+     * containment, any file readable by the build (for example {@code ~/.m2/settings.xml} passed as a
+     * side artifact) can be published to the deployment URL in one invocation. Disabled (no
+     * containment) by default; point it at the project or workspace directory in automated pipelines.
+     *
+     * @since 4.0.0
+     */
+    @Parameter(property = "maven.deploy.file.containedIn")
+    private Path containedIn;
 
     void initProperties() throws MojoException {
         Path deployedPom;
@@ -243,9 +262,8 @@ public class DeployFileMojo extends AbstractDeployMojo {
 
     @SuppressWarnings("checkstyle:MethodLength")
     public void execute() throws MojoException {
-        if (Boolean.parseBoolean(skip)
-                || ("releases".equals(skip) && !session.isVersionSnapshot(version))
-                || ("snapshots".equals(skip) && session.isVersionSnapshot(version))) {
+        SkipMode skipMode = parseSkipMode(skip, "maven.deploy.file.skip");
+        if (skipMode == SkipMode.ALL) {
             getLog().info("Skipping artifact deployment");
             return;
         }
@@ -255,6 +273,13 @@ public class DeployFileMojo extends AbstractDeployMojo {
             getLog().error(message);
             throw new MojoException(message);
         }
+
+        // containment applies to the operator-supplied paths, before any of them is read;
+        // the temporary POM later extracted from the (already contained) jar is exempt
+        checkContained(file, "file");
+        checkContained(pomFile, "pomFile");
+        checkContained(sources, "sources");
+        checkContained(javadoc, "javadoc");
 
         initProperties();
 
@@ -277,6 +302,15 @@ public class DeployFileMojo extends AbstractDeployMojo {
         if (groupId == null || artifactId == null || version == null || packaging == null) {
             throw new MojoException("The artifact information is incomplete: 'groupId', 'artifactId', "
                     + "'version' and 'packaging' are required.");
+        }
+
+        // the releases/snapshots skip variants classify the version, so they are evaluated only
+        // after the version is known - including a version supplied via pomFile or the jar's
+        // embedded POM (previously they classified a possibly-null version)
+        if ((skipMode == SkipMode.RELEASES && !session.isVersionSnapshot(version))
+                || (skipMode == SkipMode.SNAPSHOTS && session.isVersionSnapshot(version))) {
+            getLog().info("Skipping artifact deployment");
+            return;
         }
 
         if (!isValidId(groupId) || !isValidId(artifactId) || !isValidVersion(version)) {
@@ -380,6 +414,7 @@ public class DeployFileMojo extends AbstractDeployMojo {
                     file = Paths.get(files.substring(fi, nfi));
                 }
                 if (Files.isRegularFile(file)) {
+                    checkContained(file, "files");
                     String extension = getExtension(file);
                     String type = types.substring(ti, nti).trim();
                     String classifierEntry = classifiers.substring(ci, nci).trim();
@@ -426,7 +461,9 @@ public class DeployFileMojo extends AbstractDeployMojo {
                     .retryFailedDeploymentCount(Math.max(1, Math.min(10, getRetryFailedDeploymentCount())))
                     .build();
 
-            getLog().info("Deploying artifacts " + deployables + " to repository " + deploymentRepository);
+            getLog().info("Deploying artifacts " + deployables + " to repository "
+                    + deploymentRepository.getId() + " ("
+                    + redactUrlUserInfo(deploymentRepository.getUrl()) + ")");
             ArtifactDeployer artifactDeployer = session.getService(ArtifactDeployer.class);
             artifactDeployer.deploy(deployRequest);
         } catch (ArtifactDeployerException e) {
@@ -442,6 +479,48 @@ public class DeployFileMojo extends AbstractDeployMojo {
                     artifactManager.setPath(pomArtifact, null);
                 }
             }
+        }
+    }
+
+    /**
+     * Enforces the optional {@link #containedIn} containment directory for an artifact-content path.
+     */
+    private void checkContained(Path path, String parameterName) throws MojoException {
+        if (containedIn == null || path == null) {
+            return;
+        }
+        if (!isContainedIn(path, containedIn)) {
+            throw new MojoException("Parameter '" + parameterName + "' resolves to "
+                    + path.toAbsolutePath().normalize() + ", which is outside the containment directory "
+                    + containedIn.toAbsolutePath().normalize() + " configured with maven.deploy.file.containedIn");
+        }
+    }
+
+    /**
+     * Returns {@code true} when {@code path} resolves inside {@code root}, resolving symlinks where
+     * the paths exist so a link pointing outside the containment directory does not pass.
+     */
+    static boolean isContainedIn(Path path, Path root) {
+        return realOrNormalized(path).startsWith(realOrNormalized(root));
+    }
+
+    private static Path realOrNormalized(Path path) {
+        Path absolute = path.toAbsolutePath().normalize();
+        try {
+            return absolute.toRealPath();
+        } catch (IOException e) {
+            // Path does not exist — resolve the closest existing ancestor so that platform
+            // symlinks are honoured (e.g. macOS /var → /private/var), then re-append the
+            // non-existent suffix.
+            Path parent = absolute.getParent();
+            while (parent != null) {
+                try {
+                    return parent.toRealPath().resolve(parent.relativize(absolute));
+                } catch (IOException ignored) {
+                    parent = parent.getParent();
+                }
+            }
+            return absolute;
         }
     }
 

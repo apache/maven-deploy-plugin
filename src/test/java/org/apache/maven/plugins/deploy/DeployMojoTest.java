@@ -471,6 +471,104 @@ class DeployMojoTest {
         assertEquals(1, captor.getAllValues().size(), "re-entry must not re-deploy the batch");
     }
 
+    @Test
+    @InjectMojo(goal = "deploy")
+    @MojoParameter(name = "deployAtEnd", value = "false")
+    void skipTypoFailsClosed(DeployMojo mojo) throws Exception {
+        setVariableValueToObject(mojo, "skip", "ture");
+
+        MojoException e = assertThrows(MojoException.class, mojo::execute);
+        assertTrue(e.getMessage().contains("Unrecognized value 'ture'"), e.getMessage());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    @MojoParameter(name = "deployAtEnd", value = "false")
+    void skipValuesAreCaseInsensitive(DeployMojo mojo) throws Exception {
+        Project project = (Project) getVariableValueFromObject(mojo, "project");
+        artifactManager.setPath(
+                project.getMainArtifact().get(),
+                Paths.get(getBasedir(), "target/test-classes/unit/maven-deploy-test-1.0-SNAPSHOT.jar"));
+        // project version is 1.0-SNAPSHOT: skip=SNAPSHOTS (any case) must skip
+        when(session.isVersionSnapshot("1.0-SNAPSHOT")).thenReturn(true);
+        setVariableValueToObject(mojo, "skip", "SNAPSHOTS");
+
+        assertNull(execute(mojo));
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    @MojoParameter(name = "deployAtEnd", value = "false")
+    void skipReleasesDoesNotSkipSnapshotProject(DeployMojo mojo) throws Exception {
+        Project project = (Project) getVariableValueFromObject(mojo, "project");
+        artifactManager.setPath(
+                project.getMainArtifact().get(),
+                Paths.get(getBasedir(), "target/test-classes/unit/maven-deploy-test-1.0-SNAPSHOT.jar"));
+        when(session.isVersionSnapshot("1.0-SNAPSHOT")).thenReturn(true);
+        setVariableValueToObject(mojo, "skip", "Releases");
+
+        assertNotNull(execute(mojo));
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    void snapshotDeployFallsBackToReleaseRepositoryWhenSnapshotRepositoryUnusable(DeployMojo mojo) throws Exception {
+        ProjectStub project = (ProjectStub) getVariableValueFromObject(mojo, "project");
+        project.setModel(project.getModel()
+                .withDistributionManagement(org.apache.maven.api.model.DistributionManagement.newBuilder()
+                        .snapshotRepository(org.apache.maven.api.model.DeploymentRepository.newBuilder()
+                                .id("snapshots")
+                                .url("") // declared but unusable, e.g. a property interpolating empty
+                                .build())
+                        .repository(org.apache.maven.api.model.DeploymentRepository.newBuilder()
+                                .id("releases")
+                                .url("https://releases.example/repo")
+                                .build())
+                        .build()));
+
+        RemoteRepository repository = mojo.getDeploymentRepository(true);
+        assertEquals("releases", repository.getId());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    void policyMismatchWarnsButDoesNotFail(DeployMojo mojo) throws Exception {
+        ProjectStub project = (ProjectStub) getVariableValueFromObject(mojo, "project");
+        project.setModel(project.getModel()
+                .withDistributionManagement(org.apache.maven.api.model.DistributionManagement.newBuilder()
+                        .repository(org.apache.maven.api.model.DeploymentRepository.newBuilder()
+                                .id("releases")
+                                .url("https://releases.example/repo")
+                                .releases(org.apache.maven.api.model.RepositoryPolicy.newBuilder()
+                                        .enabled("false")
+                                        .build())
+                                .build())
+                        .build()));
+
+        // enforcement stays server-side: the mismatch is warned about, not refused
+        RemoteRepository repository = mojo.getDeploymentRepository(false);
+        assertEquals("releases", repository.getId());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    void emptyIdAltDeploymentRepositoryRefused(DeployMojo mojo) throws Exception {
+        setVariableValueToObject(mojo, "altDeploymentRepository", " ::https://repo.example/releases");
+
+        MojoException e = assertThrows(MojoException.class, () -> mojo.getDeploymentRepository(false));
+        assertEquals("Invalid syntax for repository.", e.getMessage());
+        assertTrue(e.getLongMessage().contains("non-empty"), e.getLongMessage());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    void ambiguousLegacyAltDeploymentRepositoryRefused(DeployMojo mojo) throws Exception {
+        setVariableValueToObject(mojo, "altDeploymentRepository", "a::default::b::c");
+
+        MojoException e = assertThrows(MojoException.class, () -> mojo.getDeploymentRepository(false));
+        assertEquals("Ambiguous syntax for alternative repository.", e.getMessage());
+    }
+
     private ArtifactDeployerRequest execute(DeployMojo mojo) {
         ArgumentCaptor<ArtifactDeployerRequest> requestCaptor = ArgumentCaptor.forClass(ArtifactDeployerRequest.class);
         doNothing().when(artifactDeployer).deploy(requestCaptor.capture());
