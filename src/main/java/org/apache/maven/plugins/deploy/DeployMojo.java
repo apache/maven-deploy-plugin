@@ -339,30 +339,71 @@ public class DeployMojo extends AbstractDeployMojo {
         if (!requests.isEmpty()) {
             // Requests are deployed sequentially and there is no rollback: if one fails, make the
             // partial-publication state explicit instead of only surfacing the failing module.
-            List<String> deployedRepositoryIds = new ArrayList<>();
+            List<Project> deployedProjects = new ArrayList<>();
             for (ArtifactDeployerRequest request : requests) {
                 try {
                     deploy(request);
                 } catch (RuntimeException e) {
-                    if (!deployedRepositoryIds.isEmpty()) {
-                        getLog().error("Deploy-at-end batch failed after " + deployedRepositoryIds.size() + " of "
-                                + requests.size() + " deploy request(s) had already completed. Artifacts already"
-                                + " published to repository id(s) " + String.join(", ", deployedRepositoryIds)
-                                + " remain published: there is no rollback.");
-                    }
+                    logPartialDeployInventory(batchedProjects, deployedProjects, request);
                     throw e;
                 }
-                deployedRepositoryIds.add(request.getRepository().getId());
+                // exactly-once: mark each project DEPLOYED as soon as its contributing request
+                // completes, so a concurrent or repeated trigger skips completed work — and the
+                // partial-deploy inventory can distinguish published from pending projects
+                for (Project reactorProject : batchedProjects) {
+                    if (getState(reactorProject) == State.TO_BE_DEPLOYED) {
+                        ArtifactDeployerRequest projRequest = (ArtifactDeployerRequest)
+                                session.getPluginContext(reactorProject).get(ArtifactDeployerRequest.class.getName());
+                        if (request.getRepository().equals(projRequest.getRepository())
+                                && request.getRetryFailedDeploymentCount()
+                                        == projRequest.getRetryFailedDeploymentCount()) {
+                            putState(reactorProject, State.DEPLOYED);
+                            deployedProjects.add(reactorProject);
+                        }
+                    }
+                }
             }
         } else {
             getLog().info("No actual deploy requests");
         }
-        // Mark every batched project DEPLOYED so a re-triggered batch (second bound deploy
-        // execution, or a direct deploy:deploy invocation walking the reactor) cannot publish
-        // the same artifacts a second time. Only reached when all requests deployed successfully.
+        // Any remaining TO_BE_DEPLOYED projects (should not happen here, but for completeness)
         for (Project reactorProject : batchedProjects) {
-            putState(reactorProject, State.DEPLOYED);
+            if (getState(reactorProject) == State.TO_BE_DEPLOYED) {
+                putState(reactorProject, State.DEPLOYED);
+            }
         }
+    }
+
+    /**
+     * The contract documented on {@link #deployAtEnd} is all-or-nothing; when a deploy-at-end
+     * batch fails mid-loop that contract can no longer be met, so leave an explicit inventory
+     * of which projects already reached the remote repository and which were skipped, instead
+     * of failing silently into a mixed state. Mirrors the install plugin's partial-install
+     * inventory for consistent operator experience across both plugins.
+     */
+    private void logPartialDeployInventory(
+            List<Project> batchedProjects, List<Project> deployedProjects, ArtifactDeployerRequest failedRequest) {
+        getLog().error("Deploy-at-end batch failed; the remote repository "
+                + failedRequest.getRepository().getId() + " ("
+                + redactUrlUserInfo(failedRequest.getRepository().getUrl())
+                + ") is in a partially deployed state:");
+        for (Project reactorProject : batchedProjects) {
+            if (deployedProjects.contains(reactorProject)) {
+                getLog().error("  deployed: " + gav(reactorProject));
+            } else {
+                getLog().error("  not deployed: " + gav(reactorProject));
+            }
+        }
+        List<Project> skipped = getProjectsWithDeployExecution().stream()
+                .filter(p -> getState(p) == State.SKIPPED)
+                .collect(Collectors.toList());
+        for (Project p : skipped) {
+            getLog().error("  skipped: " + gav(p));
+        }
+    }
+
+    private static String gav(Project project) {
+        return project.getGroupId() + ":" + project.getArtifactId() + ":" + project.getVersion();
     }
 
     private void deploy(ArtifactDeployerRequest request) {
