@@ -33,26 +33,15 @@ under the License.
 
 ### I get an Unsupported Protocol Error when deploying a 3rd party jar. What should I do?
 
-If you are using the `deploy:deploy-file` goal and encounter this error:
+Deployment uses the [Maven Resolver transport](https://maven.apache.org/guides/mini/guide-resolver-transport.html),
+which supports `https://` (and `http://`) plus `file://` URLs out of the box. Other protocols
+such as FTP, SCP or SFTP are not available by default: they require switching to the wagon
+transport (`-Dmaven.resolver.transport=wagon`) and declaring the corresponding wagon provider
+as a build `<extension>` in your POM.
 
-*&quot;Error deploying artifact: Unsupported Protocol: &apos;ftp&apos;: Cannot find
-wagon which supports the requested protocol: ftp&quot;*
-
-Then you need to place the appropriate wagon provider in your `%M2_HOME%/lib`. In
-this case the provider needed is ftp, so we have to place the wagon-ftp jar in the
-lib directory of your Maven 2 installation.
-
-As an alternative to placing the wagon provider into the Maven distribution, you can
-also create a dummy POM that declares the required wagon as an `<extension>` inside
-the current directory.
-
-If the error description is something like this:
-
-*&quot;Error deploying artifact: Unsupported Protocol: &apos;ftp&apos;: Cannot find
-wagon which supports the requested protocol: ftp
-org/apache/commons/net/ftp/FTP&quot;*
-
-Then you need to place the commons-net jar in `%M2_HOME%/lib`.
+Where possible, prefer deploying over HTTPS to a repository manager instead: it needs no extra
+extensions and does not send credentials in the clear (see the
+[HTTP(S) deployment example](./examples/deploy-http.html)).
 
 <a id="skip"></a>
 

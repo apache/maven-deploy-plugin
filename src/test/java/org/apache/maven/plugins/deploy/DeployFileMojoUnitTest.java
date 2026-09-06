@@ -25,12 +25,15 @@ import java.nio.file.Paths;
 
 import org.apache.maven.api.model.Model;
 import org.apache.maven.api.model.Parent;
+import org.apache.maven.api.plugin.Log;
 import org.apache.maven.api.plugin.MojoException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -179,6 +182,76 @@ class DeployFileMojoUnitTest {
         assertTrue(DeployFileMojo.isContainedIn(root.resolve("sub/other.jar"), root));
         assertFalse(DeployFileMojo.isContainedIn(root.resolve("../escaped.jar"), root));
         assertFalse(DeployFileMojo.isContainedIn(Paths.get("/etc/passwd"), root));
+    }
+
+    @Test
+    void multiPomJarDoesNotDeriveCoordinates() throws Exception {
+        mojo.logger = Mockito.mock(Log.class);
+        Path jar = createJar("multi.jar", "META-INF/maven/g1/a1/pom.xml", "META-INF/maven/g2/a2/pom.xml");
+        mojo.file = jar;
+        setMojoModel(mojo, "group", "artifact", "version", "packaging", null);
+
+        mojo.initProperties();
+
+        // neither embedded POM may be chosen to fill in coordinates
+        assertNull(mojo.getGroupId());
+        assertNull(mojo.getArtifactId());
+        assertNull(mojo.getVersion());
+    }
+
+    @Test
+    void shortJarFileNameDoesNotCrashTempPomCreation() throws Exception {
+        mojo.logger = Mockito.mock(Log.class);
+        // basename "a" is shorter than File.createTempFile's 3-character prefix minimum
+        Path jar = createJar("a.jar", "META-INF/maven/g/a/pom.xml");
+        mojo.file = jar;
+        setMojoModel(mojo, "group", "artifact", "version", "packaging", null);
+
+        mojo.initProperties();
+
+        assertEquals("group", mojo.getGroupId());
+        assertEquals("artifact", mojo.getArtifactId());
+    }
+
+    @Test
+    void corruptJarWarnsAndDerivesNothing() throws Exception {
+        mojo.logger = Mockito.mock(Log.class);
+        Path dir = java.nio.file.Files.createTempDirectory("deploy-file-test");
+        Path jar = dir.resolve("corrupt.jar");
+        java.nio.file.Files.write(jar, new byte[] {0x00, 0x01, 0x02, 0x03});
+        mojo.file = jar;
+        setMojoModel(mojo, "group", "artifact", "version", "packaging", null);
+
+        mojo.initProperties();
+
+        assertNull(mojo.getGroupId());
+        Mockito.verify(mojo.logger).warn(Mockito.contains("Could not read a POM from"));
+    }
+
+    @Test
+    void selfDeployGuardComparesLocationsNotSpellings() throws Exception {
+        Path dir = java.nio.file.Files.createTempDirectory("deploy-file-test");
+        Path real = java.nio.file.Files.createFile(dir.resolve("artifact.jar"));
+
+        assertTrue(DeployFileMojo.isSameLocation(real, real));
+        assertTrue(DeployFileMojo.isSameLocation(real, dir.resolve("sub/../artifact.jar")));
+        Path link = java.nio.file.Files.createSymbolicLink(dir.resolve("link.jar"), real);
+        assertTrue(DeployFileMojo.isSameLocation(link, real));
+        assertFalse(DeployFileMojo.isSameLocation(real, dir.resolve("other.jar")));
+    }
+
+    private static Path createJar(String name, String... entries) throws java.io.IOException {
+        Path dir = java.nio.file.Files.createTempDirectory("deploy-file-test");
+        Path jar = dir.resolve(name);
+        try (java.util.jar.JarOutputStream jos =
+                new java.util.jar.JarOutputStream(java.nio.file.Files.newOutputStream(jar))) {
+            for (String entry : entries) {
+                jos.putNextEntry(new java.util.jar.JarEntry(entry));
+                jos.write("<project/>".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                jos.closeEntry();
+            }
+        }
+        return jar;
     }
 
     private void setMojoModel(

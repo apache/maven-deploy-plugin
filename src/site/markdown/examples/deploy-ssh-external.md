@@ -26,6 +26,10 @@ under the License.
 
 # Deployment of artifacts in an external SSH command
 
+**Note:** the default Maven Resolver transport supports HTTP(S) and file URLs only. Deploying
+over `scpexe://` requires switching to the wagon transport
+(`-Dmaven.resolver.transport=wagon`) in addition to declaring the extension below.
+
 In order to deploy artifacts using SSH you must first specify the use of an SSH server in the **distributionManagement** element of your POM as well as specifying an `extension` in your `build` element which will pull in the SSH artifacts required to deploy with SSH:
 
 ```unknown
