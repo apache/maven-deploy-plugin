@@ -37,7 +37,7 @@ For example: from the following artifact names, the classifier is located betwee
 You can deploy the main artifact and the classified artifacts in a single run. Let&apos;s assume the original filename for the documentation is `site.pdf`: 
 
 ```unknown
-mvn ${project.groupId}:${project.artifactId}:${project.version}:deploy-file -Durl=http://localhost:8081/repomanager/ \
+mvn ${project.groupId}:${project.artifactId}:${project.version}:deploy-file -Durl=https://repomanager.example.com/repo/ \
                                                                             -DrepositoryId=some.id \
                                                                             -Dfile=path/to/artifact-name-1.0.jar \
                                                                             -DpomFile=path-to-your-pom.xml \
@@ -49,7 +49,7 @@ mvn ${project.groupId}:${project.artifactId}:${project.version}:deploy-file -Dur
 If you only want to deploy the `debug`\-jar and want to keep the classifier, you can execute the `deploy-file` like
 
 ```unknown
-mvn ${project.groupId}:${project.artifactId}:${project.version}:deploy-file -Durl=http://localhost:8081/repomanager/ \
+mvn ${project.groupId}:${project.artifactId}:${project.version}:deploy-file -Durl=https://repomanager.example.com/repo/ \
                                                                             -DrepositoryId=some.id \
                                                                             -Dfile=path-to-your-artifact-jar \
                                                                             -DpomFile=path-to-your-pom.xml \

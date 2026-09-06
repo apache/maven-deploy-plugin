@@ -34,12 +34,18 @@ In order to deploy artifacts using HTTP(S) you must specify the use of an HTTP(S
   <distributionManagement>
     <repository>
       <id>my-mrm-relases</id>
-      <url>http://localhost:8081/nexus/content/repositories/release</url>
+      <url>https://repomanager.example.com/nexus/content/repositories/release</url>
     </repository>
   </distributionManagement>
   ...
 </project>
 ```
+
+**Always prefer `https://` deployment URLs.** With a cleartext `http://` URL the credentials
+configured below are sent as unencrypted HTTP Basic authentication and can be captured by anyone
+on the network path. The plugin therefore refuses cleartext `http://` (and `ftp://`) deployment
+URLs by default; loopback hosts (`localhost`, `127.0.0.1`) are exempt, and the check can be
+explicitly overridden with `-Dmaven.deploy.allowInsecureUrl=true` if you accept the risk.
 
 ## Authentication
 

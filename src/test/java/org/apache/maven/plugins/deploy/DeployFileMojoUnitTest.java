@@ -28,6 +28,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author <a href="jerome@coffeebreaks.org">Jerome Lacoste</a>
@@ -105,6 +107,52 @@ class DeployFileMojoUnitTest {
         assertEquals(expectedArtifact, mojo.getArtifactId());
         assertEquals(expectedVersion, mojo.getVersion());
         assertEquals(expectedPackaging, mojo.getPackaging());
+    }
+
+    @Test
+    void idValidationRejectsDotOnlyAndEmptySegments() {
+        assertFalse(AbstractDeployMojo.isValidId("."));
+        assertFalse(AbstractDeployMojo.isValidId(".."));
+        assertFalse(AbstractDeployMojo.isValidId(".a"));
+        assertFalse(AbstractDeployMojo.isValidId("a."));
+        assertFalse(AbstractDeployMojo.isValidId("a..b"));
+        assertFalse(AbstractDeployMojo.isValidId("a/b"));
+        assertFalse(AbstractDeployMojo.isValidId("a\\b"));
+        assertFalse(AbstractDeployMojo.isValidId(""));
+        assertFalse(AbstractDeployMojo.isValidId(null));
+        assertTrue(AbstractDeployMojo.isValidId("org.apache.maven"));
+        assertTrue(AbstractDeployMojo.isValidId("maven-deploy-plugin"));
+    }
+
+    @Test
+    void versionValidationRejectsDotOnlyWhitespaceAndControlChars() {
+        assertFalse(AbstractDeployMojo.isValidVersion("."));
+        assertFalse(AbstractDeployMojo.isValidVersion(".."));
+        assertFalse(AbstractDeployMojo.isValidVersion("1.0 "));
+        assertFalse(AbstractDeployMojo.isValidVersion("1\t0"));
+        assertFalse(AbstractDeployMojo.isValidVersion("1.0/x"));
+        assertFalse(AbstractDeployMojo.isValidVersion(""));
+        assertFalse(AbstractDeployMojo.isValidVersion(null));
+        assertTrue(AbstractDeployMojo.isValidVersion("1.0-SNAPSHOT"));
+        assertTrue(AbstractDeployMojo.isValidVersion("4.0.0-beta-3"));
+    }
+
+    @Test
+    void classifierAndTypeValidationRejectsLayoutTraversal() {
+        assertFalse(AbstractDeployMojo.isValidClassifier("../../../../org/other/1.0/other-1.0"));
+        assertFalse(AbstractDeployMojo.isValidClassifier(".."));
+        assertFalse(AbstractDeployMojo.isValidClassifier("a b"));
+        assertTrue(AbstractDeployMojo.isValidClassifier(null));
+        assertTrue(AbstractDeployMojo.isValidClassifier(""));
+        assertTrue(AbstractDeployMojo.isValidClassifier("sources"));
+        assertTrue(AbstractDeployMojo.isValidClassifier("site.pdf"));
+        assertFalse(AbstractDeployMojo.isValidTypeOrExtension(null));
+        assertFalse(AbstractDeployMojo.isValidTypeOrExtension(""));
+        assertFalse(AbstractDeployMojo.isValidTypeOrExtension(".."));
+        assertFalse(AbstractDeployMojo.isValidTypeOrExtension("jar/../x"));
+        assertTrue(AbstractDeployMojo.isValidTypeOrExtension("jar"));
+        assertTrue(AbstractDeployMojo.isValidTypeOrExtension("tar.gz"));
+        assertTrue(AbstractDeployMojo.isValidTypeOrExtension("maven-plugin"));
     }
 
     private void setMojoModel(

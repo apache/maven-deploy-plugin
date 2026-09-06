@@ -64,9 +64,24 @@ public class DeployMojo extends AbstractDeployMojo {
     private MojoExecution mojoExecution;
 
     /**
-     * Whether every project should be deployed during its own deploy-phase or at the end of the multimodule build. If
-     * set to {@code true} and the build fails, none of the reactor projects is deployed.
-     * <strong>(experimental)</strong>
+     * Whether every project should be deployed during its own deploy-phase or at the end of the multimodule build.
+     * When set to {@code true}, the deploy requests of all projects with a bound deploy execution are collected and
+     * executed together once the last such project has reached its deploy phase, which reduces the chance of
+     * publishing artifacts from a build that subsequently fails.
+     * <p>
+     * <strong>This is not an atomic, all-or-nothing guarantee.</strong> In particular:
+     * <ul>
+     *     <li>The batch fires when the last project <em>with a deploy execution</em> reaches its deploy phase.
+     *     Reactor projects built after that point (for example trailing modules that skip or do not bind the
+     *     deploy goal, such as integration-test aggregators) can still fail <em>after</em> all artifacts have
+     *     been published.</li>
+     *     <li>When the batch spans several repositories or retry configurations, the resulting requests are
+     *     deployed sequentially: a failure part-way through leaves the repositories already deployed to
+     *     published, with no rollback. The build log reports which repositories had already been deployed
+     *     when this happens.</li>
+     *     <li>Projects configured with {@code deployAtEnd=false} deploy immediately during their own deploy
+     *     phase and cannot be recalled by a later build failure.</li>
+     * </ul>
      *
      * @since 2.8
      */
@@ -86,6 +101,17 @@ public class DeployMojo extends AbstractDeployMojo {
      * <b>Note:</b> In version 2.x, the format was <code>id::<i>layout</i>::url</code> where <code><i>layout</i></code>
      * could be <code>default</code> (ie. Maven 2) or <code>legacy</code> (ie. Maven 1), but since 3.0.0 the layout part
      * has been removed because Maven 3 only supports Maven 2 repository layout.
+     * <p>
+     * <b>Security note:</b> the credentials looked up in <code>settings.xml</code> are selected purely by the
+     * <code>id</code> part, so this parameter can point credentials kept for one server at a different URL.
+     * The provenance of the value matters: when the id matches a <code>settings.xml</code> server entry (stored
+     * credentials) and <em>no</em> URL is on record for that id in this build, a value set from the POM (a pom
+     * property or plugin configuration) is refused, while a value supplied on the command line
+     * (<code>-DaltDeploymentRepository=...</code>) proceeds with a warning naming the URL the credentials will
+     * be sent to.
+     * When the id matches a <code>settings.xml</code> server entry and the URL differs from every URL this build
+     * associates with that id, the deployment is refused unless
+     * <code>-Dmaven.deploy.allowCredentialReuse=true</code> is given on the command line.
      */
     @Parameter(property = "altDeploymentRepository")
     private String altDeploymentRepository;
@@ -148,9 +174,26 @@ public class DeployMojo extends AbstractDeployMojo {
 
     private static final String PROJECTS_WITH_DEPLOY_KEY = DeployMojo.class.getName() + ".projectsWithDeploy";
 
+    /**
+     * Serializes the deploy-at-end mark-then-check-then-fire sequence across reactor threads.
+     * With {@code -T}, two reactor leaves can reach their deploy phase concurrently, both record
+     * their state, both see {@link #allProjectsMarked()} true, and both fire
+     * {@link #deployAllAtOnce()} - double-publishing every batched module (MDEPLOY-169 ships
+     * {@code -T2} + deployAtEnd as a supported configuration). All state reads/writes and the
+     * batch trigger below take this monitor, so exactly one thread fires the batch; the loser
+     * then observes the {@code DEPLOYED} states written by the winner and no-ops. This is a
+     * constant lock object, not mutable static state; the batch state itself stays in the
+     * per-project session plugin contexts.
+     */
+    private static final Object DEPLOY_AT_END_LOCK = new Object();
+
     public DeployMojo() {}
 
     private void putState(State state) {
+        putState(project, state);
+    }
+
+    private void putState(Project project, State state) {
         session.getPluginContext(project).put(State.class.getName(), state);
     }
 
@@ -167,11 +210,23 @@ public class DeployMojo extends AbstractDeployMojo {
     }
 
     public void execute() {
+        synchronized (DEPLOY_AT_END_LOCK) {
+            if (getState(project) == State.DEPLOYED) {
+                // Terminal state: the project was already deployed in this session, either individually
+                // or as part of an earlier deploy-at-end batch. Re-entering (a second bound deploy
+                // execution, or a direct deploy:deploy invocation) must not publish it a second time.
+                getLog().info("Skipping deploy for " + project.getGroupId() + ":" + project.getArtifactId() + ":"
+                        + project.getVersion() + ": it has already been deployed in this session");
+                return;
+            }
+        }
         if (Boolean.parseBoolean(skip)
                 || ("releases".equals(skip) && !session.isVersionSnapshot(project.getVersion()))
                 || ("snapshots".equals(skip) && session.isVersionSnapshot(project.getVersion()))) {
             getLog().info("Skipping artifact deployment");
-            putState(State.SKIPPED);
+            synchronized (DEPLOY_AT_END_LOCK) {
+                putState(State.SKIPPED);
+            }
         } else {
             failIfOffline();
             warnIfAffectedPackagingAndMaven(project.getPackaging().id());
@@ -180,20 +235,31 @@ public class DeployMojo extends AbstractDeployMojo {
                 getLog().info("Deploying deploy for " + project.getGroupId() + ":" + project.getArtifactId() + ":"
                         + project.getVersion() + " at end");
                 deploy(createDeployerRequest());
-                putState(State.DEPLOYED);
+                synchronized (DEPLOY_AT_END_LOCK) {
+                    putState(State.DEPLOYED);
+                }
             } else {
-                // compute the request
-                putState(State.TO_BE_DEPLOYED);
-                putState(createDeployerRequest());
-                if (!allProjectsMarked()) {
-                    getLog().info("Deferring deploy for " + project.getGroupId() + ":" + project.getArtifactId() + ":"
-                            + project.getVersion() + " at end");
+                // compute the request outside the lock; only the state mark-and-check is serialized
+                ArtifactDeployerRequest request = createDeployerRequest();
+                synchronized (DEPLOY_AT_END_LOCK) {
+                    putState(State.TO_BE_DEPLOYED);
+                    putState(request);
+                    if (!allProjectsMarked()) {
+                        getLog().info("Deferring deploy for " + project.getGroupId() + ":" + project.getArtifactId()
+                                + ":" + project.getVersion() + " at end");
+                    }
                 }
             }
         }
 
-        if (allProjectsMarked()) {
-            deployAllAtOnce();
+        synchronized (DEPLOY_AT_END_LOCK) {
+            // check-then-act must be atomic: without the lock two -T threads can both observe
+            // allProjectsMarked() == true and both fire the batch. Holding the lock across
+            // deployAllAtOnce() is intentional - a concurrent second trigger waits, then finds
+            // every batched project already DEPLOYED and no-ops.
+            if (allProjectsMarked()) {
+                deployAllAtOnce();
+            }
         }
     }
 
@@ -233,6 +299,7 @@ public class DeployMojo extends AbstractDeployMojo {
 
     private void deployAllAtOnce() {
         Map<RemoteRepository, Map<Integer, List<ProducedArtifact>>> flattenedRequests = new LinkedHashMap<>();
+        List<Project> batchedProjects = new ArrayList<>();
         // flatten requests, grouping by remote repository and number of retries
         for (Project reactorProject : session.getProjects()) {
             State state = getState(reactorProject);
@@ -243,6 +310,7 @@ public class DeployMojo extends AbstractDeployMojo {
                         .computeIfAbsent(request.getRepository(), r -> new LinkedHashMap<>())
                         .computeIfAbsent(request.getRetryFailedDeploymentCount(), i -> new ArrayList<>())
                         .addAll(request.getArtifacts());
+                batchedProjects.add(reactorProject);
             }
         }
         // Re-group all requests
@@ -260,9 +328,31 @@ public class DeployMojo extends AbstractDeployMojo {
         }
         // Deploy
         if (!requests.isEmpty()) {
-            requests.forEach(this::deploy);
+            // Requests are deployed sequentially and there is no rollback: if one fails, make the
+            // partial-publication state explicit instead of only surfacing the failing module.
+            List<String> deployedRepositoryIds = new ArrayList<>();
+            for (ArtifactDeployerRequest request : requests) {
+                try {
+                    deploy(request);
+                } catch (RuntimeException e) {
+                    if (!deployedRepositoryIds.isEmpty()) {
+                        getLog().error("Deploy-at-end batch failed after " + deployedRepositoryIds.size() + " of "
+                                + requests.size() + " deploy request(s) had already completed. Artifacts already"
+                                + " published to repository id(s) " + String.join(", ", deployedRepositoryIds)
+                                + " remain published: there is no rollback.");
+                    }
+                    throw e;
+                }
+                deployedRepositoryIds.add(request.getRepository().getId());
+            }
         } else {
             getLog().info("No actual deploy requests");
+        }
+        // Mark every batched project DEPLOYED so a re-triggered batch (second bound deploy
+        // execution, or a direct deploy:deploy invocation walking the reactor) cannot publish
+        // the same artifacts a second time. Only reached when all requests deployed successfully.
+        for (Project reactorProject : batchedProjects) {
+            putState(reactorProject, State.DEPLOYED);
         }
     }
 
@@ -288,7 +378,18 @@ public class DeployMojo extends AbstractDeployMojo {
             artifactManager.setPath(project.getPomArtifact(), project.getPomPath());
         }
 
+        if (!isValidId(project.getGroupId())
+                || !isValidId(project.getArtifactId())
+                || !isValidVersion(project.getVersion())) {
+            throw new MojoException("The project coordinates " + project.getGroupId() + ":" + project.getArtifactId()
+                    + ":" + project.getVersion() + " are not valid: they use invalid characters.");
+        }
+
         for (Artifact deployable : deployables) {
+            if (!isValidClassifier(deployable.getClassifier())) {
+                throw new MojoException("The classifier of attached artifact " + deployable
+                        + " is not valid: uses invalid characters.");
+            }
             if (!isValidPath(deployable)) {
                 if (deployable == project.getMainArtifact().orElse(null)) {
                     if (attachedArtifacts.isEmpty()) {
@@ -334,10 +435,13 @@ public class DeployMojo extends AbstractDeployMojo {
         String altDeploymentRepo;
         if (isSnapshot && altSnapshotDeploymentRepository != null) {
             altDeploymentRepo = altSnapshotDeploymentRepository;
+            altRepositoryFromUserProperty = isFromUserProperty("altSnapshotDeploymentRepository", altDeploymentRepo);
         } else if (!isSnapshot && altReleaseDeploymentRepository != null) {
             altDeploymentRepo = altReleaseDeploymentRepository;
+            altRepositoryFromUserProperty = isFromUserProperty("altReleaseDeploymentRepository", altDeploymentRepo);
         } else {
             altDeploymentRepo = altDeploymentRepository;
+            altRepositoryFromUserProperty = isFromUserProperty("altDeploymentRepository", altDeploymentRepo);
         }
 
         if (altDeploymentRepo != null) {
@@ -353,7 +457,7 @@ public class DeployMojo extends AbstractDeployMojo {
                 if ("default".equals(layout)) {
                     getLog().warn("Using legacy syntax for alternative repository. " + "Use \"" + id + "::" + url
                             + "\" instead.");
-                    repo = createDeploymentArtifactRepository(id, url);
+                    repo = createAltDeploymentRepository(id, url);
                 } else {
                     throw new MojoException(
                             altDeploymentRepo,
@@ -373,7 +477,7 @@ public class DeployMojo extends AbstractDeployMojo {
                     String id = matcher.group(1).trim();
                     String url = matcher.group(2).trim();
 
-                    repo = createDeploymentArtifactRepository(id, url);
+                    repo = createAltDeploymentRepository(id, url);
                 }
             }
         }
@@ -385,10 +489,15 @@ public class DeployMojo extends AbstractDeployMojo {
                         && dm.getSnapshotRepository() != null
                         && isNotEmpty(dm.getSnapshotRepository().getId())
                         && isNotEmpty(dm.getSnapshotRepository().getUrl())) {
+                    validateTransportSecurity(
+                            dm.getSnapshotRepository().getId(),
+                            dm.getSnapshotRepository().getUrl());
                     repo = session.createRemoteRepository(dm.getSnapshotRepository());
                 } else if (dm.getRepository() != null
                         && isNotEmpty(dm.getRepository().getId())
                         && isNotEmpty(dm.getRepository().getUrl())) {
+                    validateTransportSecurity(
+                            dm.getRepository().getId(), dm.getRepository().getUrl());
                     repo = session.createRemoteRepository(dm.getRepository());
                 }
             }
@@ -402,6 +511,68 @@ public class DeployMojo extends AbstractDeployMojo {
         }
 
         return repo;
+    }
+
+    /**
+     * Creates the repository for an alternative deployment target: warns when it overrides the
+     * project's declared {@code distributionManagement} (naming the server id whose settings.xml
+     * credentials will be used) and guards the credential binding with the provenance of the
+     * alternative-repository value (see {@link #validateCredentialBinding(String, String, boolean)}):
+     * a mismatch against the URLs on record for the id is refused regardless of provenance, and a
+     * credentials-bearing id with no URL on record is refused when the value came from the POM but
+     * proceeds with a warning when the operator typed it on the command line.
+     */
+    private RemoteRepository createAltDeploymentRepository(String id, String url) {
+        DistributionManagement dm = project.getModel().getDistributionManagement();
+        if (dm != null && (dm.getRepository() != null || dm.getSnapshotRepository() != null)) {
+            getLog().warn("Alternative deployment repository overrides the distributionManagement declared by"
+                    + " the project: credentials of server id '" + id
+                    + "' from settings.xml (if any) will be used for " + url);
+        }
+        validateCredentialBinding(id, url, altRepositoryFromUserProperty);
+        return createDeploymentArtifactRepository(id, url);
+    }
+
+    /**
+     * Whether the alternative-repository value selected by {@link #getDeploymentRepository(boolean)}
+     * was supplied as a {@code -D} session user property (operator-typed on the command line) rather
+     * than resolved from the POM (a pom property or plugin configuration). POM-sourced values are
+     * attacker-writable in the malicious-POM model, so they get the fail-closed treatment in
+     * {@link #validateCredentialBinding(String, String, boolean)}.
+     */
+    private boolean altRepositoryFromUserProperty;
+
+    /**
+     * Returns {@code true} when the given user property is present in the session <em>and</em>
+     * carries the value actually in use: Maven lets an explicit {@code <configuration>} entry in the
+     * POM win over a {@code -D} property of the same name, so presence of the property alone does
+     * not prove the value's provenance.
+     */
+    private boolean isFromUserProperty(String propertyName, String value) {
+        if (value == null) {
+            return false;
+        }
+        java.util.Map<String, String> userProperties = session.getUserProperties();
+        return userProperties != null && value.equals(userProperties.get(propertyName));
+    }
+
+    @Override
+    protected java.util.Collection<String> getKnownRepositoryUrls(String id) {
+        java.util.Collection<String> urls = super.getKnownRepositoryUrls(id);
+        DistributionManagement dm = project.getModel().getDistributionManagement();
+        if (dm != null) {
+            if (dm.getRepository() != null
+                    && id.equals(dm.getRepository().getId())
+                    && isNotEmpty(dm.getRepository().getUrl())) {
+                urls.add(dm.getRepository().getUrl());
+            }
+            if (dm.getSnapshotRepository() != null
+                    && id.equals(dm.getSnapshotRepository().getId())
+                    && isNotEmpty(dm.getSnapshotRepository().getUrl())) {
+                urls.add(dm.getSnapshotRepository().getUrl());
+            }
+        }
+        return urls;
     }
 
     private boolean isValidPath(Artifact a) {
