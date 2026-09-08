@@ -108,6 +108,40 @@ public abstract class AbstractDeployMojo implements Mojo {
     }
 
     /**
+     * Recognized values of the {@code skip} tri-state shared by both mojos.
+     */
+    enum SkipMode {
+        NONE,
+        ALL,
+        RELEASES,
+        SNAPSHOTS
+    }
+
+    /**
+     * Parses the {@code skip} tri-state <em>fail-closed</em>: {@code skip} is a publish-suppression
+     * control, so an unrecognized value (a typo such as {@code ture} or {@code release}) must fail
+     * the build instead of silently publishing. Values are matched case-insensitively.
+     */
+    static SkipMode parseSkipMode(String value, String parameterName) throws MojoException {
+        if (value == null || value.isEmpty() || "false".equalsIgnoreCase(value)) {
+            return SkipMode.NONE;
+        }
+        if ("true".equalsIgnoreCase(value)) {
+            return SkipMode.ALL;
+        }
+        if ("releases".equalsIgnoreCase(value)) {
+            return SkipMode.RELEASES;
+        }
+        if ("snapshots".equalsIgnoreCase(value)) {
+            return SkipMode.SNAPSHOTS;
+        }
+        throw new MojoException("Unrecognized value '" + value + "' for " + parameterName
+                + ": supported values are true, false, releases and snapshots."
+                + " Refusing to deploy on an unrecognized value: a typo in a publish-suppression"
+                + " control must not silently publish.");
+    }
+
+    /**
      * Creates resolver {@link RemoteRepository} equipped with needed whistles and bells.
      */
     protected RemoteRepository createDeploymentArtifactRepository(String id, String url) {
@@ -418,6 +452,19 @@ public abstract class AbstractDeployMojo implements Mojo {
     private boolean isCredentialReuseAllowed() {
         Map<String, String> userProperties = session.getUserProperties();
         return userProperties != null && Boolean.parseBoolean(userProperties.get(ALLOW_CREDENTIAL_REUSE_PROPERTY));
+    }
+
+    /**
+     * Masks URL-embedded userinfo ({@code scheme://user:token@host/...}) before a repository
+     * string is logged: build logs are routinely archived and shared, and the deploy log line
+     * must be safe to keep while remaining useful as the audit signal for where artifacts and
+     * credentials were sent.
+     */
+    static String redactUrlUserInfo(String value) {
+        if (value == null) {
+            return null;
+        }
+        return value.replaceAll("://[^/@\\s]+@", "://***@");
     }
 
     static String normalizeRepositoryUrl(String url) {

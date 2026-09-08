@@ -75,7 +75,7 @@ mvn deploy
 
 ## The `deploy:deploy-file` Mojo
 
-The `deploy:deploy-file` mojo is used primarily for deploying artifacts, which were not built by Maven. The project&apos;s development team may or may not provide a POM for the artifact, and in some cases you may want to deploy the artifact to an internal remote repository. The deploy-file mojo provides functionality covering all of these use cases, and offers a wide range of configurability for generating a POM on-the-fly. Additionally, you can specify what layout your repository uses. The full usage statement of the deploy-file mojo can be described as:
+The `deploy:deploy-file` mojo is used primarily for deploying artifacts, which were not built by Maven. The project&apos;s development team may or may not provide a POM for the artifact, and in some cases you may want to deploy the artifact to an internal remote repository. The deploy-file mojo provides functionality covering all of these use cases, and offers a wide range of configurability for generating a POM on-the-fly. The full usage statement of the deploy-file mojo can be described as:
 
 ```unknown
 mvn deploy:deploy-file -Durl=file://C:\m2-repo \
@@ -88,8 +88,7 @@ mvn deploy:deploy-file -Durl=file://C:\m2-repo \
                        [-Dpackaging=jar] \
                        [-Dclassifier=test] \
                        [-DgeneratePom=true] \
-                       [-DgeneratePom.description="My Project Description"] \
-                       [-DrepositoryLayout=legacy]
+                       [-DgeneratePom.description="My Project Description"]
 ```
 
 If the following required information is not specified in some way, the goal will fail:

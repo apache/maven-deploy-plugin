@@ -112,6 +112,10 @@ public class DeployMojo extends AbstractDeployMojo {
      * When the id matches a <code>settings.xml</code> server entry and the URL differs from every URL this build
      * associates with that id, the deployment is refused unless
      * <code>-Dmaven.deploy.allowCredentialReuse=true</code> is given on the command line.
+     * <p>
+     * <b>Policy note:</b> unlike a repository declared in <code>distributionManagement</code>, an alternative
+     * repository is built from just <code>id::url</code> and therefore carries API-default release/snapshot
+     * policies and serves both artifact kinds; release/snapshot acceptance is enforced by the server only.
      */
     @Parameter(property = "altDeploymentRepository")
     private String altDeploymentRepository;
@@ -147,7 +151,8 @@ public class DeployMojo extends AbstractDeployMojo {
      *     <li><code>true</code>: will skip as usual</li>
      *     <li><code>releases</code>: will skip if current version of the project is a release</li>
      *     <li><code>snapshots</code>: will skip if current version of the project is a snapshot</li>
-     *     <li>any other values will be considered as <code>false</code></li>
+     *     <li>values are matched case-insensitively; any other value fails the build (fail-closed:
+     *     a typo in a publish-suppression control must not silently publish)</li>
      * </ul>
      * @since 2.4
      */
@@ -220,9 +225,10 @@ public class DeployMojo extends AbstractDeployMojo {
                 return;
             }
         }
-        if (Boolean.parseBoolean(skip)
-                || ("releases".equals(skip) && !session.isVersionSnapshot(project.getVersion()))
-                || ("snapshots".equals(skip) && session.isVersionSnapshot(project.getVersion()))) {
+        SkipMode skipMode = parseSkipMode(skip, "maven.deploy.skip");
+        if (skipMode == SkipMode.ALL
+                || (skipMode == SkipMode.RELEASES && !session.isVersionSnapshot(project.getVersion()))
+                || (skipMode == SkipMode.SNAPSHOTS && session.isVersionSnapshot(project.getVersion()))) {
             getLog().info("Skipping artifact deployment");
             synchronized (DEPLOY_AT_END_LOCK) {
                 putState(State.SKIPPED);
@@ -232,8 +238,11 @@ public class DeployMojo extends AbstractDeployMojo {
             warnIfAffectedPackagingAndMaven(project.getPackaging().id());
 
             if (!deployAtEnd) {
-                getLog().info("Deploying deploy for " + project.getGroupId() + ":" + project.getArtifactId() + ":"
-                        + project.getVersion() + " at end");
+                // this is the immediate-deploy branch: it must not claim the deploy happens "at
+                // end" - the deploy log is the operator's audit trail for what was deferred vs
+                // published immediately (the correct deferring message is in the else branch)
+                getLog().info("Deploying " + project.getGroupId() + ":" + project.getArtifactId() + ":"
+                        + project.getVersion());
                 deploy(createDeployerRequest());
                 synchronized (DEPLOY_AT_END_LOCK) {
                     putState(State.DEPLOYED);
@@ -330,36 +339,78 @@ public class DeployMojo extends AbstractDeployMojo {
         if (!requests.isEmpty()) {
             // Requests are deployed sequentially and there is no rollback: if one fails, make the
             // partial-publication state explicit instead of only surfacing the failing module.
-            List<String> deployedRepositoryIds = new ArrayList<>();
+            List<Project> deployedProjects = new ArrayList<>();
             for (ArtifactDeployerRequest request : requests) {
                 try {
                     deploy(request);
                 } catch (RuntimeException e) {
-                    if (!deployedRepositoryIds.isEmpty()) {
-                        getLog().error("Deploy-at-end batch failed after " + deployedRepositoryIds.size() + " of "
-                                + requests.size() + " deploy request(s) had already completed. Artifacts already"
-                                + " published to repository id(s) " + String.join(", ", deployedRepositoryIds)
-                                + " remain published: there is no rollback.");
-                    }
+                    logPartialDeployInventory(batchedProjects, deployedProjects, request);
                     throw e;
                 }
-                deployedRepositoryIds.add(request.getRepository().getId());
+                // exactly-once: mark each project DEPLOYED as soon as its contributing request
+                // completes, so a concurrent or repeated trigger skips completed work — and the
+                // partial-deploy inventory can distinguish published from pending projects
+                for (Project reactorProject : batchedProjects) {
+                    if (getState(reactorProject) == State.TO_BE_DEPLOYED) {
+                        ArtifactDeployerRequest projRequest = (ArtifactDeployerRequest)
+                                session.getPluginContext(reactorProject).get(ArtifactDeployerRequest.class.getName());
+                        if (request.getRepository().equals(projRequest.getRepository())
+                                && request.getRetryFailedDeploymentCount()
+                                        == projRequest.getRetryFailedDeploymentCount()) {
+                            putState(reactorProject, State.DEPLOYED);
+                            deployedProjects.add(reactorProject);
+                        }
+                    }
+                }
             }
         } else {
             getLog().info("No actual deploy requests");
         }
-        // Mark every batched project DEPLOYED so a re-triggered batch (second bound deploy
-        // execution, or a direct deploy:deploy invocation walking the reactor) cannot publish
-        // the same artifacts a second time. Only reached when all requests deployed successfully.
+        // Any remaining TO_BE_DEPLOYED projects (should not happen here, but for completeness)
         for (Project reactorProject : batchedProjects) {
-            putState(reactorProject, State.DEPLOYED);
+            if (getState(reactorProject) == State.TO_BE_DEPLOYED) {
+                putState(reactorProject, State.DEPLOYED);
+            }
         }
+    }
+
+    /**
+     * The contract documented on {@link #deployAtEnd} is all-or-nothing; when a deploy-at-end
+     * batch fails mid-loop that contract can no longer be met, so leave an explicit inventory
+     * of which projects already reached the remote repository and which were skipped, instead
+     * of failing silently into a mixed state. Mirrors the install plugin's partial-install
+     * inventory for consistent operator experience across both plugins.
+     */
+    private void logPartialDeployInventory(
+            List<Project> batchedProjects, List<Project> deployedProjects, ArtifactDeployerRequest failedRequest) {
+        getLog().error("Deploy-at-end batch failed; the remote repository "
+                + failedRequest.getRepository().getId() + " ("
+                + redactUrlUserInfo(failedRequest.getRepository().getUrl())
+                + ") is in a partially deployed state:");
+        for (Project reactorProject : batchedProjects) {
+            if (deployedProjects.contains(reactorProject)) {
+                getLog().error("  deployed: " + gav(reactorProject));
+            } else {
+                getLog().error("  not deployed: " + gav(reactorProject));
+            }
+        }
+        List<Project> skipped = getProjectsWithDeployExecution().stream()
+                .filter(p -> getState(p) == State.SKIPPED)
+                .collect(Collectors.toList());
+        for (Project p : skipped) {
+            getLog().error("  skipped: " + gav(p));
+        }
+    }
+
+    private static String gav(Project project) {
+        return project.getGroupId() + ":" + project.getArtifactId() + ":" + project.getVersion();
     }
 
     private void deploy(ArtifactDeployerRequest request) {
         try {
             getLog().info("Deploying artifacts " + request.getArtifacts().toString() + " to repository "
-                    + request.getRepository());
+                    + request.getRepository().getId() + " ("
+                    + redactUrlUserInfo(request.getRepository().getUrl()) + ")");
             getArtifactDeployer().deploy(request);
         } catch (MojoException e) {
             throw e;
@@ -445,7 +496,7 @@ public class DeployMojo extends AbstractDeployMojo {
         }
 
         if (altDeploymentRepo != null) {
-            getLog().info("Using alternate deployment repository " + altDeploymentRepo);
+            getLog().info("Using alternate deployment repository " + redactUrlUserInfo(altDeploymentRepo));
 
             Matcher matcher = ALT_LEGACY_REPO_SYNTAX_PATTERN.matcher(altDeploymentRepo);
 
@@ -455,8 +506,19 @@ public class DeployMojo extends AbstractDeployMojo {
                 String url = matcher.group(3).trim();
 
                 if ("default".equals(layout)) {
+                    if (url.contains("::")) {
+                        // "a::default::b::c" would otherwise be accepted with url "b::c": refuse
+                        // instead of guessing which of the two possible parses was intended
+                        throw new MojoException(
+                                altDeploymentRepo,
+                                "Ambiguous syntax for alternative repository.",
+                                "Ambiguous alternative repository: the value parses as legacy \"" + id + "::" + layout
+                                        + "::" + url + "\" but its URL part still contains \"::\"."
+                                        + " Use \"id::url\" with a URL that does not contain \"::\".");
+                    }
                     getLog().warn("Using legacy syntax for alternative repository. " + "Use \"" + id + "::" + url
                             + "\" instead.");
+                    requireNonEmptyIdAndUrl(altDeploymentRepo, id, url);
                     repo = createAltDeploymentRepository(id, url);
                 } else {
                     throw new MojoException(
@@ -477,6 +539,7 @@ public class DeployMojo extends AbstractDeployMojo {
                     String id = matcher.group(1).trim();
                     String url = matcher.group(2).trim();
 
+                    requireNonEmptyIdAndUrl(altDeploymentRepo, id, url);
                     repo = createAltDeploymentRepository(id, url);
                 }
             }
@@ -485,19 +548,31 @@ public class DeployMojo extends AbstractDeployMojo {
         if (repo == null) {
             DistributionManagement dm = project.getModel().getDistributionManagement();
             if (dm != null) {
-                if (isSnapshot
-                        && dm.getSnapshotRepository() != null
+                boolean snapshotRepositoryUsable = dm.getSnapshotRepository() != null
                         && isNotEmpty(dm.getSnapshotRepository().getId())
-                        && isNotEmpty(dm.getSnapshotRepository().getUrl())) {
+                        && isNotEmpty(dm.getSnapshotRepository().getUrl());
+                if (isSnapshot && snapshotRepositoryUsable) {
                     validateTransportSecurity(
                             dm.getSnapshotRepository().getId(),
                             dm.getSnapshotRepository().getUrl());
+                    warnIfPolicyMismatch(dm.getSnapshotRepository(), isSnapshot);
                     repo = session.createRemoteRepository(dm.getSnapshotRepository());
                 } else if (dm.getRepository() != null
                         && isNotEmpty(dm.getRepository().getId())
                         && isNotEmpty(dm.getRepository().getUrl())) {
+                    if (isSnapshot && dm.getSnapshotRepository() != null) {
+                        // a declared-but-unusable snapshotRepository is a config error; falling
+                        // back silently would route snapshots to a repository with a different
+                        // audience, retention policy and credentials
+                        getLog().warn("distributionManagement declares a <snapshotRepository> whose id or url is"
+                                + " empty; falling back to the release <repository> '"
+                                + dm.getRepository().getId() + "' ("
+                                + dm.getRepository().getUrl()
+                                + ") for this snapshot deployment");
+                    }
                     validateTransportSecurity(
                             dm.getRepository().getId(), dm.getRepository().getUrl());
+                    warnIfPolicyMismatch(dm.getRepository(), isSnapshot);
                     repo = session.createRemoteRepository(dm.getRepository());
                 }
             }
@@ -511,6 +586,20 @@ public class DeployMojo extends AbstractDeployMojo {
         }
 
         return repo;
+    }
+
+    /**
+     * An alternative repository whose id or url trims to empty cannot bind credentials or be
+     * deployed to meaningfully; refuse instead of continuing with a blank id (whose credential
+     * lookup would fail server-side) or a blank URL.
+     */
+    private static void requireNonEmptyIdAndUrl(String altDeploymentRepo, String id, String url) {
+        if (id.isEmpty() || url.isEmpty()) {
+            throw new MojoException(
+                    altDeploymentRepo,
+                    "Invalid syntax for repository.",
+                    "Invalid syntax for alternative repository: id and url must be non-empty. Use \"id::url\".");
+        }
     }
 
     /**
@@ -573,6 +662,23 @@ public class DeployMojo extends AbstractDeployMojo {
             }
         }
         return urls;
+    }
+
+    /**
+     * Client-side release/snapshot policy sanity check: warns when the artifact kind being deployed
+     * is explicitly disabled on the selected repository's declared policy. Enforcement stays
+     * server-side (the resolver does not consult target policies when deploying); this only makes
+     * the mismatch visible before the upload starts.
+     */
+    private void warnIfPolicyMismatch(org.apache.maven.api.model.DeploymentRepository repository, boolean isSnapshot) {
+        org.apache.maven.api.model.RepositoryPolicy policy =
+                isSnapshot ? repository.getSnapshots() : repository.getReleases();
+        if (policy != null && !policy.isEnabled()) {
+            getLog().warn("Deployment repository '" + repository.getId() + "' declares <"
+                    + (isSnapshot ? "snapshots" : "releases") + "><enabled>false</enabled>, but a "
+                    + (isSnapshot ? "snapshot" : "release")
+                    + " artifact is being deployed to it; the server is expected to reject this upload");
+        }
     }
 
     private boolean isValidPath(Artifact a) {
