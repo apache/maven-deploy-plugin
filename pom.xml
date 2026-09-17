@@ -73,7 +73,7 @@ under the License.
 
     <guiceVersion>7.0.0</guiceVersion>
     <mavenPluginTestingVersion>4.0.0-beta-4</mavenPluginTestingVersion>
-    <mavenResolverVersion>2.0.22</mavenResolverVersion>
+    <mavenResolverVersion>2.0.23</mavenResolverVersion>
     <mockitoVersion>5.23.0</mockitoVersion>
     <slf4jVersion>2.0.19</slf4jVersion>
     <version.plexus-xml>4.0.3</version.plexus-xml>
