@@ -21,13 +21,13 @@ import java.io.*;
 import java.util.*;
 
 String[] paths =
-{
+[
     "org/apache/maven/its/mdeploy-213/test/1.0/test-1.0.pom",
     "org/apache/maven/its/mdeploy-213/test/1.0/test-1.0.tar.gz",
     "org/apache/maven/its/mdeploy-213/test/1.0/test-1.0-it.zip",
     "org/apache/maven/its/mdeploy-213/test/1.0/test-1.0.jar",
     "org/apache/maven/its/mdeploy-213/test/1.0/test-1.0-javadoc.jar",
-};
+];
 
 for ( String path : paths )
 {

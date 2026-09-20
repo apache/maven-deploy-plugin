@@ -21,11 +21,11 @@ import java.io.*;
 import java.util.*;
 
 String[] paths =
-{
+[
     "org/apache/maven/its/mdeploy-212/test/1.0/test-1.0.pom",
     "org/apache/maven/its/mdeploy-212/test/1.0/test-1.0.tar.gz",
     "org/apache/maven/its/mdeploy-212/test/1.0/test-1.0-it.zip",
-};
+];
 
 for ( String path : paths )
 {
@@ -38,10 +38,10 @@ for ( String path : paths )
 }
 
 String[] missing =
-{
+[
     "org/apache/maven/its/mdeploy-212/test/1.0/test-1.0.jar",
     "org/apache/maven/its/mdeploy-212/test/1.0/test-1.0-javadoc.jar",
-};
+];
 
 for ( String path : missing )
 {

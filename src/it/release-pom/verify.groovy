@@ -21,10 +21,10 @@ import java.io.*;
 import java.util.*;
 
 String[] paths =
-{
+[
     "org/apache/maven/its/deploy/rp/test/maven-metadata.xml",
     "org/apache/maven/its/deploy/rp/test/1.0/test-1.0.pom",
-};
+];
 
 for ( String path : paths )
 {
