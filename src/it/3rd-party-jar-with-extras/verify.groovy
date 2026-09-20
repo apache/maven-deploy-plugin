@@ -21,13 +21,13 @@ import java.io.*;
 import java.util.*;
 
 String[] paths =
-{
+[
     "org/apache/maven/its/deploy/tpjwop1/test/maven-metadata.xml",
     "org/apache/maven/its/deploy/tpjwop1/test/1.0/test-1.0.jar",
     "org/apache/maven/its/deploy/tpjwop1/test/1.0/test-1.0.zip",
     "org/apache/maven/its/deploy/tpjwop1/test/1.0/test-1.0-src.tar.gz",
     "org/apache/maven/its/deploy/tpjwop1/test/1.0/test-1.0.tar.gz",
-};
+];
 
 for ( String path : paths )
 {
@@ -40,9 +40,9 @@ for ( String path : paths )
 }
 
 String[] missing =
-{
+[
     "org/apache/maven/its/deploy/tpjwop1/test/1.0/test-1.0.pom",
-};
+];
 
 for ( String path : missing )
 {
