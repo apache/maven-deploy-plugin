@@ -21,14 +21,14 @@ import java.io.*;
 import java.util.*;
 
 String[] paths =
-{
+[
     "org/apache/maven/its/deploy/adrwdms/test/maven-metadata.xml",
-};
+];
 String[] paths_absent =
-{
+[
     "org/apache/maven/its/deploy/adrwdms/test/1.0/test-1.0-SNAPSHOT.pom",
     "org/apache/maven/its/deploy/adrwdms/test/1.0/test-1.0-SNAPSHOT.jar",
-};
+];
 
 for ( String path : paths )
 {

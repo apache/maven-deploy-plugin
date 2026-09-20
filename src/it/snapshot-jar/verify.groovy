@@ -23,12 +23,12 @@ import java.util.*;
 import org.codehaus.plexus.util.*;
 
 String[] paths =
-{
+[
     "org/apache/maven/its/deploy/sj/test/maven-metadata.xml",
     "org/apache/maven/its/deploy/sj/test/1.0-SNAPSHOT/maven-metadata.xml",
     "org/apache/maven/its/deploy/sj/test/1.0-SNAPSHOT/test-1.0-*.pom",
     "org/apache/maven/its/deploy/sj/test/1.0-SNAPSHOT/test-1.0-*.jar",
-};
+];
 
 File repoDir = new File( basedir, "target/repo" );
 

@@ -21,11 +21,11 @@ import java.io.*;
 import java.util.*;
 
 String[] paths =
-{
+[
     "org/apache/maven/its/deploy/ssj/test/maven-metadata.xml",
     "org/apache/maven/its/deploy/ssj/test/1.0.0-SNAPSHOT/test-1.0.0-SNAPSHOT.pom",
     "org/apache/maven/its/deploy/ssj/test/1.0.0-SNAPSHOT/test-1.0.0-SNAPSHOT.jar",
-};
+];
 
 for ( String path : paths )
 {
