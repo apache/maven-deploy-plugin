@@ -226,6 +226,17 @@ under the License.
             <redirectTestOutputToFile>true</redirectTestOutputToFile>
           </configuration>
         </plugin>
+        <plugin>
+          <groupId>org.apache.rat</groupId>
+          <artifactId>apache-rat-plugin</artifactId>
+          <configuration>
+            <inputExcludes combine.children="append">
+              <!-- Binary test artifacts without license headers -->
+              <exclude>src/test/resources/unit/**/*.jar</exclude>
+              <exclude>src/test/resources/unit/**/*.zip</exclude>
+            </inputExcludes>
+          </configuration>
+        </plugin>
       </plugins>
     </pluginManagement>
   </build>
