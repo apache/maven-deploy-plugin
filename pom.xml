@@ -23,7 +23,7 @@ under the License.
   <parent>
     <groupId>org.apache.maven.plugins</groupId>
     <artifactId>maven-plugins</artifactId>
-    <version>49</version>
+    <version>50</version>
     <relativePath />
   </parent>
 
@@ -224,6 +224,17 @@ under the License.
           <artifactId>maven-surefire-plugin</artifactId>
           <configuration>
             <redirectTestOutputToFile>true</redirectTestOutputToFile>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.rat</groupId>
+          <artifactId>apache-rat-plugin</artifactId>
+          <configuration>
+            <inputExcludes combine.children="append">
+              <!-- Binary test artifacts without license headers -->
+              <exclude>src/test/resources/unit/**/*.jar</exclude>
+              <exclude>src/test/resources/unit/**/*.zip</exclude>
+            </inputExcludes>
           </configuration>
         </plugin>
       </plugins>
