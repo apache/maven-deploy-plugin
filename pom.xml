@@ -23,7 +23,7 @@ under the License.
   <parent>
     <groupId>org.apache.maven.plugins</groupId>
     <artifactId>maven-plugins</artifactId>
-    <version>49</version>
+    <version>50</version>
     <relativePath />
   </parent>
 
@@ -85,7 +85,7 @@ under the License.
     <mavenPluginToolsVersion>${version.maven-plugin-tools}</mavenPluginToolsVersion>
     <mavenResourcesPluginVersion>${version.maven-resources-plugin}</mavenResourcesPluginVersion>
     <mavenSourcePluginVersion>${version.maven-source-plugin}</mavenSourcePluginVersion>
-    <mavenSurefirePluginVersion>${version.maven-surefire}</mavenSurefirePluginVersion>
+    <mavenSurefirePluginVersion>${version.maven-surefire-plugin}</mavenSurefirePluginVersion>
     <mavenWarPluginVersion>${version.maven-war-plugin}</mavenWarPluginVersion>
 
     <project.build.outputTimestamp>2026-09-11T21:32:11Z</project.build.outputTimestamp>
