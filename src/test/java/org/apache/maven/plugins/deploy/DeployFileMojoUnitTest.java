@@ -121,6 +121,67 @@ class DeployFileMojoUnitTest {
         assertEquals("1.2.3", mojo.getVersion());
     }
 
+    @Test
+    void processPomPropertiesLeavesResolvedCoordinatesUnchanged() {
+        mojo.setGroupId("org.original");
+        mojo.setArtifactId("original");
+        mojo.setVersion("1.0.0");
+        Properties properties = new Properties();
+        properties.setProperty("groupId", "org.other");
+        properties.setProperty("artifactId", "other");
+        properties.setProperty("version", "2.0.0");
+
+        mojo.processPomProperties(properties);
+
+        assertEquals("org.original", mojo.getGroupId());
+        assertEquals("original", mojo.getArtifactId());
+        assertEquals("1.0.0", mojo.getVersion());
+    }
+
+    @Test
+    void processPomPropertiesResolvesOnlyUnresolvedCoordinates() {
+        mojo.setGroupId("org.original");
+        mojo.setArtifactId("original");
+        mojo.setVersion("${revision}");
+        Properties properties = new Properties();
+        properties.setProperty("groupId", "org.other");
+        properties.setProperty("artifactId", "other");
+        properties.setProperty("version", "2.0.0");
+
+        mojo.processPomProperties(properties);
+
+        assertEquals("org.original", mojo.getGroupId());
+        assertEquals("original", mojo.getArtifactId());
+        assertEquals("2.0.0", mojo.getVersion());
+    }
+
+    @Test
+    void processPomPropertiesLeavesMissingAndBlankValuesUnresolved() {
+        mojo.setGroupId("${group}");
+        mojo.setArtifactId("${artifact}");
+        mojo.setVersion("${revision}");
+        Properties properties = new Properties();
+        properties.setProperty("groupId", "org.example");
+        properties.setProperty("version", "   ");
+
+        mojo.processPomProperties(properties);
+
+        assertEquals("org.example", mojo.getGroupId());
+        assertEquals("${artifact}", mojo.getArtifactId());
+        assertEquals("${revision}", mojo.getVersion());
+    }
+
+    @Test
+    void processPomPropertiesLeavesCompoundExpressionsUnchanged() {
+        mojo.setVersion("1.0-${changelist}");
+        Properties properties = new Properties();
+        properties.setProperty("version", "2.0.0");
+
+        mojo.processPomProperties(properties);
+
+        assertEquals("1.0-${changelist}", mojo.getVersion());
+    }
+
     private void checkMojoProperties(
             final String expectedGroup,
             final String expectedArtifact,

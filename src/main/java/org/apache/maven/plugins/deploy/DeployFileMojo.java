@@ -603,16 +603,25 @@ public class DeployFileMojo extends AbstractDeployMojo {
         }
     }
 
+    /**
+     * Completes coordinates that remain unresolved after processing the embedded POM. Only pure property references
+     * are supported; compound expressions such as {@code 1.0-${changelist}} are intentionally left unchanged. The
+     * replacement values are read from the adjacent {@code pom.properties} file.
+     *
+     * @param properties the properties read from the adjacent {@code pom.properties} file
+     */
     void processPomProperties(Properties properties) {
-        if (isUnresolvedProperty(groupId)) {
-            groupId = properties.getProperty("groupId", groupId);
+        groupId = resolveProperty(properties, "groupId", groupId);
+        artifactId = resolveProperty(properties, "artifactId", artifactId);
+        version = resolveProperty(properties, "version", version);
+    }
+
+    private static String resolveProperty(Properties properties, String name, String currentValue) {
+        if (!isUnresolvedProperty(currentValue)) {
+            return currentValue;
         }
-        if (isUnresolvedProperty(artifactId)) {
-            artifactId = properties.getProperty("artifactId", artifactId);
-        }
-        if (isUnresolvedProperty(version)) {
-            version = properties.getProperty("version", version);
-        }
+        String resolvedValue = properties.getProperty(name);
+        return resolvedValue == null || resolvedValue.isBlank() ? currentValue : resolvedValue;
     }
 
     private static boolean isUnresolvedProperty(String value) {
