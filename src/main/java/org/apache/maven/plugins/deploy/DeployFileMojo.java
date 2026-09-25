@@ -29,6 +29,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.regex.Pattern;
@@ -268,6 +269,15 @@ public class DeployFileMojo extends AbstractDeployMojo {
                         Files.copy(pomInputStream, pomFile, StandardCopyOption.REPLACE_EXISTING);
 
                         processModel(readModel(pomFile));
+                        JarEntry propertiesEntry =
+                                jarFile.getJarEntry(entry.getName().replace("pom.xml", "pom.properties"));
+                        if (propertiesEntry != null) {
+                            try (InputStream propertiesInputStream = jarFile.getInputStream(propertiesEntry)) {
+                                Properties properties = new Properties();
+                                properties.load(propertiesInputStream);
+                                processPomProperties(properties);
+                            }
+                        }
 
                         return pomFile;
                     }
@@ -591,6 +601,22 @@ public class DeployFileMojo extends AbstractDeployMojo {
         if (this.packaging == null) {
             this.packaging = model.getPackaging();
         }
+    }
+
+    void processPomProperties(Properties properties) {
+        if (isUnresolvedProperty(groupId)) {
+            groupId = properties.getProperty("groupId", groupId);
+        }
+        if (isUnresolvedProperty(artifactId)) {
+            artifactId = properties.getProperty("artifactId", artifactId);
+        }
+        if (isUnresolvedProperty(version)) {
+            version = properties.getProperty("version", version);
+        }
+    }
+
+    private static boolean isUnresolvedProperty(String value) {
+        return value != null && value.startsWith("${") && value.endsWith("}");
     }
 
     /**
