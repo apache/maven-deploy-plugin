@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Properties;
 
 import org.apache.maven.api.model.Model;
 import org.apache.maven.api.model.Parent;
@@ -101,6 +102,23 @@ class DeployFileMojoUnitTest {
         mojo.setPackaging("packagingO");
         mojo.initProperties();
         checkMojoProperties("groupO", "artifactO", "versionO", "packagingO");
+    }
+
+    @Test
+    void processResolvedVersionFromPomProperties() {
+        mojo.setGroupId("${group}");
+        mojo.setArtifactId("${artifact}");
+        mojo.setVersion("${revision}");
+        Properties properties = new Properties();
+        properties.setProperty("groupId", "org.example");
+        properties.setProperty("artifactId", "example");
+        properties.setProperty("version", "1.2.3");
+
+        mojo.processPomProperties(properties);
+
+        assertEquals("org.example", mojo.getGroupId());
+        assertEquals("example", mojo.getArtifactId());
+        assertEquals("1.2.3", mojo.getVersion());
     }
 
     private void checkMojoProperties(
