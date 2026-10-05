@@ -50,6 +50,7 @@ import org.junit.jupiter.api.io.TempDir;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.when;
 
@@ -191,7 +192,8 @@ class DeployMojoTest {
         mojo.execute();
 
         File[] files = localRepo.listFiles();
-        assertNull(files);
+        // the resolver may create an empty local repository directory
+        assertTrue(files == null || files.length == 0);
 
         files = remoteRepo.listFiles();
         assertNull(files);
@@ -409,7 +411,9 @@ class DeployMojoTest {
     @InjectMojo(goal = "deploy")
     void testLegacyAltDeploymentRepositoryWithDefaultLayout(DeployMojo mojo) throws Exception {
         assertEquals(
-                new RemoteRepository.Builder("altDeploymentRepository", "default", "http://localhost").build(),
+                new RemoteRepository.Builder("altDeploymentRepository", "default", "http://localhost")
+                        .setIntent(RemoteRepository.Intent.DEPLOYMENT)
+                        .build(),
                 mojo.getDeploymentRepository(
                         mavenProject, null, null, "altDeploymentRepository::default::http://localhost"));
     }
@@ -450,7 +454,9 @@ class DeployMojoTest {
     @InjectMojo(goal = "deploy")
     void testDefaultScmSvnAltDeploymentRepository(DeployMojo mojo) throws Exception {
         assertEquals(
-                new RemoteRepository.Builder("altDeploymentRepository", "default", "scm:svn:http://localhost").build(),
+                new RemoteRepository.Builder("altDeploymentRepository", "default", "scm:svn:http://localhost")
+                        .setIntent(RemoteRepository.Intent.DEPLOYMENT)
+                        .build(),
                 mojo.getDeploymentRepository(
                         mavenProject, null, null, "altDeploymentRepository::default::scm:svn:http://localhost"));
     }
@@ -475,7 +481,9 @@ class DeployMojoTest {
     @InjectMojo(goal = "deploy")
     void testAltSnapshotDeploymentRepository(DeployMojo mojo) throws Exception {
         assertEquals(
-                new RemoteRepository.Builder("altSnapshotDeploymentRepository", "default", "http://localhost").build(),
+                new RemoteRepository.Builder("altSnapshotDeploymentRepository", "default", "http://localhost")
+                        .setIntent(RemoteRepository.Intent.DEPLOYMENT)
+                        .build(),
                 mojo.getDeploymentRepository(
                         mavenProject, "altSnapshotDeploymentRepository::http://localhost", null, null));
     }
@@ -486,12 +494,18 @@ class DeployMojoTest {
         mavenProject.setVersion("1.0");
 
         assertEquals(
-                new RemoteRepository.Builder("altReleaseDeploymentRepository", "default", "http://localhost").build(),
+                new RemoteRepository.Builder("altReleaseDeploymentRepository", "default", "http://localhost")
+                        .setIntent(RemoteRepository.Intent.DEPLOYMENT)
+                        .build(),
                 mojo.getDeploymentRepository(
                         mavenProject, null, "altReleaseDeploymentRepository::http://localhost", null));
     }
 
     private void addFileToList(File file, List<String> fileList) {
+        if (".meta".equals(file.getName()) || ".locks".equals(file.getName())) {
+            // resolver 2.x bookkeeping directories
+            return;
+        }
         if (!file.isDirectory()) {
             fileList.add(file.getName());
         } else {
