@@ -187,6 +187,33 @@ class DeployMojoTest {
 
     @Test
     @InjectMojo(goal = "deploy")
+    @MojoParameter(name = "deployAtEnd", value = "false")
+    @MojoParameter(name = "allowIncompleteProjects", value = "true")
+    void mainArtifactWithDirectoryPathIsSkippedWhenAttachmentsExist(DeployMojo mojo) throws Exception {
+        // Module source hierarchy: the JAR plugin attaches one JAR per Java module and never assigns a
+        // file to the main artifact, whose path stays the (directory) build output. Deploy must deploy the
+        // POM + attachments and must NOT hand the directory to the deployer (which fails with "is a folder").
+        assertNotNull(mojo);
+        Project project = (Project) getVariableValueFromObject(mojo, "project");
+        projectManager.attachArtifact(
+                project,
+                new ProducedArtifactStub("org.apache.maven.test", "foo.bar", "", "1.0-SNAPSHOT", "jar"),
+                Paths.get(getBasedir(), "target/test-classes/unit/attached-artifact-test-1.0-SNAPSHOT.jar"));
+        artifactManager.setPath(project.getMainArtifact().get(), Paths.get(getBasedir(), "target/test-classes/unit"));
+
+        ArtifactDeployerRequest request = execute(mojo);
+
+        assertNotNull(request);
+        Collection<ProducedArtifact> artifacts = request.getArtifacts();
+        assertEquals(
+                Arrays.asList(
+                        "org.apache.maven.test:maven-deploy-test:pom:1.0-SNAPSHOT",
+                        "org.apache.maven.test:foo.bar:jar:1.0-SNAPSHOT"),
+                artifacts.stream().map(Artifact::key).collect(Collectors.toList()));
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
     void legacyAltDeploymentRepositoryWithDefaultLayout(DeployMojo mojo) throws Exception {
         setVariableValueToObject(mojo, "altDeploymentRepository", "altDeploymentRepository::default::http://localhost");
 

@@ -423,6 +423,7 @@ public class DeployMojo extends AbstractDeployMojo {
         ProjectManager projectManager = getProjectManager();
         Collection<ProducedArtifact> deployables = projectManager.getAllArtifacts(project);
         Collection<ProducedArtifact> attachedArtifacts = projectManager.getAttachedArtifacts(project);
+        List<ProducedArtifact> toDeploy = new ArrayList<>(deployables);
 
         ArtifactManager artifactManager = getArtifactManager();
         if (artifactManager.getPath(project.getPomArtifact()).isEmpty()) {
@@ -448,13 +449,14 @@ public class DeployMojo extends AbstractDeployMojo {
                                 "The packaging for this project did not assign a file to the build artifact");
                     } else {
                         if (allowIncompleteProjects) {
-                            getLog().warn("");
-                            getLog().warn("The packaging plugin for this project did not assign");
-                            getLog().warn(
-                                            "a main file to the project but it has attachments. Change packaging to 'pom'.");
-                            getLog().warn("");
-                            getLog().warn("Incomplete projects like this will fail in future Maven versions!");
-                            getLog().warn("");
+                            // The main artifact has no file: its path is e.g. the output directory of a module
+                            // source hierarchy, where the JAR plugin attaches one JAR per Java module instead of
+                            // assigning a single main JAR. Deploy the POM and the attachments only; do not hand
+                            // the directory to the deployer, which would otherwise fail with "is a folder".
+                            getLog().info("The project's main artifact has no file"
+                                    + " (e.g. a module source hierarchy produces one artifact per Java module);"
+                                    + " deploying the POM and the attached artifacts only.");
+                            toDeploy.remove(deployable);
                         } else {
                             throw new MojoException("The packaging plugin for this project did not assign "
                                     + "a main file to the project but it has attachments. Change packaging to 'pom'.");
@@ -470,7 +472,7 @@ public class DeployMojo extends AbstractDeployMojo {
         ArtifactDeployerRequest request = ArtifactDeployerRequest.builder()
                 .session(session)
                 .repository(getDeploymentRepository(session.isVersionSnapshot(project.getVersion())))
-                .artifacts(deployables)
+                .artifacts(toDeploy)
                 .retryFailedDeploymentCount(Math.max(1, Math.min(10, getRetryFailedDeploymentCount())))
                 .build();
 
