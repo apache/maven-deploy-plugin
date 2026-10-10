@@ -25,12 +25,14 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.apache.maven.api.Artifact;
 import org.apache.maven.api.ProducedArtifact;
 import org.apache.maven.api.Project;
 import org.apache.maven.api.RemoteRepository;
+import org.apache.maven.api.SourceRoot;
 import org.apache.maven.api.di.Inject;
 import org.apache.maven.api.di.Priority;
 import org.apache.maven.api.di.Provides;
@@ -68,6 +70,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
@@ -567,6 +570,45 @@ class DeployMojoTest {
 
         MojoException e = assertThrows(MojoException.class, () -> mojo.getDeploymentRepository(false));
         assertEquals("Ambiguous syntax for alternative repository.", e.getMessage());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    @MojoParameter(name = "deployAtEnd", value = "false")
+    void moduleSourceHierarchySkipsMainArtifactAtDeploy(DeployMojo mojo) throws Exception {
+        assertNotNull(mojo);
+        Project project = (Project) getVariableValueFromObject(mojo, "project");
+
+        // Simulate module source hierarchy: main artifact path is a directory (the build output dir)
+        artifactManager.setPath(project.getMainArtifact().get(), Paths.get(getBasedir(), "target/test-classes"));
+
+        // Attach a per-module JAR as the real deployable artifact
+        ProducedArtifactStub moduleJar = new ProducedArtifactStub(
+                "org.apache.maven.test", "maven-deploy-test", "module.one", "1.0-SNAPSHOT", "jar");
+        projectManager.attachArtifact(
+                project,
+                moduleJar,
+                Paths.get(getBasedir(), "target/test-classes/unit/maven-deploy-test-1.0-SNAPSHOT.jar"));
+
+        // Stub a module source root on the projectManager
+        SourceRoot moduleRoot = mock(SourceRoot.class);
+        when(moduleRoot.enabled()).thenReturn(true);
+        when(moduleRoot.module()).thenReturn(Optional.of("org.example.module"));
+        when(projectManager.getSourceRoots(project)).thenReturn(List.of(moduleRoot));
+
+        ArtifactDeployerRequest request = execute(mojo);
+
+        assertNotNull(request);
+        Collection<ProducedArtifact> artifacts = request.getArtifacts();
+        // Main artifact (directory) must be excluded; POM and per-module JAR must be deployed
+        List<String> keys = artifacts.stream().map(Artifact::key).collect(Collectors.toList());
+        assertFalse(
+                keys.contains("org.apache.maven.test:maven-deploy-test:jar:1.0-SNAPSHOT"),
+                "directory main artifact must be excluded from deploy request");
+        assertTrue(keys.contains("org.apache.maven.test:maven-deploy-test:pom:1.0-SNAPSHOT"), "POM must be deployed");
+        assertTrue(
+                keys.contains("org.apache.maven.test:maven-deploy-test:jar:module.one:1.0-SNAPSHOT"),
+                "per-module JAR must be deployed");
     }
 
     private ArtifactDeployerRequest execute(DeployMojo mojo) {
