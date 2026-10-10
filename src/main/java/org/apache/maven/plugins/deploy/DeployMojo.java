@@ -33,6 +33,7 @@ import org.apache.maven.api.MojoExecution;
 import org.apache.maven.api.ProducedArtifact;
 import org.apache.maven.api.Project;
 import org.apache.maven.api.RemoteRepository;
+import org.apache.maven.api.SourceRoot;
 import org.apache.maven.api.di.Inject;
 import org.apache.maven.api.model.DistributionManagement;
 import org.apache.maven.api.model.Plugin;
@@ -473,20 +474,20 @@ public class DeployMojo extends AbstractDeployMojo {
                     if (attachedArtifacts.isEmpty()) {
                         throw new MojoException(
                                 "The packaging for this project did not assign a file to the build artifact");
+                    } else if (usesModuleSourceHierarchy(project, projectManager)) {
+                        getLog().info("Module source hierarchy: no main artifact produced;"
+                                + " deploying POM and per-module artifacts only.");
+                        toDeploy.remove(deployable);
+                    } else if (allowIncompleteProjects) {
+                        getLog().warn("");
+                        getLog().warn("The packaging plugin for this project did not assign");
+                        getLog().warn("a main file to the project but it has attachments. Change packaging to 'pom'.");
+                        getLog().warn("");
+                        getLog().warn("Incomplete projects like this will fail in future Maven versions!");
+                        getLog().warn("");
                     } else {
-                        if (allowIncompleteProjects) {
-                            // The main artifact has no file: its path is e.g. the output directory of a module
-                            // source hierarchy, where the JAR plugin attaches one JAR per Java module instead of
-                            // assigning a single main JAR. Deploy the POM and the attachments only; do not hand
-                            // the directory to the deployer, which would otherwise fail with "is a folder".
-                            getLog().info("The project's main artifact has no file"
-                                    + " (e.g. a module source hierarchy produces one artifact per Java module);"
-                                    + " deploying the POM and the attached artifacts only.");
-                            toDeploy.remove(deployable);
-                        } else {
-                            throw new MojoException("The packaging plugin for this project did not assign "
-                                    + "a main file to the project but it has attachments. Change packaging to 'pom'.");
-                        }
+                        throw new MojoException("The packaging plugin for this project did not assign "
+                                + "a main file to the project but it has attachments. Change packaging to 'pom'.");
                     }
                 } else {
                     throw new MojoException("The packaging for this project did not assign "
@@ -740,6 +741,12 @@ public class DeployMojo extends AbstractDeployMojo {
                     + (isSnapshot ? "snapshot" : "release")
                     + " artifact is being deployed to it; the server is expected to reject this upload");
         }
+    }
+
+    private static boolean usesModuleSourceHierarchy(Project project, ProjectManager projectManager) {
+        return projectManager.getSourceRoots(project).stream()
+                .filter(SourceRoot::enabled)
+                .anyMatch(sr -> sr.module().isPresent());
     }
 
     private boolean isValidPath(Artifact a) {
