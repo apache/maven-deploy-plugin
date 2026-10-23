@@ -69,11 +69,11 @@ under the License.
 
   <properties>
     <javaVersion>8</javaVersion>
-    <mavenVersion>3.9.16</mavenVersion>
+    <mavenVersion>3.10.0</mavenVersion>
     <!-- Maven bound -->
-    <resolverVersion>1.9.27</resolverVersion>
+    <resolverVersion>2.0.24</resolverVersion>
     <!-- Maven bound -->
-    <slf4jVersion>1.7.36</slf4jVersion>
+    <slf4jVersion>2.0.19</slf4jVersion>
 
     <!-- plugins version used in IT tests -->
     <mavenAntrunPluginVersion>${version.maven-antrun-plugin}</mavenAntrunPluginVersion>
