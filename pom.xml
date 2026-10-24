@@ -71,8 +71,6 @@ under the License.
     <javaVersion>17</javaVersion>
     <mavenVersion>4.0.0-rc-7</mavenVersion>
 
-    <guiceVersion>7.0.0</guiceVersion>
-    <mavenPluginTestingVersion>4.0.0-beta-4</mavenPluginTestingVersion>
     <mavenResolverVersion>2.0.24</mavenResolverVersion>
     <mockitoVersion>5.24.0</mockitoVersion>
     <slf4jVersion>2.0.20</slf4jVersion>
@@ -94,19 +92,6 @@ under the License.
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
         <version>33.7.2-jre</version>
-      </dependency>
-      <!--
-        maven-plugin-testing-harness 4.0.0-beta-4 transitively pins maven-xml to 4.0.0-rc-3
-        and pulls in maven-xml-impl 4.0.0-alpha-9 (an artifact ID that no longer exists
-        from rc-4 onward; the XmlService implementation moved into maven-xml itself).
-        Pin maven-xml to ${mavenVersion} so the right XmlService provider is on the
-        test classpath; otherwise Holder.<clinit> fails with
-        "No XmlService implementation found" and every unit test errors out.
-      -->
-      <dependency>
-        <groupId>org.apache.maven</groupId>
-        <artifactId>maven-xml</artifactId>
-        <version>${mavenVersion}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
@@ -139,9 +124,9 @@ under the License.
 
     <!-- Test -->
     <dependency>
-      <groupId>org.apache.maven.plugin-testing</groupId>
-      <artifactId>maven-plugin-testing-harness</artifactId>
-      <version>${mavenPluginTestingVersion}</version>
+      <groupId>org.apache.maven</groupId>
+      <artifactId>maven-testing</artifactId>
+      <version>${mavenVersion}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -160,12 +145,6 @@ under the License.
       <groupId>org.apache.maven</groupId>
       <artifactId>maven-impl</artifactId>
       <version>${mavenVersion}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.google.inject</groupId>
-      <artifactId>guice</artifactId>
-      <version>${guiceVersion}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
