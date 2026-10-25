@@ -29,6 +29,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.regex.Pattern;
@@ -268,6 +269,15 @@ public class DeployFileMojo extends AbstractDeployMojo {
                         Files.copy(pomInputStream, pomFile, StandardCopyOption.REPLACE_EXISTING);
 
                         processModel(readModel(pomFile));
+                        JarEntry propertiesEntry =
+                                jarFile.getJarEntry(entry.getName().replace("pom.xml", "pom.properties"));
+                        if (propertiesEntry != null) {
+                            try (InputStream propertiesInputStream = jarFile.getInputStream(propertiesEntry)) {
+                                Properties properties = new Properties();
+                                properties.load(propertiesInputStream);
+                                processPomProperties(properties);
+                            }
+                        }
 
                         return pomFile;
                     }
@@ -591,6 +601,31 @@ public class DeployFileMojo extends AbstractDeployMojo {
         if (this.packaging == null) {
             this.packaging = model.getPackaging();
         }
+    }
+
+    /**
+     * Completes coordinates that remain unresolved after processing the embedded POM. Only pure property references
+     * are supported; compound expressions such as {@code 1.0-${changelist}} are intentionally left unchanged. The
+     * replacement values are read from the adjacent {@code pom.properties} file.
+     *
+     * @param properties the properties read from the adjacent {@code pom.properties} file
+     */
+    void processPomProperties(Properties properties) {
+        groupId = resolveProperty(properties, "groupId", groupId);
+        artifactId = resolveProperty(properties, "artifactId", artifactId);
+        version = resolveProperty(properties, "version", version);
+    }
+
+    private static String resolveProperty(Properties properties, String name, String currentValue) {
+        if (!isUnresolvedProperty(currentValue)) {
+            return currentValue;
+        }
+        String resolvedValue = properties.getProperty(name);
+        return resolvedValue == null || resolvedValue.isBlank() ? currentValue : resolvedValue;
+    }
+
+    private static boolean isUnresolvedProperty(String value) {
+        return value != null && value.startsWith("${") && value.endsWith("}");
     }
 
     /**
