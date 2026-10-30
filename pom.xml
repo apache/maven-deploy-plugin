@@ -68,7 +68,7 @@ under the License.
   </distributionManagement>
 
   <properties>
-    <mavenVersion>3.9.16</mavenVersion>
+    <mavenVersion>3.10.0</mavenVersion>
     <!-- Maven bound -->
     <resolverVersion>1.9.27</resolverVersion>
     <!-- Maven bound -->
