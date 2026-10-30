@@ -70,7 +70,7 @@ under the License.
   <properties>
     <mavenVersion>3.9.16</mavenVersion>
     <!-- Maven bound -->
-    <resolverVersion>1.9.27</resolverVersion>
+    <resolverVersion>2.0.24</resolverVersion>
     <!-- Maven bound -->
     <slf4jVersion>1.7.36</slf4jVersion>
 
