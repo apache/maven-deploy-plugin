@@ -78,41 +78,4 @@ Of course, you can configure the repository in your `pom.xml` if you want to go 
 
 ### Copying from Local Directory to Target Remote Repository
 
-`wagon-maven-plugin`&apos;s [`merge-maven-repos` goal](https://www.mojohaus.org/wagon-maven-plugin/merge-maven-repos-mojo.html) provides a mechanism to copy from one remote repository to the other, while merging repository metadata\.
-
-`wagon-maven-plugin`&apos;s [`upload` goal](https://www.mojohaus.org/wagon-maven-plugin/upload-mojo.html) will do the same without taking care of repository metadata: use it if you have an empty repository as target, like a staging repository provided by a repository manager\.
-
-It can be invoked fully from command line \(renaming `-Dwagon.` with `wagon.targetId` when [Wagon Maven Plugin 2\.0\.1 will be released](https://github.com/mojohaus/wagon-maven-plugin/pull/26)\):
-
-```unknown
-mvn org.codehaus.mojo:wagon-maven-plugin:2.0.0:merge-maven-repos \
-  -Dwagon.source=file:./target/staging-deploy \
-  -Dwagon.target=https://... \
-  -Dwagon.=id
-# or once wagon-maven-plugin 2.0.1 is released:
-  -Dwagon.targetId=id
-```
-
-or more simply with `mvn wagon:merge-maven-repos` with configuration in `pom.xml`:
-
-```unknown
-<project>
-  [...]
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>wagon-maven-plugin</artifactId>
-        <version>2.0.0</version>
-        <configuration>
-          <source>file:./target/staging-deploy</source>
-          <target>${project.distributionManagement.repository.url}</target>
-          <targetId>${project.distributionManagement.repository.id}</targetId>
-        </configuration>
-      </plugin>
-    </plugins>
-  </build>
-  [...]
-</project>
-```
-
+Copying the staged repository to the remote one, retrying as needed, is not a Deploy Plugin feature. The [Deploying over an unreliable network](https://maven.apache.org/guides/mini/guide-deployment-transports.html#Deploying_over_an_unreliable_network) section of the Maven guide shows how to do it with the Wagon Maven Plugin.

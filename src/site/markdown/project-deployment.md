@@ -28,7 +28,5 @@ under the License.
 
 Here are examples of using the deploy plugin for project deployment:
 
-- [Deployment with HTTP(S)](./examples/deploy-http.html)
-- [Deployment with FTP](./examples/deploy-ftp.html)
-- [Deployment with external SSH](./examples/deploy-ssh-external.html)
+- [Deploying over HTTP(S), FTP and SSH](https://maven.apache.org/guides/mini/guide-deployment-transports.html) (Maven guide)
 - [Workarounds when there are network issues](./examples/deploy-network-issues.html)
