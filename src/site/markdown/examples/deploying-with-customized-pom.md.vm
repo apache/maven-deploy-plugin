@@ -26,7 +26,7 @@ date: 2006-06-21
 
 If there is already an existing pom and want it to be deployed together with the 3rd party artifact, set the **pomFile** parameter to the path of the pom\.xml\.
 
-```unknown
+```bash
 mvn ${project.groupId}:${project.artifactId}:${project.version}:deploy-file -Durl=file:///C:/m2-repo \
                                                                             -DrepositoryId=some.id \
                                                                             -Dfile=path-to-your-artifact-jar \

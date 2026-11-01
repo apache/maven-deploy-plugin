@@ -34,7 +34,7 @@ There are a few strategies to work around the network issue\.
 
 Deploy plugin provides [`retryFailedDeploymentCount` parameter](../deploy-mojo.html#retryFailedDeploymentCount) to retry deployment multiple times before giving up and returning a failure for the `deploy` goal: 
 
-```unknown
+```xml
 <project>
   [...]
   <build>
@@ -64,13 +64,13 @@ When the network is really not consistent, a deeper strategy is to deploy in 2 s
 
 Deploying to a local directory can be done from command line, without changing POM, using [`altDeploymentRepository` parameter](../deploy-mojo.html#altDeploymentRepository):
 
-```unknown
+```bash
 mvn deploy -DaltDeploymentRepository=local::file:./target/staging-deploy
 ```
 
 or for older 2\.x version of maven\-deploy\-plugin
 
-```unknown
+```bash
 mvn deploy -DaltDeploymentRepository=local::default::file:./target/staging-deploy
 ```
 

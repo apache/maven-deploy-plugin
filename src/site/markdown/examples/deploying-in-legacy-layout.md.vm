@@ -28,7 +28,7 @@ date: 2006-06-21
 
 - legacy layout directory structure:
 
-    ```unknown
+    ```text
       groupId
       |--artifactId
          |--jars
@@ -37,7 +37,7 @@ date: 2006-06-21
 
 - default layout directory structure:
 
-    ```unknown
+    ```text
       groupId
       |--artifactId
          |--version
@@ -47,7 +47,7 @@ date: 2006-06-21
 
     In able to deploy an artifact in a legacy layout of repository, set the **repositoryLayout** parameter to `legacy` value\.
 
-    ```unknown
+    ```bash
     mvn ${project.groupId}:${project.artifactId}:${project.version}:deploy-file -Durl=file:///C:/m2-repo \
                                                                                 -DrepositoryId=some.id \
                                                                                 -Dfile=your-artifact-1.0.jar \

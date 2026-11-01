@@ -24,7 +24,7 @@ date: 20011-02-23
 
 A project may include a main jar and associated sources and javadoc jars\.
 
-```unknown
+```text
   artifact-name-1.0.jar
   artifact-name-1.0-sources.jar
   artifact-name-1.0-javadoc.jar
@@ -32,7 +32,7 @@ A project may include a main jar and associated sources and javadoc jars\.
 
 The sources jar contains the Java sources, and the javadoc jar contains the generated javadocs\. To include these files in your deployment, set the **sources** and **javadoc** parameters to the paths to the sources and javadoc jar files\.
 
-```unknown
+```bash
 mvn ${project.groupId}:${project.artifactId}:${project.version}:deploy-file -Durl=file:///home/me/m2-repo \
                                                                             -DrepositoryId=some.repo.id \
                                                                             -Dfile=./path/to/artifact-name-1.0.jar \

@@ -41,7 +41,7 @@ You do not have to edit this project&apos;s POM if the location already comes fr
 
 If your repository is secured, you may also want to configure your `settings.xml` file to define corresponding `<server/>` entries which provides authentication information\. Server entries are matched to the different parts of the distributionManagement using their `<id/>` elements\. For example, your project may have a distributionManagement section similar to the following:
 
-```unknown
+```xml
 [...]
   <distributionManagement>
     <repository>
@@ -55,7 +55,7 @@ If your repository is secured, you may also want to configure your `settings.xml
 
 In this case, you can specify a server definition in your `settings.xml` to provide authentication information for both of these repositories at once\. Your server section might look like this:
 
-```unknown
+```xml
 [...]
     <server>
       <id>internal.repo</id>
@@ -69,7 +69,7 @@ Please see the article about [Password Encryption](https://maven.apache.org/guid
 
 Once you&apos;ve configured your repository deployment information correctly deploying your project&apos;s artifact will only require invocation of the `deploy` phase of the build:
 
-```unknown
+```bash
 mvn deploy
 ```
 
@@ -77,7 +77,7 @@ mvn deploy
 
 The `deploy:deploy-file` mojo is used primarily for deploying artifacts, which were not built by Maven\. The project&apos;s development team may or may not provide a POM for the artifact, and in some cases you may want to deploy the artifact to an internal remote repository\. The deploy\-file mojo provides functionality covering all of these use cases, and offers a wide range of configurability for generating a POM on\-the\-fly\. Additionally, you can specify what layout your repository uses\. The full usage statement of the deploy\-file mojo can be described as:
 
-```unknown
+```bash
 mvn deploy:deploy-file -Durl=file://C:\m2-repo \
                        -DrepositoryId=some.id \
                        -Dfile=your-artifact-1.0.jar \
