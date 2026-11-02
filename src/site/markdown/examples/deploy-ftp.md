@@ -36,7 +36,7 @@ transport does not support FTP at all: you must switch to the wagon transport
 
 In order to deploy artifacts using FTP you must first specify the use of an FTP server in the **distributionManagement** element of your POM as well as specifying an `extension` in your `build` element which will pull in the FTP artifacts required to deploy with FTP:
 
-```unknown
+```xml
 <project>
   ...
   <distributionManagement>
@@ -62,7 +62,7 @@ In order to deploy artifacts using FTP you must first specify the use of an FTP 
 
 Your `settings.xml` would contain a `server` element where the `id` of that element matches `id` of the FTP repository specified in the POM above. Store the password in [encrypted form](https://maven.apache.org/guides/mini/guide-encryption.html) rather than as clear text:
 
-```unknown
+```xml
 <settings>
   ...
   <servers>
@@ -78,7 +78,7 @@ Your `settings.xml` would contain a `server` element where the `id` of that elem
 
 You should, of course, make sure that you can login into the specified FTP server by hand before attempting the deployment with Maven. Once you have verified that everything is setup correctly you can now deploy your artifacts using Maven:
 
-```unknown
+```bash
 mvn deploy
 ```
 
