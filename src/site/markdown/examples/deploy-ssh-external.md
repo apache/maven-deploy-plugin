@@ -32,7 +32,7 @@ over `scpexe://` requires switching to the wagon transport
 
 In order to deploy artifacts using SSH you must first specify the use of an SSH server in the **distributionManagement** element of your POM as well as specifying an `extension` in your `build` element which will pull in the SSH artifacts required to deploy with SSH:
 
-```unknown
+```xml
 
 <project>
   ...
@@ -59,7 +59,7 @@ In order to deploy artifacts using SSH you must first specify the use of an SSH 
 
 If you are deploying from Unix or have Cygwin installed you won&apos;t need to any additional configuration in your `settings.xml` file as everything will be taken from the environment. But if you are on Windows and are using something like `plink` then you will need something like the following:
 
-```unknown
+```xml
 
 <settings>
   ...
@@ -81,13 +81,13 @@ If you are deploying from Unix or have Cygwin installed you won&apos;t need to a
 
 You should, of course, make sure that you can login into the specified SSH server by hand before attempting the deployment with Maven. Once you have verified that everything is setup correctly you can now deploy your artifacts using Maven:
 
-```unknown
+```bash
 mvn deploy
 ```
 
 Sometimes you may have permissions problems deploying and if so you can set the file and directory permissions like so:
 
-```unknown
+```xml
 
  <settings>
    ...

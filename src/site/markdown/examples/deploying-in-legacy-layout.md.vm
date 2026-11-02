@@ -30,7 +30,7 @@ under the License.
 
 - legacy layout directory structure:
 
-    ```unknown
+    ```text
       groupId
       |--artifactId
          |--jars
@@ -39,7 +39,7 @@ under the License.
 
 - default layout directory structure:
 
-    ```unknown
+    ```text
       groupId
       |--artifactId
          |--version

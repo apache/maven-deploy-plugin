@@ -28,7 +28,7 @@ under the License.
 
 In order to deploy artifacts using HTTP(S) you must specify the use of an HTTP(S) server in the [**distributionManagement** element of your POM](https://maven.apache.org/pom.html#Distribution_Management):
 
-```unknown
+```xml
 <project>
   ...
   <distributionManagement>
@@ -51,7 +51,7 @@ explicitly overridden with `-Dmaven.deploy.allowInsecureUrl=true` if you accept 
 
 Your `settings.xml` would contain a `server` element where the `id` of that element matches `id` of the HTTP(S) repository specified in the POM above. It must contain the credentials to be used (in [encrypted form](https://maven.apache.org/guides/mini/guide-encryption.html)):
 
-```unknown
+```xml
 <settings>
   ...
   <servers>
