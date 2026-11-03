@@ -19,6 +19,7 @@
 package org.apache.maven.plugins.deploy;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -26,6 +27,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.jar.JarEntry;
+import java.util.jar.JarOutputStream;
 
 import org.apache.maven.api.Artifact;
 import org.apache.maven.api.Session;
@@ -44,9 +47,11 @@ import org.apache.maven.api.services.ArtifactDeployerRequest;
 import org.apache.maven.api.services.ArtifactManager;
 import org.apache.maven.impl.InternalSession;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import static org.apache.maven.api.plugin.testing.MojoExtension.getBasedir;
 import static org.apache.maven.api.plugin.testing.MojoExtension.getVariableValueFromObject;
+import static org.apache.maven.api.plugin.testing.MojoExtension.setVariableValueToObject;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -59,6 +64,9 @@ import static org.mockito.Mockito.when;
  */
 @MojoTest
 class DeployFileMojoTest {
+    @TempDir
+    Path temp;
+
     private static final String LOCAL_REPO = "target/local-repo";
 
     @Inject
@@ -72,6 +80,52 @@ class DeployFileMojoTest {
     @Inject
     @SuppressWarnings("unused")
     private ArtifactManager artifactManager;
+
+    @Test
+    @InjectMojo(goal = "deploy-file")
+    void embeddedPomResolvesVersionWithPomXmlInGroupId(DeployFileMojo mojo) throws Exception {
+        assertEmbeddedPomVersion(mojo, "org.pom.xml", "demo");
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy-file")
+    void embeddedPomResolvesVersionWithPomXmlInArtifactId(DeployFileMojo mojo) throws Exception {
+        assertEmbeddedPomVersion(mojo, "org.example", "pom.xml-demo");
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy-file")
+    void embeddedPomResolvesVersionWithOrdinaryCoordinates(DeployFileMojo mojo) throws Exception {
+        assertEmbeddedPomVersion(mojo, "org.example", "demo");
+    }
+
+    private void assertEmbeddedPomVersion(DeployFileMojo mojo, String groupId, String artifactId) throws Exception {
+        Path jar = temp.resolve("embedded.jar");
+        String directory = "META-INF/maven/" + groupId + "/" + artifactId + "/";
+        try (JarOutputStream output = new JarOutputStream(Files.newOutputStream(jar))) {
+            output.putNextEntry(new JarEntry(directory + "pom.xml"));
+            output.write(("<project><modelVersion>4.0.0</modelVersion><groupId>" + groupId + "</groupId>"
+                            + "<artifactId>" + artifactId + "</artifactId><version>${revision}</version></project>")
+                    .getBytes(StandardCharsets.UTF_8));
+            output.closeEntry();
+            output.putNextEntry(new JarEntry(directory + "pom.properties"));
+            output.write(("groupId=" + groupId + "\nartifactId=" + artifactId + "\nversion=1.0-SNAPSHOT\n")
+                    .getBytes(StandardCharsets.UTF_8));
+            output.closeEntry();
+        }
+        setVariableValueToObject(mojo, "file", jar);
+        try {
+            mojo.initProperties();
+            assertEquals(groupId, mojo.getGroupId());
+            assertEquals(artifactId, mojo.getArtifactId());
+            assertEquals("1.0-SNAPSHOT", mojo.getVersion());
+        } finally {
+            Path extractedPom = (Path) getVariableValueFromObject(mojo, "pomFile");
+            if (extractedPom != null) {
+                Files.deleteIfExists(extractedPom);
+            }
+        }
+    }
 
     @Test
     @InjectMojo(goal = "deploy-file")

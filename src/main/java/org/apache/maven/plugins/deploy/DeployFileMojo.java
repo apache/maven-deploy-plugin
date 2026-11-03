@@ -269,8 +269,9 @@ public class DeployFileMojo extends AbstractDeployMojo {
                         Files.copy(pomInputStream, pomFile, StandardCopyOption.REPLACE_EXISTING);
 
                         processModel(readModel(pomFile));
-                        JarEntry propertiesEntry =
-                                jarFile.getJarEntry(entry.getName().replace("pom.xml", "pom.properties"));
+                        JarEntry propertiesEntry = jarFile.getJarEntry(
+                                entry.getName().substring(0, entry.getName().length() - "pom.xml".length())
+                                        + "pom.properties");
                         if (propertiesEntry != null) {
                             try (InputStream propertiesInputStream = jarFile.getInputStream(propertiesEntry)) {
                                 Properties properties = new Properties();
