@@ -34,7 +34,8 @@ updates:
       # Maven 3 so use SLF4J 1.7.x
       - dependency-name: "org.slf4j:*"
         versions: [">= 2.0.0"]
-      # Maven 3 line stays on Resolver 1.x (2.x is Maven 4)
+      # Build compiles against the Resolver 1.x API (maven-resolver-api 1.9.27);
+      # Resolver 2.x ships with Maven 3.10+ and 4.x, so keep Dependabot off it.
       - dependency-name: "org.apache.maven.resolver:*"
         versions: [">= 2.0.0"]
       # ASF plugins stay on the Maven 3.9 baseline (min-prerequisite
