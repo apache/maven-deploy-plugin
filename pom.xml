@@ -85,7 +85,6 @@ under the License.
     <mavenResourcesPluginVersion>${version.maven-resources-plugin}</mavenResourcesPluginVersion>
     <mavenSourcePluginVersion>${version.maven-source-plugin}</mavenSourcePluginVersion>
     <mavenSurefirePluginVersion>${version.maven-surefire-plugin}</mavenSurefirePluginVersion>
-    <mavenWarPluginVersion>${version.maven-war-plugin}</mavenWarPluginVersion>
 
     <project.build.outputTimestamp>2026-09-11T21:32:11Z</project.build.outputTimestamp>
   </properties>
