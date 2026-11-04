@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -47,9 +48,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import static org.apache.maven.api.plugin.testing.MojoExtension.setVariableValueToObject;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.when;
 
@@ -59,6 +63,8 @@ import static org.mockito.Mockito.when;
 @MojoTest(realRepositorySession = true)
 @Basedir("/unit/deploy-test")
 class DeployMojoTest {
+
+    private static final String GA_PATH = "org/apache/maven/test/maven-deploy-test/";
 
     @TempDir
     private Path tempDir;
@@ -92,6 +98,8 @@ class DeployMojoTest {
         deploymentRepository.setUrl("file://" + remoteRepo.getAbsolutePath());
 
         mavenProject.setSnapshotArtifactRepository(
+                repositorySystem.buildArtifactRepositoryFromRepo(deploymentRepository));
+        mavenProject.setReleaseArtifactRepository(
                 repositorySystem.buildArtifactRepositoryFromRepo(deploymentRepository));
 
         mavenProject.setGroupId("org.apache.maven.test");
@@ -491,6 +499,206 @@ class DeployMojoTest {
                         mavenProject, null, "altReleaseDeploymentRepository::http://localhost", null));
     }
 
+    @Test
+    @InjectMojo(goal = "deploy")
+    void testDeployRelease(DeployMojo mojo) throws Exception {
+        mojo.setPluginContext(new ConcurrentHashMap<>());
+        mavenProject.setVersion("1.0");
+        setProjectArtifact(mavenProject, "jar");
+
+        mojo.execute();
+
+        assertDeployed(
+                remoteRepo,
+                GA_PATH + "maven-metadata.xml",
+                GA_PATH + "1.0/maven-deploy-test-1.0.pom",
+                GA_PATH + "1.0/maven-deploy-test-1.0.jar");
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    void testDeployReleaseWithPackagingAsPom(DeployMojo mojo) throws Exception {
+        mojo.setPluginContext(new ConcurrentHashMap<>());
+        mavenProject.setVersion("1.0");
+        setProjectArtifact(mavenProject, "pom");
+        mavenProject.setPackaging("pom");
+
+        mojo.execute();
+
+        assertDeployed(remoteRepo, GA_PATH + "maven-metadata.xml", GA_PATH + "1.0/maven-deploy-test-1.0.pom");
+        assertFalse(new File(remoteRepo, GA_PATH + "1.0/maven-deploy-test-1.0.jar").exists());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    void testDeployReleaseWithAttachedArtifact(DeployMojo mojo) throws Exception {
+        mojo.setPluginContext(new ConcurrentHashMap<>());
+        mavenProject.setVersion("1.0");
+        setProjectArtifact(mavenProject, "jar");
+        mavenProjectHelper.attachArtifact(
+                mavenProject,
+                "jar",
+                "sources",
+                Files.createTempFile(tempDir, "test-sources", "jar").toFile());
+
+        mojo.execute();
+
+        assertDeployed(
+                remoteRepo,
+                GA_PATH + "maven-metadata.xml",
+                GA_PATH + "1.0/maven-deploy-test-1.0.pom",
+                GA_PATH + "1.0/maven-deploy-test-1.0.jar",
+                GA_PATH + "1.0/maven-deploy-test-1.0-sources.jar");
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    void testDeployPomProjectWithAttachedClassifiedWar(DeployMojo mojo) throws Exception {
+        mojo.setPluginContext(new ConcurrentHashMap<>());
+        mavenProject.setVersion("1.0");
+        setProjectArtifact(mavenProject, "pom");
+        mavenProject.setPackaging("pom");
+        // MDEPLOY-45: the war plugin attaches a classified war to a project with pom packaging
+        mavenProjectHelper.attachArtifact(
+                mavenProject,
+                "war",
+                "mdp45",
+                Files.createTempFile(tempDir, "test-war", "war").toFile());
+
+        mojo.execute();
+
+        assertDeployed(
+                remoteRepo, GA_PATH + "1.0/maven-deploy-test-1.0.pom", GA_PATH + "1.0/maven-deploy-test-1.0-mdp45.war");
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    @MojoParameter(name = "skip", value = "releases")
+    void testSkipReleasesDoesNotDeployRelease(DeployMojo mojo) throws Exception {
+        mojo.setPluginContext(new ConcurrentHashMap<>());
+        mavenProject.setVersion("1.0");
+        setProjectArtifact(mavenProject, "jar");
+
+        mojo.execute();
+
+        assertNull(remoteRepo.listFiles());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    @MojoParameter(name = "skip", value = "snapshots")
+    void testSkipSnapshotsDoesNotDeploySnapshot(DeployMojo mojo) throws Exception {
+        mojo.setPluginContext(new ConcurrentHashMap<>());
+        setProjectArtifact(mavenProject, "jar");
+
+        mojo.execute();
+
+        assertNull(remoteRepo.listFiles());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    @MojoParameter(name = "skip", value = "releases")
+    void testSkipReleasesDeploysSnapshot(DeployMojo mojo) throws Exception {
+        mojo.setPluginContext(new ConcurrentHashMap<>());
+        setProjectArtifact(mavenProject, "jar");
+
+        mojo.execute();
+
+        assertTrue(new File(remoteRepo, GA_PATH + "1.0-SNAPSHOT").isDirectory());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    @MojoParameter(name = "skip", value = "snapshots")
+    void testSkipSnapshotsDeploysRelease(DeployMojo mojo) throws Exception {
+        mojo.setPluginContext(new ConcurrentHashMap<>());
+        mavenProject.setVersion("1.0");
+        setProjectArtifact(mavenProject, "jar");
+
+        mojo.execute();
+
+        assertDeployed(remoteRepo, GA_PATH + "1.0/maven-deploy-test-1.0.jar");
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    void testAltDeploymentRepositoryOverridesDistributionManagementForRelease(DeployMojo mojo) throws Exception {
+        mojo.setPluginContext(new ConcurrentHashMap<>());
+        mavenProject.setVersion("1.0");
+        setProjectArtifact(mavenProject, "jar");
+        File altRepo = tempDir.resolve("alt-repo").toFile();
+        setVariableValueToObject(mojo, "altDeploymentRepository", "alt-id::" + altRepo.toURI());
+
+        mojo.execute();
+
+        assertDeployed(
+                altRepo,
+                GA_PATH + "maven-metadata.xml",
+                GA_PATH + "1.0/maven-deploy-test-1.0.pom",
+                GA_PATH + "1.0/maven-deploy-test-1.0.jar");
+        assertNull(remoteRepo.listFiles());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    void testAltDeploymentRepositoryOverridesDistributionManagementForSnapshot(DeployMojo mojo) throws Exception {
+        mojo.setPluginContext(new ConcurrentHashMap<>());
+        setProjectArtifact(mavenProject, "jar");
+        File altRepo = tempDir.resolve("alt-repo").toFile();
+        setVariableValueToObject(mojo, "altDeploymentRepository", "alt-id::" + altRepo.toURI());
+
+        mojo.execute();
+
+        assertDeployed(altRepo, GA_PATH + "maven-metadata.xml");
+        String[] deployed = new File(altRepo, GA_PATH + "1.0-SNAPSHOT").list();
+        assertNotNull(deployed);
+        assertTrue(
+                Arrays.asList(deployed).stream().anyMatch(name -> name.endsWith(".jar")),
+                Arrays.asList(deployed).toString());
+        assertTrue(
+                Arrays.asList(deployed).stream().anyMatch(name -> name.endsWith(".pom")),
+                Arrays.asList(deployed).toString());
+        assertNull(remoteRepo.listFiles());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    @MojoParameter(name = "skip", value = "true")
+    void testSkipWithoutDistributionManagement(DeployMojo mojo) throws Exception {
+        // MDEPLOY-89: skipping must not look for a deployment repository
+        mojo.setPluginContext(new ConcurrentHashMap<>());
+        mavenProject.setReleaseArtifactRepository(null);
+        mavenProject.setSnapshotArtifactRepository(null);
+        mavenProject.setVersion("1.0");
+        setProjectArtifact(mavenProject, "jar");
+
+        mojo.execute();
+
+        assertNull(remoteRepo.listFiles());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    void testAltDeploymentRepositoryWithoutDistributionManagement(DeployMojo mojo) throws Exception {
+        // MDEPLOY-50
+        mojo.setPluginContext(new ConcurrentHashMap<>());
+        mavenProject.setReleaseArtifactRepository(null);
+        mavenProject.setSnapshotArtifactRepository(null);
+        mavenProject.setVersion("1.0");
+        setProjectArtifact(mavenProject, "jar");
+        File altRepo = tempDir.resolve("alt-repo").toFile();
+        setVariableValueToObject(mojo, "altDeploymentRepository", "alt-id::" + altRepo.toURI());
+
+        mojo.execute();
+
+        assertDeployed(
+                altRepo,
+                GA_PATH + "maven-metadata.xml",
+                GA_PATH + "1.0/maven-deploy-test-1.0.pom",
+                GA_PATH + "1.0/maven-deploy-test-1.0.jar");
+    }
+
     private void addFileToList(File file, List<String> fileList) {
         if (!file.isDirectory()) {
             fileList.add(file.getName());
@@ -515,6 +723,12 @@ class DeployMojoTest {
             }
         }
         return expectedFiles.size();
+    }
+
+    private static void assertDeployed(File repo, String... paths) {
+        for (String path : paths) {
+            assertTrue(new File(repo, path).isFile(), "missing in " + repo + ": " + path);
+        }
     }
 
     private void setProjectArtifact(MavenProject mavenProject, String type) throws IOException {
