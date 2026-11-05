@@ -23,6 +23,7 @@ assert new File( remoteRepo, "deploy-at-end-pass/org/apache/maven/its/deploy/dae
 assert new File( remoteRepo, "deploy-at-end-pass/org/apache/maven/its/deploy/dae/pass/module3/1.0/module3-1.0.pom" ).exists()
 assert new File( remoteRepo, "deploy-at-end-pass/org/apache/maven/its/deploy/dae/pass/module3/1.0/module3-1.0.jar" ).exists()
 
+// both invocations append to this one build.log, so the messages below prove deferral for either run, not the serial one alone
 File buildLog = new File( basedir, 'build.log' )
 assert buildLog.exists()
 assert buildLog.text.contains( "[INFO] Deferring deploy for org.apache.maven.its.deploy.dae.pass:dae:1.0 at end" )
