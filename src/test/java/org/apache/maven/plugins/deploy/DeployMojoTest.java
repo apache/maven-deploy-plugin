@@ -605,7 +605,14 @@ class DeployMojoTest {
 
         mojo.execute();
 
-        assertTrue(new File(remoteRepo, GA_PATH + "1.0-SNAPSHOT").isDirectory());
+        String[] deployed = new File(remoteRepo, GA_PATH + "1.0-SNAPSHOT").list();
+        assertNotNull(deployed);
+        assertTrue(
+                Arrays.asList(deployed).stream().anyMatch(name -> name.endsWith(".jar")),
+                Arrays.asList(deployed).toString());
+        assertTrue(
+                Arrays.asList(deployed).stream().anyMatch(name -> name.endsWith(".pom")),
+                Arrays.asList(deployed).toString());
     }
 
     @Test

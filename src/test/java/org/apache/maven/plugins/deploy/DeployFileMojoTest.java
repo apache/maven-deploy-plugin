@@ -34,6 +34,7 @@ import java.util.jar.JarOutputStream;
 
 import org.apache.maven.api.plugin.testing.Basedir;
 import org.apache.maven.api.plugin.testing.InjectMojo;
+import org.apache.maven.api.plugin.testing.MojoParameter;
 import org.apache.maven.api.plugin.testing.MojoTest;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Model;
@@ -359,43 +360,55 @@ class DeployFileMojoTest {
     @Test
     @InjectMojo(goal = "deploy-file", pom = "plugin-config.xml")
     @Basedir("/unit/deploy-file-skip")
+    @MojoParameter(name = "skip", value = "true")
+    @MojoParameter(name = "version", value = "1.0")
     void testSkipTrueDeploysNothing(DeployFileMojo mojo) throws Exception {
-        assertSkip(mojo, "true", "1.0", false);
+        assertSkip(mojo, "1.0", false);
     }
 
     @Test
     @InjectMojo(goal = "deploy-file", pom = "plugin-config.xml")
     @Basedir("/unit/deploy-file-skip")
+    @MojoParameter(name = "skip", value = "false")
+    @MojoParameter(name = "version", value = "1.0")
     void testSkipFalseDeploys(DeployFileMojo mojo) throws Exception {
-        assertSkip(mojo, "false", "1.0", true);
+        assertSkip(mojo, "1.0", true);
     }
 
     @Test
     @InjectMojo(goal = "deploy-file", pom = "plugin-config.xml")
     @Basedir("/unit/deploy-file-skip")
+    @MojoParameter(name = "skip", value = "releases")
+    @MojoParameter(name = "version", value = "1.0")
     void testSkipReleasesDoesNotDeployRelease(DeployFileMojo mojo) throws Exception {
-        assertSkip(mojo, "releases", "1.0", false);
+        assertSkip(mojo, "1.0", false);
     }
 
     @Test
     @InjectMojo(goal = "deploy-file", pom = "plugin-config.xml")
     @Basedir("/unit/deploy-file-skip")
+    @MojoParameter(name = "skip", value = "snapshots")
+    @MojoParameter(name = "version", value = "1.0")
     void testSkipSnapshotsDeploysRelease(DeployFileMojo mojo) throws Exception {
-        assertSkip(mojo, "snapshots", "1.0", true);
+        assertSkip(mojo, "1.0", true);
     }
 
     @Test
     @InjectMojo(goal = "deploy-file", pom = "plugin-config.xml")
     @Basedir("/unit/deploy-file-skip")
+    @MojoParameter(name = "skip", value = "snapshots")
+    @MojoParameter(name = "version", value = "1.0-SNAPSHOT")
     void testSkipSnapshotsDoesNotDeploySnapshot(DeployFileMojo mojo) throws Exception {
-        assertSkip(mojo, "snapshots", "1.0-SNAPSHOT", false);
+        assertSkip(mojo, "1.0-SNAPSHOT", false);
     }
 
     @Test
     @InjectMojo(goal = "deploy-file", pom = "plugin-config.xml")
     @Basedir("/unit/deploy-file-skip")
+    @MojoParameter(name = "skip", value = "releases")
+    @MojoParameter(name = "version", value = "1.0-SNAPSHOT")
     void testSkipReleasesDeploysSnapshot(DeployFileMojo mojo) throws Exception {
-        assertSkip(mojo, "releases", "1.0-SNAPSHOT", true);
+        assertSkip(mojo, "1.0-SNAPSHOT", true);
     }
 
     @Test
@@ -426,10 +439,31 @@ class DeployFileMojoTest {
                 dir + "test-1.0.jar", dir + "test-1.0.pom", dir + "test-1.0-sources.jar", dir + "test-1.0-javadoc.jar");
     }
 
-    private void assertSkip(DeployFileMojo mojo, String skip, String version, boolean deployed) throws Exception {
+    @Test
+    @InjectMojo(goal = "deploy-file", pom = "plugin-config.xml")
+    @Basedir("/unit/deploy-file-sources-javadoc")
+    @MojoParameter(name = "version", value = "1.0-SNAPSHOT")
+    void testDeploySnapshotSourcesAndJavadoc(DeployFileMojo mojo) throws Exception {
+        File target = new File(getBasedir(), "target");
+        createJar(new File(target, "test-1.0.jar"), "a.txt", "main");
+        createJar(new File(target, "test-1.0-sources.jar"), "a.txt", "sources");
+        createJar(new File(target, "test-1.0-javadoc.jar"), "a.txt", "javadoc");
+
+        mojo.execute();
+
+        // MDEPLOY-184: the side artifacts of a snapshot carry the timestamp and the build number, like the main one
+        File dir = new File(remoteRepo, "org/apache/maven/its/deploy/test/1.0-SNAPSHOT");
+        List<String> names = Arrays.asList(Objects.requireNonNull(dir.list()));
+        String prefix = "test-1\\.0-\\d{8}\\.\\d{6}-\\d+";
+        for (String suffix : new String[] {"\\.jar", "\\.pom", "-sources\\.jar", "-javadoc\\.jar"}) {
+            assertEquals(
+                    1, names.stream().filter(n -> n.matches(prefix + suffix)).count(), suffix + " in " + names);
+        }
+    }
+
+    /** The skip mode and the version are bound by {@code @MojoParameter}, as a POM would configure them. */
+    private void assertSkip(DeployFileMojo mojo, String version, boolean deployed) throws Exception {
         createJar(new File(getBasedir(), "target/deployfile-skip.jar"), "a.txt", "content");
-        setVariableValueToObject(mojo, "skip", skip);
-        setVariableValueToObject(mojo, "version", version);
 
         mojo.execute();
 
