@@ -75,7 +75,7 @@ under the License.
     <versions.junit5>${versions.junit}</versions.junit5>
     <mavenVersion>4.0.0-rc-7</mavenVersion>
 
-    <mavenResolverVersion>2.0.24</mavenResolverVersion>
+    <mavenResolverVersion>2.0.25</mavenResolverVersion>
     <mockitoVersion>5.24.0</mockitoVersion>
     <slf4jVersion>2.0.20</slf4jVersion>
     <version.plexus-xml>4.0.3</version.plexus-xml>
