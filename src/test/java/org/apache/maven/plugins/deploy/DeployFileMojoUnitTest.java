@@ -27,7 +27,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author <a href="jerome@coffeebreaks.org">Jerome Lacoste</a>
@@ -64,44 +63,32 @@ class DeployFileMojoUnitTest {
     }
 
     @Test
-    void testProcessPomFromPomFileWithParent1() {
+    void testProcessPomFromPomFileWithParent1() throws MojoExecutionException {
         mojo.setPomFile(new File("foo.bar"));
 
         setMojoModel(mojo.model, null, null, null, null, parent);
 
-        try {
-            mojo.initProperties();
-        } catch (MojoExecutionException expected) {
-            assertTrue(true); // missing artifactId and packaging
-        }
+        mojo.initProperties();
 
         checkMojoProperties("parentGroup", null, "parentVersion", null);
     }
 
     @Test
-    void testProcessPomFromPomFileWithParent2() {
+    void testProcessPomFromPomFileWithParent2() throws MojoExecutionException {
         mojo.setPomFile(new File("foo.bar"));
         setMojoModel(mojo.model, null, "artifact", null, null, parent);
 
-        try {
-            mojo.initProperties();
-        } catch (MojoExecutionException expected) {
-            assertTrue(true); // missing packaging
-        }
+        mojo.initProperties();
 
         checkMojoProperties("parentGroup", "artifact", "parentVersion", null);
     }
 
     @Test
-    void testProcessPomFromPomFileWithParent3() {
+    void testProcessPomFromPomFileWithParent3() throws MojoExecutionException {
         mojo.setPomFile(new File("foo.bar"));
         setMojoModel(mojo.model, null, "artifact", "version", null, parent);
 
-        try {
-            mojo.initProperties();
-        } catch (MojoExecutionException expected) {
-            assertTrue(true); // missing version and packaging
-        }
+        mojo.initProperties();
 
         checkMojoProperties("parentGroup", "artifact", "version", null);
     }
