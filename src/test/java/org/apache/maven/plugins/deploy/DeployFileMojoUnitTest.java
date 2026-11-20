@@ -23,9 +23,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import org.apache.maven.api.logging.Logger;
 import org.apache.maven.api.model.Model;
 import org.apache.maven.api.model.Parent;
-import org.apache.maven.api.plugin.Log;
 import org.apache.maven.api.plugin.MojoException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -186,7 +186,7 @@ class DeployFileMojoUnitTest {
 
     @Test
     void multiPomJarDoesNotDeriveCoordinates() throws Exception {
-        mojo.logger = Mockito.mock(Log.class);
+        mojo.logger = Mockito.mock(Logger.class);
         Path jar = createJar("multi.jar", "META-INF/maven/g1/a1/pom.xml", "META-INF/maven/g2/a2/pom.xml");
         mojo.file = jar;
         setMojoModel(mojo, "group", "artifact", "version", "packaging", null);
@@ -201,7 +201,7 @@ class DeployFileMojoUnitTest {
 
     @Test
     void shortJarFileNameDoesNotCrashTempPomCreation() throws Exception {
-        mojo.logger = Mockito.mock(Log.class);
+        mojo.logger = Mockito.mock(Logger.class);
         // basename "a" is shorter than File.createTempFile's 3-character prefix minimum
         Path jar = createJar("a.jar", "META-INF/maven/g/a/pom.xml");
         mojo.file = jar;
@@ -215,7 +215,7 @@ class DeployFileMojoUnitTest {
 
     @Test
     void corruptJarWarnsAndDerivesNothing() throws Exception {
-        mojo.logger = Mockito.mock(Log.class);
+        mojo.logger = Mockito.mock(Logger.class);
         Path dir = java.nio.file.Files.createTempDirectory("deploy-file-test");
         Path jar = dir.resolve("corrupt.jar");
         java.nio.file.Files.write(jar, new byte[] {0x00, 0x01, 0x02, 0x03});

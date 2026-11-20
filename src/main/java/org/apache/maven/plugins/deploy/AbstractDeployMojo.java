@@ -26,7 +26,7 @@ import org.apache.maven.api.RemoteRepository;
 import org.apache.maven.api.Session;
 import org.apache.maven.api.Version;
 import org.apache.maven.api.di.Inject;
-import org.apache.maven.api.plugin.Log;
+import org.apache.maven.api.logging.Logger;
 import org.apache.maven.api.plugin.Mojo;
 import org.apache.maven.api.plugin.MojoException;
 import org.apache.maven.api.plugin.annotations.Parameter;
@@ -58,7 +58,7 @@ public abstract class AbstractDeployMojo implements Mojo {
     static final String ALLOW_INSECURE_URL_PROPERTY = "maven.deploy.allowInsecureUrl";
 
     @Inject
-    protected Log logger;
+    protected Logger logger;
 
     @Inject
     protected Session session;
@@ -479,7 +479,7 @@ public abstract class AbstractDeployMojo implements Mojo {
         return session;
     }
 
-    protected Log getLog() {
+    protected Logger getLog() {
         return logger;
     }
 }
