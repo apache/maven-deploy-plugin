@@ -21,10 +21,13 @@ package org.apache.maven.plugins.deploy;
 import javax.inject.Inject;
 
 import java.io.File;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -154,6 +157,30 @@ public class DeployMojo extends AbstractDeployMojo {
     @Parameter(defaultValue = "false", property = "allowIncompleteProjects")
     private boolean allowIncompleteProjects;
 
+    /**
+     * Attached artifacts that must not be deployed, for example a shaded or executable JAR that other modules of
+     * the build use but that is of no use in the remote repository. The main artifact, the POM and the
+     * consumer POM of Maven 4 are never skipped this way.
+     * <p>
+     * Each entry selects attached artifacts by {@code groupId}, {@code artifactId}, {@code classifier} and
+     * {@code extension}. Every element that is set must match; an element that is left out matches any value,
+     * and at least one element is required:
+     * <pre>
+     * &lt;skipAttachedArtifacts&gt;
+     *   &lt;attachedArtifact&gt;
+     *     &lt;classifier&gt;shaded&lt;/classifier&gt;
+     *     &lt;extension&gt;jar&lt;/extension&gt;
+     *   &lt;/attachedArtifact&gt;
+     * &lt;/skipAttachedArtifacts&gt;
+     * </pre>
+     * The build fails when an entry matches no attached artifact of the project, so that a misspelled entry
+     * cannot publish an artifact that was meant to stay local.
+     *
+     * @since 3.3.0
+     */
+    @Parameter
+    private List<AttachedArtifact> skipAttachedArtifacts;
+
     @Inject
     protected DeployMojo(RuntimeInformation runtimeInformation, RepositorySystem repositorySystem) {
         super(runtimeInformation, repositorySystem);
@@ -193,6 +220,9 @@ public class DeployMojo extends AbstractDeployMojo {
     private static final String DEPLOY_ALT_DEPLOYMENT_REPOSITORY =
             DeployMojo.class.getName() + ".altDeploymentRepository";
 
+    private static final String DEPLOY_SKIPPED_ATTACHED_ARTIFACTS =
+            DeployMojo.class.getName() + ".skippedAttachedArtifacts";
+
     private static final String PROJECTS_WITH_DEPLOY_KEY = DeployMojo.class.getName() + ".projectsWithDeploy";
 
     private void putState(State state) {
@@ -230,6 +260,9 @@ public class DeployMojo extends AbstractDeployMojo {
         } else {
             failIfOffline();
             warnIfAffectedPackagingAndMaven(project.getPackaging());
+            // resolved here, with the configuration of this project: with deployAtEnd the mojo instance of the
+            // last project processes all of them, and would apply its own skipAttachedArtifacts to each
+            Set<String> skippedAttachedArtifacts = selectSkippedAttachedArtifacts(project);
 
             if (!deployAtEnd) {
 
@@ -241,13 +274,14 @@ public class DeployMojo extends AbstractDeployMojo {
 
                 DeployRequest request = new DeployRequest();
                 request.setRepository(deploymentRepository);
-                processProject(project, request);
+                processProject(project, request, skippedAttachedArtifacts);
                 deploy(request);
                 state = State.DEPLOYED;
             } else {
                 putPluginContextValue(DEPLOY_ALT_SNAPSHOT_DEPLOYMENT_REPOSITORY, altSnapshotDeploymentRepository);
                 putPluginContextValue(DEPLOY_ALT_RELEASE_DEPLOYMENT_REPOSITORY, altReleaseDeploymentRepository);
                 putPluginContextValue(DEPLOY_ALT_DEPLOYMENT_REPOSITORY, altDeploymentRepository);
+                getPluginContext().put(DEPLOY_SKIPPED_ATTACHED_ARTIFACTS, skippedAttachedArtifacts);
                 state = State.TO_BE_DEPLOYED;
             }
         }
@@ -294,7 +328,13 @@ public class DeployMojo extends AbstractDeployMojo {
                     newRequest.setRepository(repo);
                     return newRequest;
                 });
-                processProject(reactorProject, request);
+                Object skippedAttachedArtifacts = pluginContext.get(DEPLOY_SKIPPED_ATTACHED_ARTIFACTS);
+                processProject(
+                        reactorProject,
+                        request,
+                        skippedAttachedArtifacts instanceof Collection
+                                ? (Collection<?>) skippedAttachedArtifacts
+                                : Collections.emptySet());
             }
         }
         // finally execute all deployments request, lets resolver to optimize deployment
@@ -357,7 +397,9 @@ public class DeployMojo extends AbstractDeployMojo {
         return false;
     }
 
-    private void processProject(final MavenProject project, DeployRequest request) throws MojoExecutionException {
+    private void processProject(
+            final MavenProject project, DeployRequest request, Collection<?> skippedAttachedArtifacts)
+            throws MojoExecutionException {
         // always exists, as project exists
         Artifact pomArtifact = RepositoryUtils.toArtifact(new ProjectArtifact(project));
         // always exists, but at "init" is w/o file (packaging plugin assigns file to this when packaged)
@@ -408,9 +450,47 @@ public class DeployMojo extends AbstractDeployMojo {
         }
 
         for (org.apache.maven.artifact.Artifact attached : project.getAttachedArtifacts()) {
+            if (skippedAttachedArtifacts.contains(attached.getId())) {
+                getLog().info("Skipping deployment of attached artifact " + attached.getId());
+                continue;
+            }
             getLog().debug("Attaching for deploy: " + attached.getId());
             request.addArtifact(RepositoryUtils.toArtifact(attached));
         }
+    }
+
+    /**
+     * Returns the ids of the attached artifacts selected by {@link #skipAttachedArtifacts}. Fails on an entry that
+     * selects nothing: a silent no-op would upload an artifact the configuration asked to keep out of the
+     * repository.
+     */
+    private Set<String> selectSkippedAttachedArtifacts(MavenProject project) throws MojoExecutionException {
+        Set<String> skipped = new LinkedHashSet<>();
+        if (skipAttachedArtifacts == null) {
+            return skipped;
+        }
+        for (AttachedArtifact selector : skipAttachedArtifacts) {
+            if (selector == null || selector.isEmpty()) {
+                throw new MojoExecutionException("An entry of skipAttachedArtifacts is empty: set at least one of"
+                        + " 'groupId', 'artifactId', 'classifier' or 'extension'.");
+            }
+            boolean matched = false;
+            for (org.apache.maven.artifact.Artifact attached : project.getAttachedArtifacts()) {
+                if (selector.matches(attached)) {
+                    matched = true;
+                    skipped.add(attached.getId());
+                }
+            }
+            if (!matched) {
+                throw new MojoExecutionException("The skipAttachedArtifacts entry [" + selector + "] matches no"
+                        + " attached artifact of " + project.getGroupId() + ":" + project.getArtifactId() + ":"
+                        + project.getVersion() + "; attached artifacts: "
+                        + project.getAttachedArtifacts().stream()
+                                .filter(a -> !AttachedArtifact.isConsumerPom(a))
+                                .collect(Collectors.toList()));
+            }
+        }
+        return skipped;
     }
 
     private boolean isFile(File file) {
