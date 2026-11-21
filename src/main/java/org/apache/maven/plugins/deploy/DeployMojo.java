@@ -171,6 +171,30 @@ public class DeployMojo extends AbstractDeployMojo {
     @Parameter(defaultValue = "false", property = "allowIncompleteProjects")
     private boolean allowIncompleteProjects;
 
+    /**
+     * Attached artifacts that must not be deployed, for example a shaded or executable JAR that other modules of
+     * the build use but that is of no use in the remote repository. The main artifact, the POM and the
+     * consumer POM of Maven 4 are never skipped this way.
+     * <p>
+     * Each entry selects attached artifacts by {@code groupId}, {@code artifactId}, {@code classifier} and
+     * {@code extension}. Every element that is set must match; an element that is left out matches any value,
+     * and at least one element is required:
+     * <pre>
+     * &lt;skipAttachedArtifacts&gt;
+     *   &lt;attachedArtifact&gt;
+     *     &lt;classifier&gt;shaded&lt;/classifier&gt;
+     *     &lt;extension&gt;jar&lt;/extension&gt;
+     *   &lt;/attachedArtifact&gt;
+     * &lt;/skipAttachedArtifacts&gt;
+     * </pre>
+     * The build fails when an entry matches no attached artifact of the project, so that a misspelled entry
+     * cannot publish an artifact that was meant to stay local.
+     *
+     * @since 4.0.0-beta-4
+     */
+    @Parameter
+    private List<AttachedArtifact> skipAttachedArtifacts;
+
     private enum State {
         SKIPPED,
         DEPLOYED,
@@ -437,7 +461,9 @@ public class DeployMojo extends AbstractDeployMojo {
                     + ":" + project.getVersion() + " are not valid: they use invalid characters.");
         }
 
-        for (Artifact deployable : deployables) {
+        toDeploy.removeAll(selectSkippedAttachedArtifacts(attachedArtifacts));
+
+        for (Artifact deployable : List.copyOf(toDeploy)) {
             if (!isValidClassifier(deployable.getClassifier())) {
                 throw new MojoException("The classifier of attached artifact " + deployable
                         + " is not valid: uses invalid characters.");
@@ -477,6 +503,39 @@ public class DeployMojo extends AbstractDeployMojo {
                 .build();
 
         return request;
+    }
+
+    /**
+     * Returns the attached artifacts selected by {@link #skipAttachedArtifacts}. Fails on an entry that selects
+     * nothing: a silent no-op would upload an artifact the configuration asked to keep out of the repository.
+     */
+    private List<ProducedArtifact> selectSkippedAttachedArtifacts(Collection<ProducedArtifact> attachedArtifacts) {
+        List<ProducedArtifact> skipped = new ArrayList<>();
+        if (skipAttachedArtifacts == null) {
+            return skipped;
+        }
+        for (AttachedArtifact selector : skipAttachedArtifacts) {
+            if (selector == null || selector.isEmpty()) {
+                throw new MojoException("An entry of skipAttachedArtifacts is empty: set at least one of"
+                        + " 'groupId', 'artifactId', 'classifier' or 'extension'.");
+            }
+            List<ProducedArtifact> matched =
+                    attachedArtifacts.stream().filter(selector::matches).collect(Collectors.toList());
+            if (matched.isEmpty()) {
+                throw new MojoException("The skipAttachedArtifacts entry [" + selector + "] matches no attached"
+                        + " artifact of " + gav(project) + "; attached artifacts: "
+                        + attachedArtifacts.stream()
+                                .filter(a -> !AttachedArtifact.isConsumerPom(a))
+                                .collect(Collectors.toList()));
+            }
+            for (ProducedArtifact artifact : matched) {
+                if (!skipped.contains(artifact)) {
+                    getLog().info("Skipping deployment of attached artifact " + artifact);
+                    skipped.add(artifact);
+                }
+            }
+        }
+        return skipped;
     }
 
     /**
