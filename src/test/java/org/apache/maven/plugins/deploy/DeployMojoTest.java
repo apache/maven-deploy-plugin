@@ -57,6 +57,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.when;
@@ -389,6 +390,128 @@ class DeployMojoTest {
         assertEquals(expectedFiles.size(), fileList.size());
 
         assertEquals(0, getSizeOfExpectedFiles(fileList, expectedFiles));
+    }
+
+    @Test
+    @Basedir("/unit/deploy-skip-attached-artifacts")
+    @InjectMojo(goal = "deploy", pom = "plugin-config.xml")
+    void testSkippedAttachedArtifactsAreNotDeployed(DeployMojo mojo) throws Exception {
+        mojo.setPluginContext(new ConcurrentHashMap<>());
+        mavenProject.setVersion("1.0");
+        setProjectArtifact(mavenProject, "jar");
+        attachArtifact("jar", "shaded");
+        attachArtifact("zip", null);
+
+        mojo.execute();
+
+        assertDeployed(
+                remoteRepo,
+                GA_PATH + "1.0/maven-deploy-test-1.0.pom",
+                GA_PATH + "1.0/maven-deploy-test-1.0.jar",
+                GA_PATH + "1.0/maven-deploy-test-1.0.zip");
+        assertFalse(new File(remoteRepo, GA_PATH + "1.0/maven-deploy-test-1.0-shaded.jar").exists());
+        // the artifact stays attached to the project: only this deployment leaves it out
+        assertEquals(2, mavenProject.getAttachedArtifacts().size());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    void testSkippedAttachedArtifactElementLeftOutMatchesAnyValue(DeployMojo mojo) throws Exception {
+        mojo.setPluginContext(new ConcurrentHashMap<>());
+        mavenProject.setVersion("1.0");
+        setProjectArtifact(mavenProject, "jar");
+        attachArtifact("jar", "shaded");
+        attachArtifact("zip", null);
+        AttachedArtifact all = new AttachedArtifact();
+        all.setArtifactId("maven-deploy-test");
+        // a second entry selecting an artifact that an earlier entry already selected is not an error
+        AttachedArtifact zip = new AttachedArtifact();
+        zip.setExtension("zip");
+        setVariableValueToObject(mojo, "skipAttachedArtifacts", Arrays.asList(all, zip));
+
+        mojo.execute();
+
+        // the main artifact has the same artifactId and the extension jar, and is deployed all the same
+        assertDeployed(
+                remoteRepo, GA_PATH + "1.0/maven-deploy-test-1.0.pom", GA_PATH + "1.0/maven-deploy-test-1.0.jar");
+        assertFalse(new File(remoteRepo, GA_PATH + "1.0/maven-deploy-test-1.0-shaded.jar").exists());
+        assertFalse(new File(remoteRepo, GA_PATH + "1.0/maven-deploy-test-1.0.zip").exists());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    void testSkippedAttachedArtifactMatchingNothingFailsTheBuild(DeployMojo mojo) throws Exception {
+        mojo.setPluginContext(new ConcurrentHashMap<>());
+        setProjectArtifact(mavenProject, "jar");
+        attachArtifact("jar", "shaded");
+        AttachedArtifact misspelled = new AttachedArtifact();
+        misspelled.setClassifier("shadded");
+        setVariableValueToObject(mojo, "skipAttachedArtifacts", Collections.singletonList(misspelled));
+
+        MojoExecutionException e = assertThrows(MojoExecutionException.class, mojo::execute);
+
+        assertTrue(e.getMessage().contains("classifier=shadded"), e.getMessage());
+        assertTrue(e.getMessage().contains("matches no attached artifact"), e.getMessage());
+        assertFalse(remoteRepo.exists());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    void testEmptySkippedAttachedArtifactFailsTheBuild(DeployMojo mojo) throws Exception {
+        mojo.setPluginContext(new ConcurrentHashMap<>());
+        setProjectArtifact(mavenProject, "jar");
+        attachArtifact("jar", "shaded");
+        setVariableValueToObject(mojo, "skipAttachedArtifacts", Collections.singletonList(new AttachedArtifact()));
+
+        MojoExecutionException e = assertThrows(MojoExecutionException.class, mojo::execute);
+
+        assertTrue(e.getMessage().contains("is empty"), e.getMessage());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    void testSkippedAttachedArtifactsNeverSelectTheConsumerPom(DeployMojo mojo) throws Exception {
+        mojo.setPluginContext(new ConcurrentHashMap<>());
+        mavenProject.setVersion("1.0");
+        setProjectArtifact(mavenProject, "jar");
+        attachArtifact("jar", "shaded");
+        // Maven 4 attaches the consumer POM to every project
+        attachArtifact("pom", "consumer");
+        AttachedArtifact all = new AttachedArtifact();
+        all.setArtifactId("maven-deploy-test");
+        setVariableValueToObject(mojo, "skipAttachedArtifacts", Collections.singletonList(all));
+
+        mojo.execute();
+
+        assertDeployed(
+                remoteRepo,
+                GA_PATH + "1.0/maven-deploy-test-1.0.pom",
+                GA_PATH + "1.0/maven-deploy-test-1.0.jar",
+                GA_PATH + "1.0/maven-deploy-test-1.0-consumer.pom");
+        assertFalse(new File(remoteRepo, GA_PATH + "1.0/maven-deploy-test-1.0-shaded.jar").exists());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    void testSkippedAttachedArtifactSelectingOnlyTheConsumerPomFailsTheBuild(DeployMojo mojo) throws Exception {
+        mojo.setPluginContext(new ConcurrentHashMap<>());
+        setProjectArtifact(mavenProject, "jar");
+        attachArtifact("pom", "consumer");
+        AttachedArtifact consumer = new AttachedArtifact();
+        consumer.setClassifier("consumer");
+        setVariableValueToObject(mojo, "skipAttachedArtifacts", Collections.singletonList(consumer));
+
+        MojoExecutionException e = assertThrows(MojoExecutionException.class, mojo::execute);
+
+        assertTrue(e.getMessage().contains("matches no attached artifact"), e.getMessage());
+    }
+
+    private void attachArtifact(String type, String classifier) throws IOException {
+        mavenProjectHelper.attachArtifact(
+                mavenProject,
+                type,
+                classifier,
+                Files.createTempFile(tempDir, "test-attached", type).toFile());
     }
 
     @Test

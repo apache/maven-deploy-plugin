@@ -77,6 +77,40 @@ under the License.
 </plugin>]]></source>
        </answer>
      </faq>
+     <faq id="skipAttachedArtifacts">
+       <question>I don't want to deploy one of the attached artifacts of a module. Can I skip it?</question>
+       <answer>
+         <p>
+           Yes. An attached artifact, for example a shaded JAR that other modules of the build use but that is of no
+           use in the remote repository, stays out of the deployment when you select it with
+           <code>skipAttachedArtifacts</code>:
+         </p>
+         <source>
+<![CDATA[<plugin>
+  <groupId>org.apache.maven.plugins</groupId>
+  <artifactId>maven-deploy-plugin</artifactId>
+  <version>X.Y</version>
+  <configuration>
+    <skipAttachedArtifacts>
+      <attachedArtifact>
+        <classifier>shaded</classifier>
+        <extension>jar</extension>
+      </attachedArtifact>
+    </skipAttachedArtifacts>
+  </configuration>
+</plugin>]]></source>
+         <p>
+           An entry selects by <code>groupId</code>, <code>artifactId</code>, <code>classifier</code> and
+           <code>extension</code>. An element you leave out matches any value, and at least one element is required.
+           The main artifact and the POM, including the consumer POM of Maven 4, are always deployed, and the
+           artifact is still installed in the local repository.
+         </p>
+         <p>
+           The build fails when an entry matches no attached artifact of the project, so configure the parameter in
+           the module that attaches the artifact rather than in a parent POM.
+         </p>
+       </answer>
+     </faq>
      <faq id="deploy_deploy">
        <question>What does the message "The packaging for this project did not assign a file to the build artifact" mean when I run <code>deploy:deploy</code>?</question>
        <answer>
