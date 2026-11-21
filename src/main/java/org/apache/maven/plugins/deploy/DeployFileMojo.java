@@ -275,7 +275,12 @@ public class DeployFileMojo extends AbstractDeployMojo {
                         if (propertiesEntry != null) {
                             try (InputStream propertiesInputStream = jarFile.getInputStream(propertiesEntry)) {
                                 Properties properties = new Properties();
-                                properties.load(propertiesInputStream);
+                                try {
+                                    properties.load(propertiesInputStream);
+                                } catch (IllegalArgumentException e) {
+                                    // a malformed unicode escape; report it like any other unreadable entry
+                                    throw new IOException("malformed " + propertiesEntry.getName(), e);
+                                }
                                 processPomProperties(properties);
                             }
                         }
