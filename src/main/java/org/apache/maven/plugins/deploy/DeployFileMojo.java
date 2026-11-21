@@ -605,9 +605,10 @@ public class DeployFileMojo extends AbstractDeployMojo {
     }
 
     /**
-     * Completes coordinates that remain unresolved after processing the embedded POM. Only pure property references
-     * are supported; compound expressions such as {@code 1.0-${changelist}} are intentionally left unchanged. The
-     * replacement values are read from the adjacent {@code pom.properties} file.
+     * Completes coordinates that remain unresolved after processing the embedded POM. A coordinate that still
+     * contains a property reference, such as {@code ${revision}} or {@code 1.0-${changelist}}, is replaced as a
+     * whole by the value recorded in the adjacent {@code pom.properties} file. Coordinates without a property
+     * reference are never overwritten.
      *
      * @param properties the properties read from the adjacent {@code pom.properties} file
      */
@@ -626,7 +627,7 @@ public class DeployFileMojo extends AbstractDeployMojo {
     }
 
     private static boolean isUnresolvedProperty(String value) {
-        return value != null && value.startsWith("${") && value.endsWith("}");
+        return value != null && value.contains("${");
     }
 
     /**

@@ -172,14 +172,14 @@ class DeployFileMojoUnitTest {
     }
 
     @Test
-    void processPomPropertiesLeavesCompoundExpressionsUnchanged() {
+    void processPomPropertiesResolvesCompoundExpressions() {
         mojo.setVersion("1.0-${changelist}");
         Properties properties = new Properties();
-        properties.setProperty("version", "2.0.0");
+        properties.setProperty("version", "1.0-SNAPSHOT");
 
         mojo.processPomProperties(properties);
 
-        assertEquals("1.0-${changelist}", mojo.getVersion());
+        assertEquals("1.0-SNAPSHOT", mojo.getVersion());
     }
 
     private void checkMojoProperties(
