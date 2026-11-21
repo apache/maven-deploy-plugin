@@ -22,6 +22,7 @@ import javax.inject.Inject;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -30,6 +31,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import org.apache.maven.api.plugin.testing.Basedir;
 import org.apache.maven.api.plugin.testing.InjectMojo;
@@ -49,6 +52,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import static org.apache.maven.api.plugin.testing.MojoExtension.setVariableValueToObject;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -526,6 +530,33 @@ class DeployMojoTest {
         mojo.execute();
 
         assertDeployed(remoteRepo, GA_PATH + "maven-metadata.xml", GA_PATH + "1.0/maven-deploy-test-1.0.pom");
+        assertFalse(new File(remoteRepo, GA_PATH + "1.0/maven-deploy-test-1.0.jar").exists());
+    }
+
+    /**
+     * {@code jar:jar} on a pom-packaged project sets the JAR as the file of {@code project.getArtifact()}; deploy must
+     * still upload the POM under the {@code .pom} name (#203).
+     */
+    @Test
+    @InjectMojo(goal = "deploy")
+    void testDeployPomProjectAfterJarJarDeploysPom(DeployMojo mojo) throws Exception {
+        mojo.setPluginContext(new ConcurrentHashMap<>());
+        mavenProject.setVersion("1.0");
+        setProjectArtifact(mavenProject, "pom");
+        mavenProject.setPackaging("pom");
+        Path jar = tempDir.resolve("maven-deploy-test-1.0.jar");
+        try (ZipOutputStream zip = new ZipOutputStream(Files.newOutputStream(jar))) {
+            zip.putNextEntry(new ZipEntry("META-INF/MANIFEST.MF"));
+            zip.write("Manifest-Version: 1.0\n".getBytes(StandardCharsets.UTF_8));
+            zip.closeEntry();
+        }
+        mavenProject.getArtifact().setFile(jar.toFile());
+
+        mojo.execute();
+
+        Path deployedPom = remoteRepo.toPath().resolve(GA_PATH + "1.0/maven-deploy-test-1.0.pom");
+        assertTrue(Files.isRegularFile(deployedPom), "missing " + deployedPom);
+        assertArrayEquals(Files.readAllBytes(mavenProject.getFile().toPath()), Files.readAllBytes(deployedPom));
         assertFalse(new File(remoteRepo, GA_PATH + "1.0/maven-deploy-test-1.0.jar").exists());
     }
 
