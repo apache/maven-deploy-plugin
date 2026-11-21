@@ -188,6 +188,140 @@ class DeployMojoTest {
     @Test
     @InjectMojo(goal = "deploy")
     @MojoParameter(name = "deployAtEnd", value = "false")
+    void skippedAttachedArtifactsAreNotDeployed(DeployMojo mojo) throws Exception {
+        Project project = attachShadedJarAndZip(mojo);
+        AttachedArtifact shaded = new AttachedArtifact();
+        shaded.setClassifier("shaded");
+        shaded.setExtension("jar");
+        setVariableValueToObject(mojo, "skipAttachedArtifacts", List.of(shaded));
+
+        ArtifactDeployerRequest request = execute(mojo);
+
+        assertNotNull(request);
+        assertEquals(
+                Arrays.asList(
+                        "org.apache.maven.test:maven-deploy-test:pom:1.0-SNAPSHOT",
+                        "org.apache.maven.test:maven-deploy-test:jar:1.0-SNAPSHOT",
+                        "org.apache.maven.test:maven-deploy-test:zip:1.0-SNAPSHOT"),
+                request.getArtifacts().stream().map(Artifact::key).collect(Collectors.toList()));
+        // the artifact stays attached to the project: only this deployment leaves it out
+        assertEquals(2, projectManager.getAttachedArtifacts(project).size());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    @MojoParameter(name = "deployAtEnd", value = "false")
+    void skippedAttachedArtifactElementLeftOutMatchesAnyValue(DeployMojo mojo) throws Exception {
+        attachShadedJarAndZip(mojo);
+        AttachedArtifact all = new AttachedArtifact();
+        all.setArtifactId("maven-deploy-test");
+        // a second entry selecting an artifact that an earlier entry already selected is not an error
+        AttachedArtifact zip = new AttachedArtifact();
+        zip.setExtension("zip");
+        setVariableValueToObject(mojo, "skipAttachedArtifacts", List.of(all, zip));
+
+        ArtifactDeployerRequest request = execute(mojo);
+
+        assertNotNull(request);
+        // the main artifact has the same artifactId and the extension jar, and is deployed all the same
+        assertEquals(
+                Arrays.asList(
+                        "org.apache.maven.test:maven-deploy-test:pom:1.0-SNAPSHOT",
+                        "org.apache.maven.test:maven-deploy-test:jar:1.0-SNAPSHOT"),
+                request.getArtifacts().stream().map(Artifact::key).collect(Collectors.toList()));
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    @MojoParameter(name = "deployAtEnd", value = "false")
+    void skippedAttachedArtifactMatchingNothingFailsTheBuild(DeployMojo mojo) throws Exception {
+        attachShadedJarAndZip(mojo);
+        AttachedArtifact misspelled = new AttachedArtifact();
+        misspelled.setClassifier("shadded");
+        setVariableValueToObject(mojo, "skipAttachedArtifacts", List.of(misspelled));
+
+        MojoException e = assertThrows(MojoException.class, mojo::execute);
+
+        assertTrue(e.getMessage().contains("classifier=shadded"), e.getMessage());
+        assertTrue(e.getMessage().contains("matches no attached artifact"), e.getMessage());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    @MojoParameter(name = "deployAtEnd", value = "false")
+    void emptySkippedAttachedArtifactFailsTheBuild(DeployMojo mojo) throws Exception {
+        attachShadedJarAndZip(mojo);
+        setVariableValueToObject(mojo, "skipAttachedArtifacts", List.of(new AttachedArtifact()));
+
+        MojoException e = assertThrows(MojoException.class, mojo::execute);
+
+        assertTrue(e.getMessage().contains("is empty"), e.getMessage());
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    @MojoParameter(name = "deployAtEnd", value = "false")
+    void skippedAttachedArtifactsNeverSelectTheConsumerPom(DeployMojo mojo) throws Exception {
+        Project project = attachShadedJarAndZip(mojo);
+        // Maven 4 attaches the consumer POM to every project
+        projectManager.attachArtifact(
+                project,
+                new ProducedArtifactStub(
+                        "org.apache.maven.test", "maven-deploy-test", "consumer", "1.0-SNAPSHOT", "pom"),
+                Paths.get(getBasedir(), "src/test/resources/unit/pom.xml"));
+        AttachedArtifact all = new AttachedArtifact();
+        all.setArtifactId("maven-deploy-test");
+        setVariableValueToObject(mojo, "skipAttachedArtifacts", List.of(all));
+
+        ArtifactDeployerRequest request = execute(mojo);
+
+        assertNotNull(request);
+        assertEquals(
+                Arrays.asList(
+                        "org.apache.maven.test:maven-deploy-test:pom:1.0-SNAPSHOT",
+                        "org.apache.maven.test:maven-deploy-test:jar:1.0-SNAPSHOT",
+                        "org.apache.maven.test:maven-deploy-test:pom:consumer:1.0-SNAPSHOT"),
+                request.getArtifacts().stream().map(Artifact::key).collect(Collectors.toList()));
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    @MojoParameter(name = "deployAtEnd", value = "false")
+    void skippedAttachedArtifactSelectingOnlyTheConsumerPomFailsTheBuild(DeployMojo mojo) throws Exception {
+        Project project = attachShadedJarAndZip(mojo);
+        projectManager.attachArtifact(
+                project,
+                new ProducedArtifactStub(
+                        "org.apache.maven.test", "maven-deploy-test", "consumer", "1.0-SNAPSHOT", "pom"),
+                Paths.get(getBasedir(), "src/test/resources/unit/pom.xml"));
+        AttachedArtifact consumer = new AttachedArtifact();
+        consumer.setClassifier("consumer");
+        setVariableValueToObject(mojo, "skipAttachedArtifacts", List.of(consumer));
+
+        MojoException e = assertThrows(MojoException.class, mojo::execute);
+
+        assertTrue(e.getMessage().contains("matches no attached artifact"), e.getMessage());
+    }
+
+    private Project attachShadedJarAndZip(DeployMojo mojo) throws Exception {
+        Project project = (Project) getVariableValueFromObject(mojo, "project");
+        projectManager.attachArtifact(
+                project,
+                new ProducedArtifactStub("org.apache.maven.test", "maven-deploy-test", "shaded", "1.0-SNAPSHOT", "jar"),
+                Paths.get(getBasedir(), "target/test-classes/unit/attached-artifact-test-1.0-SNAPSHOT.jar"));
+        projectManager.attachArtifact(
+                project,
+                new ProducedArtifactStub("org.apache.maven.test", "maven-deploy-test", "", "1.0-SNAPSHOT", "zip"),
+                Paths.get(getBasedir(), "target/test-classes/unit/maven-deploy-test.zip"));
+        artifactManager.setPath(
+                project.getMainArtifact().get(),
+                Paths.get(getBasedir(), "target/test-classes/unit/maven-deploy-test-1.0-SNAPSHOT.jar"));
+        return project;
+    }
+
+    @Test
+    @InjectMojo(goal = "deploy")
+    @MojoParameter(name = "deployAtEnd", value = "false")
     @MojoParameter(name = "allowIncompleteProjects", value = "true")
     void mainArtifactWithDirectoryPathIsSkippedWhenAttachmentsExist(DeployMojo mojo) throws Exception {
         // Module source hierarchy: the JAR plugin attaches one JAR per Java module and never assigns a

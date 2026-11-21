@@ -27,6 +27,7 @@ under the License.
 
 1. [I get an Unsupported Protocol Error when deploying a 3rd party jar. What should I do?](#question)
 1. [I don't want to deploy one of the artifacts in my multi-module build. Can I skip deployment?](#skip)
+1. [I don't want to deploy one of the attached artifacts of a module. Can I skip it?](#skipAttachedArtifacts)
 1. [What does the message &quot;The packaging for this project did not assign a file to the build artifact&quot; mean when I run `deploy:deploy`?](#deploy_deploy)
 
 <a id="question"></a>
@@ -60,6 +61,38 @@ as follows:
   </configuration>
 </plugin>
 ```
+
+<a id="skipAttachedArtifacts"></a>
+
+### I don't want to deploy one of the attached artifacts of a module. Can I skip it?
+
+Yes. An attached artifact, for example a shaded JAR that other modules of the build use
+but that is of no use in the remote repository, stays out of the deployment when you
+select it with `skipAttachedArtifacts`:
+
+```xml
+<plugin>
+  <groupId>org.apache.maven.plugins</groupId>
+  <artifactId>maven-deploy-plugin</artifactId>
+  <version>X.Y</version>
+  <configuration>
+    <skipAttachedArtifacts>
+      <attachedArtifact>
+        <classifier>shaded</classifier>
+        <extension>jar</extension>
+      </attachedArtifact>
+    </skipAttachedArtifacts>
+  </configuration>
+</plugin>
+```
+
+An entry selects by `groupId`, `artifactId`, `classifier` and `extension`. An element you
+leave out matches any value, and at least one element is required. The main artifact and
+the POM, including the consumer POM of Maven 4, are always deployed, and the artifact is
+still installed in the local repository.
+
+The build fails when an entry matches no attached artifact of the project, so configure
+the parameter in the module that attaches the artifact rather than in a parent POM.
 
 <a id="deploy_deploy"></a>
 
