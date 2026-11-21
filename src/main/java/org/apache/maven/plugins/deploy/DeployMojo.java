@@ -426,9 +426,9 @@ public class DeployMojo extends AbstractDeployMojo {
         List<ProducedArtifact> toDeploy = new ArrayList<>(deployables);
 
         ArtifactManager artifactManager = getArtifactManager();
-        if (artifactManager.getPath(project.getPomArtifact()).isEmpty()) {
-            artifactManager.setPath(project.getPomArtifact(), project.getPomPath());
-        }
+        // Always point the POM artifact at the project's POM: on a pom-packaged project, jar:jar may already have set
+        // the JAR as the file of the artifact with the POM's coordinates.
+        artifactManager.setPath(project.getPomArtifact(), project.getPomPath());
 
         if (!isValidId(project.getGroupId())
                 || !isValidId(project.getArtifactId())
