@@ -17,9 +17,6 @@
  * under the License.
  */
 
-import java.io.*;
-import java.util.*;
-
 String[] paths =
 [
     "org/apache/maven/its/mdeploy-213/test/1.0/test-1.0.pom",
@@ -38,5 +35,3 @@ for ( String path : paths )
         throw new FileNotFoundException( "Missing: " + file.getAbsolutePath() );
     }
 }
-
-return true;
