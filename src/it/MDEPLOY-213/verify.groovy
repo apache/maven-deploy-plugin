@@ -18,20 +18,18 @@
  */
 
 String[] paths =
-[
-    "org/apache/maven/its/mdeploy-213/test/1.0/test-1.0.pom",
-    "org/apache/maven/its/mdeploy-213/test/1.0/test-1.0.tar.gz",
-    "org/apache/maven/its/mdeploy-213/test/1.0/test-1.0-it.zip",
-    "org/apache/maven/its/mdeploy-213/test/1.0/test-1.0.jar",
-    "org/apache/maven/its/mdeploy-213/test/1.0/test-1.0-javadoc.jar",
-];
+        [
+            "org/apache/maven/its/mdeploy-213/test/1.0/test-1.0.pom",
+            "org/apache/maven/its/mdeploy-213/test/1.0/test-1.0.tar.gz",
+            "org/apache/maven/its/mdeploy-213/test/1.0/test-1.0-it.zip",
+            "org/apache/maven/its/mdeploy-213/test/1.0/test-1.0.jar",
+            "org/apache/maven/its/mdeploy-213/test/1.0/test-1.0-javadoc.jar",
+        ]
 
-for ( String path : paths )
-{
-    File file = new File( new File( basedir, "target/repo" ), path );
-    System.out.println( "Checking for existence of " + file );
-    if ( !file.isFile() )
-    {
-        throw new FileNotFoundException( "Missing: " + file.getAbsolutePath() );
+for (String path : paths) {
+    File file = new File(new File(basedir, "target/repo"), path)
+    System.out.println("Checking for existence of " + file)
+    if (!file.isFile()) {
+        throw new FileNotFoundException("Missing: " + file.getAbsolutePath())
     }
 }
