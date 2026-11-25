@@ -17,10 +17,10 @@
  * under the License.
  */
 
-File file = new File( localRepositoryPath, "org/apache/maven/its/deploy/nmas" );
-System.out.println( "Deleting " + file );
-assert file.deleteDir();
+File file = new File(localRepositoryPath, "org/apache/maven/its/deploy/nmas")
+System.out.println("Deleting " + file)
+assert file.deleteDir()
 
-file = new File( basedir, "target/repo" );
-System.out.println( "Deleting " + file );
-assert file.deleteDir();
+file = new File(basedir, "target/repo")
+System.out.println("Deleting " + file)
+assert file.deleteDir()
