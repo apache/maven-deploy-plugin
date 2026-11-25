@@ -20,8 +20,12 @@
 File deployedDir = new File(basedir, "target/repo/org/apache/maven/plugins/deploy/its/deployfile-snapshot-skip-fail/1.0-SNAPSHOT")
 assert deployedDir.exists()
 assert deployedDir.isDirectory()
-assert deployedDir.listFiles({ File file, String name -> name.matches("deployfile-snapshot-skip-fail-1\\.0-.*\\.jar") } as FilenameFilter).length == 1
-assert deployedDir.listFiles({ File file, String name -> name.matches("deployfile-snapshot-skip-fail-1\\.0-.*\\.pom") } as FilenameFilter).length == 1
+assert deployedDir.listFiles({ File file, String name ->
+    name.matches("deployfile-snapshot-skip-fail-1\\.0-.*\\.jar")
+} as FilenameFilter).length == 1
+assert deployedDir.listFiles({ File file, String name ->
+    name.matches("deployfile-snapshot-skip-fail-1\\.0-.*\\.pom")
+} as FilenameFilter).length == 1
 
 File buildLog = new File(basedir, 'build.log')
 assert buildLog.exists()

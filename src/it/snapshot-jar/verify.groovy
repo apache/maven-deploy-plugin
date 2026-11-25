@@ -17,32 +17,29 @@
  * under the License.
  */
 
-import java.io.*;
-import java.util.*;
+import java.io.*
+import java.util.*
 
-import org.codehaus.plexus.util.*;
+import org.codehaus.plexus.util.*
 
 String[] paths =
-[
-    "org/apache/maven/its/deploy/sj/test/maven-metadata.xml",
-    "org/apache/maven/its/deploy/sj/test/1.0-SNAPSHOT/maven-metadata.xml",
-    "org/apache/maven/its/deploy/sj/test/1.0-SNAPSHOT/test-1.0-*.pom",
-    "org/apache/maven/its/deploy/sj/test/1.0-SNAPSHOT/test-1.0-*.jar",
-];
+        [
+            "org/apache/maven/its/deploy/sj/test/maven-metadata.xml",
+            "org/apache/maven/its/deploy/sj/test/1.0-SNAPSHOT/maven-metadata.xml",
+            "org/apache/maven/its/deploy/sj/test/1.0-SNAPSHOT/test-1.0-*.pom",
+            "org/apache/maven/its/deploy/sj/test/1.0-SNAPSHOT/test-1.0-*.jar",
+        ]
 
-File repoDir = new File( basedir, "target/repo" );
+File repoDir = new File(basedir, "target/repo")
 
-for ( String path : paths )
-{
-    File file = new File( repoDir, path );
-    System.out.println( "Checking for existence of " + file );
-    if ( !file.isFile() )
-    {
-        if ( FileUtils.getFiles( repoDir, path, null ).isEmpty() )
-        {
-            throw new FileNotFoundException( "Missing: " + file.getAbsolutePath() );
+for (String path : paths) {
+    File file = new File(repoDir, path)
+    System.out.println("Checking for existence of " + file)
+    if (!file.isFile()) {
+        if (FileUtils.getFiles(repoDir, path, null).isEmpty()) {
+            throw new FileNotFoundException("Missing: " + file.getAbsolutePath())
         }
     }
 }
 
-return true;
+return true

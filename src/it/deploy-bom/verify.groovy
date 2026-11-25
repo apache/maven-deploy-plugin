@@ -18,14 +18,16 @@
  */
 
 def expectedDeploys = [
-//        'org/apache/maven/its/deploy/bom/test/1.0/test-1.0-build.pom', - rc-2 fix
-        'org/apache/maven/its/deploy/bom/test/1.0/test-1.0.pom',
-        'org/apache/maven/its/deploy/bom/test/maven-metadata.xml',
+    //        'org/apache/maven/its/deploy/bom/test/1.0/test-1.0-build.pom', - rc-2 fix
+    'org/apache/maven/its/deploy/bom/test/1.0/test-1.0.pom',
+    'org/apache/maven/its/deploy/bom/test/maven-metadata.xml',
 ]
 
-def repoDir = new File ( basedir, 'target/repo')
+def repoDir = new File(basedir, 'target/repo')
 
-def missingDeploys = expectedDeploys.findAll { ! new File(repoDir, it).isFile() }
+def missingDeploys = expectedDeploys.findAll {
+    ! new File(repoDir, it).isFile()
+}
 
 assert missingDeploys.size() == 0
 

@@ -19,23 +19,22 @@
 
 // the repository URL is relative to the basedir of each module on Maven 3 and to the root on Maven 4
 def deployed = []
-basedir.eachFileRecurse( groovy.io.FileType.FILES ) { file ->
-    if ( file.path.replace( '\\', '/' ).contains( '/target/repo/' ) )
-    {
+basedir.eachFileRecurse(groovy.io.FileType.FILES) { file ->
+    if (file.path.replace('\\', '/').contains('/target/repo/')) {
         deployed << file.name
     }
 }
 
-assert deployed.contains( 'module1-1.0.pom' )
-assert deployed.contains( 'module1-1.0.jar' )
-assert deployed.contains( 'module2-1.0.pom' )
-assert deployed.contains( 'module2-1.0.jar' )
+assert deployed.contains('module1-1.0.pom')
+assert deployed.contains('module1-1.0.jar')
+assert deployed.contains('module2-1.0.pom')
+assert deployed.contains('module2-1.0.jar')
 
 // module1 holds its sources JAR back; the JAR was built and is still attached
-assert new File( basedir, 'module1/target/module1-1.0-sources.jar' ).isFile()
-assert !deployed.contains( 'module1-1.0-sources.jar' )
+assert new File(basedir, 'module1/target/module1-1.0-sources.jar').isFile()
+assert !deployed.contains('module1-1.0-sources.jar')
 
 // module2, the last module of the build, has no skipAttachedArtifacts and deploys its sources JAR
-assert deployed.contains( 'module2-1.0-sources.jar' )
+assert deployed.contains('module2-1.0-sources.jar')
 
-assert new File( basedir, 'build.log' ).text.contains( 'Skipping deployment of attached artifact' )
+assert new File(basedir, 'build.log').text.contains('Skipping deployment of attached artifact')

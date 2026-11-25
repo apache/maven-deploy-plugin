@@ -17,13 +17,13 @@
  * under the License.
  */
 
-assert new File( basedir, "target/repo/org/apache/maven/plugins/deploy/its/mdeploy178/1.0/mdeploy178-1.0.jar" ).exists()
-File deployedPom = new File( basedir, "target/repo/org/apache/maven/plugins/deploy/its/mdeploy178/1.0/mdeploy178-1.0.pom" )
+assert new File(basedir, "target/repo/org/apache/maven/plugins/deploy/its/mdeploy178/1.0/mdeploy178-1.0.jar").exists()
+File deployedPom = new File(basedir, "target/repo/org/apache/maven/plugins/deploy/its/mdeploy178/1.0/mdeploy178-1.0.pom")
 assert deployedPom.exists()
 
-File buildLog = new File( basedir, 'build.log' )
+File buildLog = new File(basedir, 'build.log')
 assert buildLog.exists()
-assert buildLog.text.contains( "[DEBUG] Using META-INF/maven/org.apache.maven.plugins.deploy.its/mdeploy178/pom.xml as pomFile" )
+assert buildLog.text.contains("[DEBUG] Using META-INF/maven/org.apache.maven.plugins.deploy.its/mdeploy178/pom.xml as pomFile")
 
-def pomProject = new groovy.xml.XmlParser().parse( deployedPom )
-assert "https://issues.apache.org/jira/browse/MDEPLOY-178".equals( pomProject.get("url").text() )
+def pomProject = new groovy.xml.XmlParser().parse(deployedPom)
+assert "https://issues.apache.org/jira/browse/MDEPLOY-178".equals(pomProject.get("url").text())

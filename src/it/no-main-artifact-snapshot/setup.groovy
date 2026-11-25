@@ -17,17 +17,17 @@
  * under the License.
  */
 
-import java.io.*;
-import java.util.*;
+import java.io.*
+import java.util.*
 
-import org.codehaus.plexus.util.*;
+import org.codehaus.plexus.util.*
 
-File file = new File( localRepositoryPath, "org/apache/maven/its/deploy/nmas" );
-System.out.println( "Deleting " + file );
-FileUtils.deleteDirectory( file );
+File file = new File(localRepositoryPath, "org/apache/maven/its/deploy/nmas")
+System.out.println("Deleting " + file)
+FileUtils.deleteDirectory(file)
 
-file = new File( basedir, "target/repo" );
-System.out.println( "Deleting " + file );
-FileUtils.deleteDirectory( file );
+file = new File(basedir, "target/repo")
+System.out.println("Deleting " + file)
+FileUtils.deleteDirectory(file)
 
-return true;
+return true

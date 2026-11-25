@@ -17,10 +17,10 @@
  * under the License.
  */
 
-assert !( new File( basedir, "target/repo/org/apache/maven/its/deploy/dae/fail/dae/1.0/dae-1.0.pom" ).exists() )
-assert !( new File( basedir, "module1/target/repo/org/apache/maven/its/deploy/dae/fail/module1/1.0/module1-1.0.pom" ).exists() )
+assert !(new File(basedir, "target/repo/org/apache/maven/its/deploy/dae/fail/dae/1.0/dae-1.0.pom").exists())
+assert !(new File(basedir, "module1/target/repo/org/apache/maven/its/deploy/dae/fail/module1/1.0/module1-1.0.pom").exists())
 
-File buildLog = new File( basedir, 'build.log' )
+File buildLog = new File(basedir, 'build.log')
 assert buildLog.exists()
-assert buildLog.text.contains( "[INFO] Deferring deploy for org.apache.maven.its.deploy.dae.fail:dae:1.0 at end" )
+assert buildLog.text.contains("[INFO] Deferring deploy for org.apache.maven.its.deploy.dae.fail:dae:1.0 at end")
 

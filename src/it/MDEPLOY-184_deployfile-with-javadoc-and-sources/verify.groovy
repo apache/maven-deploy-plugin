@@ -17,7 +17,7 @@
  * under the License.
  */
 
-assert new File( basedir, "target/repo/org/apache/maven/its/deploy/184/artifact-name/1.0/artifact-name-1.0.jar" ).exists()
-assert new File( basedir, "target/repo/org/apache/maven/its/deploy/184/artifact-name/1.0/artifact-name-1.0.pom" ).exists()
-assert new File( basedir, "target/repo/org/apache/maven/its/deploy/184/artifact-name/1.0/artifact-name-1.0-sources.jar" ).exists()
-assert new File( basedir, "target/repo/org/apache/maven/its/deploy/184/artifact-name/1.0/artifact-name-1.0-javadoc.jar" ).exists()
+assert new File(basedir, "target/repo/org/apache/maven/its/deploy/184/artifact-name/1.0/artifact-name-1.0.jar").exists()
+assert new File(basedir, "target/repo/org/apache/maven/its/deploy/184/artifact-name/1.0/artifact-name-1.0.pom").exists()
+assert new File(basedir, "target/repo/org/apache/maven/its/deploy/184/artifact-name/1.0/artifact-name-1.0-sources.jar").exists()
+assert new File(basedir, "target/repo/org/apache/maven/its/deploy/184/artifact-name/1.0/artifact-name-1.0-javadoc.jar").exists()

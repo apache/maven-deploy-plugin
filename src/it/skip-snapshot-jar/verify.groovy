@@ -17,30 +17,27 @@
  * under the License.
  */
 
-import java.io.*;
-import java.util.*;
+import java.io.*
+import java.util.*
 
 String[] paths =
-[
-    "org/apache/maven/its/deploy/ssj/test/maven-metadata.xml",
-    "org/apache/maven/its/deploy/ssj/test/1.0.0-SNAPSHOT/test-1.0.0-SNAPSHOT.pom",
-    "org/apache/maven/its/deploy/ssj/test/1.0.0-SNAPSHOT/test-1.0.0-SNAPSHOT.jar",
-];
+        [
+            "org/apache/maven/its/deploy/ssj/test/maven-metadata.xml",
+            "org/apache/maven/its/deploy/ssj/test/1.0.0-SNAPSHOT/test-1.0.0-SNAPSHOT.pom",
+            "org/apache/maven/its/deploy/ssj/test/1.0.0-SNAPSHOT/test-1.0.0-SNAPSHOT.jar",
+        ]
 
-for ( String path : paths )
-{
-    File file = new File( new File( basedir, "target/repo" ), path );
-    System.out.println( "Checking for existence of " + file );
-    if ( file.isFile() )
-    {
-        throw new IllegalStateException( "File has been deployed: " + file.getAbsolutePath() );
+for (String path : paths) {
+    File file = new File(new File(basedir, "target/repo"), path)
+    System.out.println("Checking for existence of " + file)
+    if (file.isFile()) {
+        throw new IllegalStateException("File has been deployed: " + file.getAbsolutePath())
     }
 }
 
-File directory = new File( new File( basedir, "target/repo" ), "org/apache/maven/its/deploy/ssj/test/1.0.0-SNAPSHOT/" );
-if ( directory.exists() )
-{
-    throw new IllegalStateException( "directory exists: " + directory.getAbsolutePath() );
+File directory = new File(new File(basedir, "target/repo"), "org/apache/maven/its/deploy/ssj/test/1.0.0-SNAPSHOT/")
+if (directory.exists()) {
+    throw new IllegalStateException("directory exists: " + directory.getAbsolutePath())
 }
 
-return true;
+return true

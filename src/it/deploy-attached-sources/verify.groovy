@@ -18,62 +18,52 @@
  * under the License.
  */
 
-import java.io.*;
-import java.util.*;
-import java.util.jar.*;
-import org.codehaus.plexus.util.*;
+import java.io.*
+import java.util.*
+import java.util.jar.*
+import org.codehaus.plexus.util.*
 
-boolean result = true;
+boolean result = true
 
-try
-{
-    File target = new File( basedir, "target" );
-    if ( !target.exists() || !target.isDirectory() )
-    {
-        System.err.println( "target file is missing or not a directory." );
-        return false;
+try {
+    File target = new File(basedir, "target")
+    if (!target.exists() || !target.isDirectory()) {
+        System.err.println("target file is missing or not a directory.")
+        return false
     }
 
-    File deployedDir = new File( target, "repo/org/apache/maven/its/deploy/test/1.0-SNAPSHOT/" );
-    if ( !deployedDir.isDirectory() )
-    {
-        System.err.println( "deployedDir is missing or is not a directory." );
-        return false;
+    File deployedDir = new File(target, "repo/org/apache/maven/its/deploy/test/1.0-SNAPSHOT/")
+    if (!deployedDir.isDirectory()) {
+        System.err.println("deployedDir is missing or is not a directory.")
+        return false
     }
 
-    boolean sourcesExists = false;
-    boolean javadocsExists = false;
+    boolean sourcesExists = false
+    boolean javadocsExists = false
 
-    String [] fileList = deployedDir.list();
-    for ( int i=0; i<fileList.length; ++i )
-    {
-        if ( fileList[i].endsWith( "-1-sources.jar" ) )
-        {
-            sourcesExists = true;
+    String [] fileList = deployedDir.list()
+    for (int i = 0; i<fileList.length; ++i) {
+        if (fileList[i].endsWith("-1-sources.jar")) {
+            sourcesExists = true
         }
-        if ( fileList[i].endsWith( "-1-javadoc.jar" ) )
-        {
-            javadocsExists = true;
+        if (fileList[i].endsWith("-1-javadoc.jar")) {
+            javadocsExists = true
         }
     }
 
-    if ( !sourcesExists )
-    {
-        System.err.println( "Unable to find deployed sources jar" );
-        return false;
+    if (!sourcesExists) {
+        System.err.println("Unable to find deployed sources jar")
+        return false
     }
 
-    if ( !javadocsExists )
-    {
-        System.err.println( "Unable to find deployed javadocs jar" );
-        return false;
+    if (!javadocsExists) {
+        System.err.println("Unable to find deployed javadocs jar")
+        return false
     }
-
 }
-catch( Throwable e )
-{
-    e.printStackTrace();
-    result = false;
+catch(Throwable e) {
+    e.printStackTrace()
+    result = false
 }
 
-return result;
+return result

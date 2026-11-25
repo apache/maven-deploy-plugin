@@ -17,7 +17,7 @@
  * under the License.
  */
 
-def buildLog = new File ( basedir, "build.log")
+def buildLog = new File(basedir, "build.log")
 
-assert buildLog.text.contains( "The packaging plugin for this project did not assign "
-                                   + "a main file to the project but it has attachments. Change packaging to 'pom'." )
+assert buildLog.text.contains("The packaging plugin for this project did not assign "
++ "a main file to the project but it has attachments. Change packaging to 'pom'.")
