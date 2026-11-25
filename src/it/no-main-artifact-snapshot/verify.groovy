@@ -17,17 +17,11 @@
  * under the License.
  */
 
-import java.io.*;
-import java.util.*;
-
 File dir = new File( new File( basedir, "target/repo" ), "org/apache/maven/its/deploy/nmas/test/1.0-SNAPSHOT" );
 
 String[] files = dir.list();
 
-if ( files == null )
-{
-    throw new FileNotFoundException( "Missing directory: " + dir );
-}
+assert files != null : "Missing directory: " + dir
 
 String pom = null, jar = null;
 
@@ -43,19 +37,8 @@ for ( String file : files )
     }
 }
 
-if ( pom == null )
-{
-    throw new FileNotFoundException( "Missing timestamped POM" );
-}
+assert pom != null : "Missing timestamped POM"
 
-if ( jar == null )
-{
-    throw new FileNotFoundException( "Missing timestamped JAR" );
-}
+assert jar != null : "Missing timestamped JAR"
 
-if ( !jar.equals( pom ) )
-{
-    throw new IllegalStateException( "Timestamp mismatch " + jar + " vs " + pom );
-}
-
-return true;
+assert jar.equals( pom ) : "Timestamp mismatch " + jar + " vs " + pom
