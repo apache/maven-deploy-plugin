@@ -17,9 +17,9 @@
  * under the License.
  */
 
-rootRepo = new File( basedir, "target/repo" )
-module1Repo = new File( basedir, "module1/target/repo" )
-module2Repo = new File( basedir, "module2/target/repo" )
+rootRepo = new File(basedir, "target/repo")
+module1Repo = new File(basedir, "module1/target/repo")
+module2Repo = new File(basedir, "module2/target/repo")
 
 if (mavenVersion.startsWith('4.')) {
     // Maven 4 deploys in the root target directory, as defined in the root POM (even if not deployed)
@@ -30,5 +30,5 @@ if (mavenVersion.startsWith('4.')) {
 }
 
 // check that files are deployed both by Maven 3 and 4 = https://github.com/apache/maven-deploy-plugin/issues/533
-assert new File( module1Repo, "org/apache/maven/its/mdeploy-225/module1/1.0/module1-1.0.pom" ).exists()
-assert new File( module2Repo, "org/apache/maven/its/mdeploy-225/module2/1.0/module2-1.0.pom" ).exists()
+assert new File(module1Repo, "org/apache/maven/its/mdeploy-225/module1/1.0/module1-1.0.pom").exists()
+assert new File(module2Repo, "org/apache/maven/its/mdeploy-225/module2/1.0/module2-1.0.pom").exists()

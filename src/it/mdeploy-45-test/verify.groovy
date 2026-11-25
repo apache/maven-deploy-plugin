@@ -18,34 +18,29 @@
  * under the License.
  */
 
-import java.io.*;
-import java.util.*;
-import java.util.jar.*;
-import org.codehaus.plexus.util.*;
+import java.io.*
+import java.util.*
+import java.util.jar.*
+import org.codehaus.plexus.util.*
 
-boolean result = true;
+boolean result = true
 
-try
-{
-    File target = new File( basedir, "target" );
-    if ( !target.exists() || !target.isDirectory() )
-    {
-        System.err.println( "target file is missing or not a directory." );
-        return false;
+try {
+    File target = new File(basedir, "target")
+    if (!target.exists() || !target.isDirectory()) {
+        System.err.println("target file is missing or not a directory.")
+        return false
     }
 
-    File deployedFile = new File( target, "org/apache/maven/its/deploy/45/test/0.1/test-0.1-mdp45.war" );
-    if ( !deployedFile.exists() || deployedFile.isDirectory() )
-    {
-        System.err.println( "deployedFile file is missing or a directory." );
-        return false;
+    File deployedFile = new File(target, "org/apache/maven/its/deploy/45/test/0.1/test-0.1-mdp45.war")
+    if (!deployedFile.exists() || deployedFile.isDirectory()) {
+        System.err.println("deployedFile file is missing or a directory.")
+        return false
     }
-
 }
-catch( Throwable e )
-{
-    e.printStackTrace();
-    result = false;
+catch(Throwable e) {
+    e.printStackTrace()
+    result = false
 }
 
-return result;
+return result

@@ -17,38 +17,32 @@
  * under the License.
  */
 
-import java.io.*;
-import java.util.*;
+import java.io.*
+import java.util.*
 
 String[] paths =
-[
-    "org/apache/maven/its/deploy/tpjwop2/test/maven-metadata.xml",
-    "org/apache/maven/its/deploy/tpjwop2/test/1.0/test-1.0.jar",
-];
+        [
+            "org/apache/maven/its/deploy/tpjwop2/test/maven-metadata.xml",
+            "org/apache/maven/its/deploy/tpjwop2/test/1.0/test-1.0.jar",
+        ]
 
-for ( String path : paths )
-{
-    File file = new File( new File( basedir, "target/repo" ), path );
-    System.out.println( "Checking for existence of " + file );
-    if ( !file.isFile() )
-    {
-        throw new FileNotFoundException( "Missing: " + file.getAbsolutePath() );
+for (String path : paths) {
+    File file = new File(new File(basedir, "target/repo"), path)
+    System.out.println("Checking for existence of " + file)
+    if (!file.isFile()) {
+        throw new FileNotFoundException("Missing: " + file.getAbsolutePath())
     }
 }
 
 String[] missing =
-[
-    "org/apache/maven/its/deploy/tpjwop2/test/1.0/test-1.0.pom",
-];
+        ["org/apache/maven/its/deploy/tpjwop2/test/1.0/test-1.0.pom",]
 
-for ( String path : missing )
-{
-    File file = new File( new File( basedir, "target/repo" ), path );
-    System.out.println( "Checking for absence of " + file );
-    if ( file.exists() )
-    {
-        throw new FileNotFoundException( "Existent: " + file.getAbsolutePath() );
+for (String path : missing) {
+    File file = new File(new File(basedir, "target/repo"), path)
+    System.out.println("Checking for absence of " + file)
+    if (file.exists()) {
+        throw new FileNotFoundException("Existent: " + file.getAbsolutePath())
     }
 }
 
-return true;
+return true

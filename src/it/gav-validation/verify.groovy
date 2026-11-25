@@ -18,18 +18,15 @@
  */
 
 String[] paths =
-[
-    "org/apache/maven/its/deploy/gv",
-];
+        ["org/apache/maven/its/deploy/gv",]
 
-for ( String path : paths )
-{
-    assert !new File( new File( basedir, "target/repo" ), path ).exists()
+for (String path : paths) {
+    assert !new File(new File(basedir, "target/repo"), path).exists()
 }
 
-File buildLog = new File( basedir, 'build.log' )
+File buildLog = new File(basedir, 'build.log')
 assert buildLog.exists()
-assert buildLog.text.contains( "The artifact information is incomplete" )
-assert buildLog.text.contains( "The artifact information is not valid" )
+assert buildLog.text.contains("The artifact information is incomplete")
+assert buildLog.text.contains("The artifact information is not valid")
 
-return true;
+return true

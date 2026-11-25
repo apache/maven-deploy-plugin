@@ -18,34 +18,29 @@
  * under the License.
  */
 
-import java.io.*;
-import java.util.*;
-import java.util.jar.*;
-import org.codehaus.plexus.util.*;
+import java.io.*
+import java.util.*
+import java.util.jar.*
+import org.codehaus.plexus.util.*
 
-boolean result = true;
+boolean result = true
 
-try
-{
-    File target = new File( basedir, "target" );
-    if ( !target.exists() || !target.isDirectory() )
-    {
-        System.err.println( "target file is missing or not a directory." );
-        return false;
+try {
+    File target = new File(basedir, "target")
+    if (!target.exists() || !target.isDirectory()) {
+        System.err.println("target file is missing or not a directory.")
+        return false
     }
 
-    File deployedFile = new File( target, "repo/org/apache/maven/test/test/1.1/test-1.1.jar" );
-    if ( !deployedFile.isFile() )
-    {
-        System.err.println( "Deployed file is missing or is not a directory: " + deployedFile);
-        return false;
+    File deployedFile = new File(target, "repo/org/apache/maven/test/test/1.1/test-1.1.jar")
+    if (!deployedFile.isFile()) {
+        System.err.println("Deployed file is missing or is not a directory: " + deployedFile)
+        return false
     }
-
 }
-catch( Throwable e )
-{
-    e.printStackTrace();
-    result = false;
+catch(Throwable e) {
+    e.printStackTrace()
+    result = false
 }
 
-return result;
+return result
